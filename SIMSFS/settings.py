@@ -55,7 +55,7 @@ ROOT_URLCONF = 'SIMSFS.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': ['INVENTORY_MANAGEMENT\Templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
