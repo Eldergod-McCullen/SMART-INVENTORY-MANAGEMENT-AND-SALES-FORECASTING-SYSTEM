@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>LOG IN/REGISTER</title>
+
+    <link rel="stylesheet" href="Log-in_Register.css">
+    <link href='https://cdn.boxicons.com/3.0.3/fonts/basic/boxicons.min.css' rel='stylesheet'>
+    <link href='https://cdn.boxicons.com/3.0.3/fonts/brands/boxicons-brands.min.css' rel='stylesheet'>
+    <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+</head>
+
+<body>
+    <div class="container">
+        <div class="form-box login" id="form-login">
+            <form action="" method="post">
+                <h1>LOG IN</h1>
+
+                <div class="input-box">
+                    <input type="email" placeholder="E-mail" name="Email" alt="Email" required>
+                    <i class="bx bxs-envelope"></i>
+                </div>
+
+                <div class="input-box">
+                    <input type="password" placeholder="Password" name="Password" alt="Password" required>
+                    <i class="bx bxs-lock-alt"></i>
+                </div>
+
+                <div class="forgot-link">
+                    <a href="#">Forgot password?</a>
+                </div>
+
+                <button type="button" name="log-in" class="btn">LOG IN</button>
+                <p>or log-in with a social media account</p>
+
+                <div class="social-icons">
+                    <a href="#" class="google" title="Google"><i class="bx bxl-google"></i></a>
+                    <a href="#" class="facebook" title="Facebook"><i class="bx bxl-facebook"></i></a>
+                    <a href="#" class="github" title="GitHub"><i class="bx bxl-github"></i></a>
+                    <a href="#" class="linkedin" title="LinkedIn"><i class="bx bxl-linkedin"></i></a>
+                </div>
+                
+            </form>
+        </div>
+
+        <div class="form-box register" id="form-register">
+            <form action="" method="post">
+                <h1>REGISTER</h1>
+
+                <div class="input-box">
+                    <input type="text" placeholder="Full Name" alt="Full Name" name="Full Name" required>
+                    <i class="bx bxs-user"></i>
+                </div>
+
+                <div class="input-box">
+                    <input type="email" placeholder="Email" alt="Email" name="Email" required>
+                    <i class="bx bxs-envelope"></i>
+                </div>
+            
+                <div class="input-box">
+                    <input type="tel" placeholder="Phone Number" name="Phone Number" alt="Phone Number" required>
+                    <i class="bx bxs-phone"></i>
+                </div>
+
+                <div class="input-box">
+                    <input type="password" placeholder="Password" name="Password" alt="Password" required>
+                    <i class="bx bxs-lock-alt"></i>
+                </div>
+
+                <!-- ADDITIONAL FOR THE ROLE -->
+                <div class="input-box">
+                    <input type="text" placeholder="Role" name="Role" alt="Role" required>
+                    <i class='bx bxs-user-hexagon'></i> 
+                </div>
+                
+
+                <button type="submit" name="register" class="btn">REGISTER</button>
+                <p>or register with a social media account</p>
+
+                <div class="social-icons">
+                    <a href="#" class="google" title="Google"><i class="bx bxl-google"></i></a>
+                    <a href="#" class="facebook" title="Facebook"><i class="bx bxl-facebook"></i></a>
+                    <a href="#" class="github" title="GitHub"><i class="bx bxl-github"></i></a>
+                    <a href="#" class="linkedin" title="LinkedIn"><i class="bx bxl-linkedin"></i></a>
+                </div>
+            </form>
+            
+            <!--p>Already have an account? <a href="#">Sign in</a></!--p-->
+        </div>
+
+        <div class="toggle-box">
+            <div class="toggle-panel toggle-left">
+                <h1>GREETINGS AND,WELCOME!</h1>
+                <p>Don't have an account?</p>
+                <button class="btn register-btn">Register</button>
+            </div>
+
+            <div class="toggle-panel toggle-right">
+                <h1>WELCOME BACK!</h1>
+                <p>Already have an account?</p>
+                <button class="btn login-btn">Log In</button>
+            </div>
+        </div>
+        
+    </div>
+    
+    <script src="Log-in_Register.js" defer></script>
+    <script src="https://unpkg.com/boxicons@2.1.4/dist/boxicons.js"></script>
+</body>
+</html>

@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>SALES</title>
+
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css?family=Poppins:400,600|Roboto:400,500|Montserrat:400,500" rel="stylesheet">
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
+
+  <!-- jQuery (required by Select2) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+
+  <!-- Select2 CSS -->
+  <link
+    href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css"
+    rel="stylesheet" />
+
+  <!-- Select2 JS -->
+  <script
+    src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js">
+  </script>
+
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="Sales.css">
+
+</head>
+
+<body>
+  <div class="container">
+    <!-- Header -->
+    <div id="soHeader" class="flex-space">
+      <div>
+        <h1>Sales Orders</h1>
+        <h2>Add and manage your SOs</h2>
+      </div>
+      <button id="soBtnNewSO"><i class="fa fa-plus"></i> New SO</button>
+    </div>
+
+    <!-- Navigation & Search -->
+    <div class="flex-space">
+      <!--<div></div> -->             <!-- Placeholder for future nav items - THIS ONE IS ADDED,TO BE SEEN LATER-->
+      <div class="flex">
+        <select id="soSearchCriteria" title="soSearchCriteria">
+          <option>All</option>
+          <option>SO ID</option>
+          <option>Customer Name</option>
+          <option>Invoice Num</option>
+          <option>Receipt Status</option>
+          <option>Shipping Status</option>
+        </select>
+        <input type="text" id="soSearchInput" placeholder="Search...">
+        <button id="soBtnSearch">Search</button>
+        <button class="btn-clear" id="soBtnClear">Clear</button>
+      </div>
+    </div>
+
+    <!-- SO List Table -->
+    <table id="solist">
+      <thead>
+        <tr>
+          <th>SO Date</th><th>SO ID</th><th>Customer ID</th><th>Customer Name</th>
+          <th>Invoice Num</th><th>State</th><th>City</th><th>Total SO Amount</th>
+          <th>Total Received</th><th>SO Balance</th><th>Receipt Status</th>
+          <th>Shipping Status</th><th>Actions</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <!-- Processing Overlay -->
+  <div id="soProcessingOverlay"><i class="fa fa-spinner fa-pulse"></i> Processing...</div>
+
+  <!-- New SO / View Details Modal -->
+  <div id="soModalOverlay" class="modal-overlay">
+    <div class="modal" id="soModal">
+      <div class="modal-header">
+        <h2 id="soModalTitle">Modal Title</h2>
+      </div>
+      <div class="modal-body" id="soModalBody">
+        <!-- Content injected by JS -->
+      </div>
+      <div class="modal-footer" id="soModalFooter">
+        <!-- Buttons injected by JS -->
+      </div>
+    </div>
+  </div>
+
+  
+  <script src="Sales.js"></script>
+  
+</body>
+</html>

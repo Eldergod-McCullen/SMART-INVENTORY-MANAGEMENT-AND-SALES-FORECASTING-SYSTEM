@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>PURCHASES</title>
+  
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600&family=Poppins:wght@400;500;600&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+  
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Select2 -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css">
+  
+  <!-- Flatpickr (Date Picker) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  
+  <link rel="stylesheet" href="Purchases.css">
+  
+</head>
+<body>
+  <div class="purchase-container">
+    <!-- Header Section -->
+    <div class="header-section">
+      <h1>PURCHASE ORDERS</h1>
+      <p>Create and manage your purchase orders</p>
+    </div>
+    
+    <!-- Action Bar -->
+    <div class="action-bar">
+      <div class="btn-group">
+        <button class="btn btn-primary" onclick="poOpenNewPOModal()">
+          <i class="fas fa-file-invoice"></i> NEW PURCHASE ORDER
+        </button>
+        <button class="btn btn-secondary" onclick="poOpenPMTStatusModal()">
+          <i class="fas fa-money-bill-wave"></i> Payment Status
+        </button>
+        <button class="btn btn-secondary" onclick="poOpenShippingStatusModal()">
+          <i class="fas fa-truck"></i> Shipping Status
+        </button>
+      </div>
+      
+      <div class="search-group">
+        <select id="poSearchCriteria" class="search-select" title="poSearchCriteria">
+          <option value="all">All</option>
+          <option value="PO ID">PO ID</option>
+          <option value="Supplier Name">Supplier Name</option>
+          <option value="Bill Num">Bill Num</option>
+          <option value="PMT Status">PMT Status</option>
+          <option value="Shipping Status">Shipping Status</option>
+        </select>
+        <input type="text" id="poSearchInput" class="search-input" placeholder="Search...">
+        <button class="btn btn-outline" onclick="poSearchPOs()">
+          <i class="fas fa-search"></i> Search
+        </button>
+        <button class="btn btn-outline" onclick="poClearSearch()">
+          <i class="fas fa-times"></i> Clear
+        </button>
+      </div>
+    </div>
+    
+    <!-- Purchase Orders Table -->
+    <div id="poTableContainer">
+      <table class="purchase-table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>PO ID</th>
+            <th>Supplier ID</th>
+            <th>Supplier Name</th>
+            <th>Bill Num</th>
+            <th>State</th>
+            <th>City</th>
+            <th>Total Amount</th>
+            <th>Total Paid</th>
+            <th>PO Balance</th>
+            <th>PMT Status</th>
+            <th>Shipping Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="poTableBody">
+          <!-- Data will be populated by JavaScript -->
+        </tbody>
+      </table>
+      
+      <!-- Pagination -->
+      <div class="pagination" id="poPagination">
+        <!-- Pagination buttons will be added here -->
+      </div>
+    </div>
+    
+    <!-- No Data Message -->
+    <div id="poNoData" class="no-data-container">
+      <i class="fas fa-inbox no-data-icon"></i>
+      <h3 class="no-data-title">No purchase orders found</h3>
+      <p>Click "New PO" to create your first purchase order</p>
+    </div>
+  </div>
+  
+  <!-- PMT Status Modal -->
+  <div id="poPMTStatusModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Configure PMT Status</h2>
+        <span class="close-btn" onclick="poClosePMTStatusModal()">&times;</span>
+      </div>
+      <div class="form-group">
+        <label class="required">PMT Status</label>
+        <input type="text" id="poNewPMTStatus" class="form-control" title="poNewPMTStatus" required>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="poClosePMTStatusModal()">Close</button>
+        <button class="btn btn-primary" onclick="poSaveNewPMTStatus()">Save</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Shipping Status Modal -->
+  <div id="poShippingStatusModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Configure Shipping Status</h2>
+        <span class="close-btn" onclick="poCloseShippingStatusModal()">&times;</span>
+      </div>
+      <div class="form-group">
+        <label class="required">Shipping Status</label>
+        <input type="text" id="poNewShippingStatus" class="form-control" title="poNewShippingStatus" required>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="poCloseShippingStatusModal()">Close</button>
+        <button class="btn btn-primary" onclick="poSaveNewShippingStatus()">Save</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- New PO Modal -->
+  <div id="poNewPOModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Create New PO</h2>
+        <span class="close-btn" onclick="poCloseNewPOModal()">&times;</span>
+      </div>
+      
+      <!-- Section 1: PO Header -->
+      <div class="form-section">
+        <h3>PO Information</h3>
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="required">PO ID</label>
+            <div class="id-generate">
+              <input type="text" id="poPOID" class="form-control id-field" title="poPOID" readonly>
+              <button class="btn btn-secondary" onclick="poGeneratePOID()">Generate</button>
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label class="required">PO Date</label>
+            <input type="text" id="poPODate" class="form-control date-picker" placeholder="Select date">
+          </div>
+          
+          <div class="form-group">
+            <label class="required">Supplier Name</label>
+            <select id="poSupplierName" class="form-control" title="poSupplierName" onchange="poSupplierChanged()"></select>
+          </div>
+          
+          <div class="form-group">
+            <label class="required">Supplier ID</label>
+            <input type="text" id="poSupplierID" class="form-control" title="poSupplierID" readonly>
+          </div>
+          
+          <div class="form-group">
+            <label class="required">State</label>
+            <input type="text" id="poState" class="form-control" title="poState" readonly>
+          </div>
+          
+          <div class="form-group">
+            <label class="required">City</label>
+            <input type="text" id="poCity" class="form-control" title="poState" readonly>
+          </div>
+          
+          <div class="form-group">
+            <label class="required">Bill Num</label>
+            <input type="text" id="poBillNum" class="form-control" title="poBillNum">
+          </div>
+        </div>
+      </div>
+      
+      <!-- Section 2: PO Items -->
+      <div class="form-section">
+        <h3>PO Items</h3>
+        <button class="add-item-btn" onclick="poAddItemRow()">
+          <i class="fas fa-plus"></i> Add Item
+        </button>
+        
+        <div class="items-table-container">
+          <table class="items-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th >PO ID</th>
+                <th >Detail ID</th>
+                <th >Supplier ID</th>
+                <th >Supplier Name</th>
+                <th >State</th>
+                <th >City</th>
+                <th >Bill Num</th>
+                <th >Item ID</th>
+                <th >Item Type</th>
+                <th >Item Category</th>
+                <th >Item Subcategory</th>
+                <th >Item Name</th>
+                <th >QTY</th>
+                <th >Unit Cost</th>
+                <th >Cost Excl Tax</th>
+                <th >Tax Rate</th>
+                <th >Total Tax</th>
+                <th >Cost Incl Tax</th>
+                <th >Shipping Fees</th>
+                <th >Total Price</th>
+                <th >Action</th>
+              </tr>
+            </thead>
+            <tbody id="poItemsTableBody">
+              <!-- Item rows will be added here -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+      
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="poCloseNewPOModal()">Close</button>
+        <button class="btn btn-primary" onclick="poSaveNewPO()">Save PO</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- PO Details Modal -->
+  <div id="poDetailsModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>PO Details</h2>
+        <span class="close-btn" onclick="poCloseDetailsModal()">&times;</span>
+      </div>
+      
+      <div id="poDetailsContent">
+        <!-- PO details will be loaded here -->
+      </div>
+    </div>
+  </div>
+  
+  <!-- Processing Overlay -->
+  <div id="poProcessingOverlay" class="processing-overlay">
+    <div class="spinner"></div>
+    <p>Processing...</p>
+  </div>
+
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+
+  <script src="Purchases.js"></script>
+      
+</body>
+</html>

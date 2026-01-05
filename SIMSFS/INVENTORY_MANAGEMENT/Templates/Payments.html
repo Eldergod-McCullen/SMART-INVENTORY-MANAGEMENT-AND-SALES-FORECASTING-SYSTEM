@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>PAYMENTS</title>
+
+  <!-- Google Fonts -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Poppins:400,600|Roboto:400,500|Montserrat:400,500" >
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
+
+  <link rel="stylesheet" href="Payments.css">
+
+  <!-- jQuery & Select2 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+  
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <div class="flex-space">
+      <div>
+        <h1>Payments Module</h1>
+        <h2>Create Payments Against Purchase Orders</h2>
+      </div>
+      <button id="ptBtnNew"><i class="fa fa-plus"></i> New Payment</button>
+    </div>
+
+    <!-- Search bar -->
+    <div class="flex-space" id="div1">
+      <div></div>
+      <div class="flex">
+        <select id="ptSearchCrit" title="SearchCriteria">
+          <option>All</option>
+          <option>PO ID</option>
+          <option>Supplier Name</option>
+          <option>Bill Num</option>
+          <option>PMT Mode</option>
+        </select>
+        <input type="text" id="ptSearchInput" placeholder="Search...">
+        <button id="ptBtnSearch">Search</button>
+        <button class="btn-clear" id="ptBtnClear">Clear</button>
+      </div>
+    </div>
+
+    <!-- Payments list -->
+    <table id="ptList">
+      <thead>
+        <tr>
+          <th>Trx Date</th><th>Trx ID</th><th>Supplier ID</th><th>Supplier Name</th>
+          <th>State</th><th>City</th><th>PO ID</th><th>Bill Num</th>
+          <th>PMT Mode</th><th>Amount Paid</th><th>Actions</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <!-- Processing overlay -->
+  <div id="ptProcessing"><i class="fa fa-spinner fa-pulse"></i> Processing...</div>
+
+  <!-- Modal -->
+  <div id="ptModalOverlay" class="modal-overlay">
+    <div class="modal" id="ptModal">
+      <div class="modal-header"><h2 id="ptModalTitle"></h2></div>
+      <div class="modal-body" id="ptModalBody"></div>
+      <div class="modal-footer" id="ptModalFooter"></div>
+    </div>
+  </div>
+
+<script src="Payments.js"></script>
+
+</body>
+</html>

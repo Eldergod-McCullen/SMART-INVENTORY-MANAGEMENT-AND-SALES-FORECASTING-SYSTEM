@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>INVENTORY</title>
+  
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600&family=Poppins:wght@400;500;600&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+  
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Select2 -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" rel="stylesheet" />
+  
+  <link rel="stylesheet" href="Inventory.css">
+
+</head>
+
+<body>
+  <div class="inventory-container">
+      
+    <!-- HEADER SECTION -->
+    <div class="header-section">
+      <h1>INVENTORY ITEMS</h1>
+      <p>Add and manage your inventory items</p>
+    </div>
+    
+    <!-- ACTION BAR -->
+    <div class="action-bar">
+      <div class="btn-group">
+        <button class="btn btn-primary" onclick="openNewItemModal()">
+          <i class="fas fa-box"></i> Add Inventory Item
+        </button>
+        <button class="btn btn-secondary" onclick="openNewTypeModal()">
+          <i class="fas fa-tag"></i> Add Item Type
+        </button>
+        <button class="btn btn-secondary" onclick="openNewCategoryModal()">
+          <i class="fas fa-layer-group"></i> Add Item Category
+        </button>
+        <button class="btn btn-secondary" onclick="openNewSubcategoryModal()">
+          <i class="fas fa-shapes"></i> Add Item Subcategory
+        </button>
+      </div>
+      
+      <div class="search-group">
+        <select id="searchCriteria" class="search-select" title="Search criteria filter">
+          <option value="all">All</option>
+          <option value="Item Type">Item Type</option>
+          <option value="Item Category">Item Category</option>
+          <option value="Item Subcategory">Item Subcategory</option>
+          <option value="Item Name">Item Name</option>
+          <option value="Reorder Required">Reorder Required</option>
+        </select>
+        <input type="text" id="searchInput" class="search-input" placeholder="Search...">
+        <button class="btn btn-outline" onclick="searchItems()">
+          <i class="fas fa-search"></i> Search
+        </button>
+        <button class="btn btn-outline" onclick="clearSearch()">
+          <i class="fas fa-times"></i> Clear
+        </button>
+      </div>
+    </div>
+    
+    <!-- Inventory Table -->
+    <div id="tableContainer">
+      <table class="inventory-table">
+        <thead>
+          <tr>
+            <th width="5%">Item ID</th>
+            <th width="10%">Item Type</th>
+            <th width="10%">Item Category</th>
+            <th width="12%">Item Subcategory</th>
+            <th width="25%">Item Name</th>
+            <th width="7%">QTY Purchased</th>
+            <th width="7%">QTY Sold</th>
+            <th width="7%">Remaining QTY</th>
+            <th width="5%">Reorder Level</th>
+            <th width="5%">Reorder Required</th>
+            <th width="7%">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody">
+          <!-- Data will be populated by JavaScript -->
+        </tbody>
+      </table>
+      
+      <!-- Pagination -->
+      <div class="pagination" id="pagination">
+        <!-- Pagination buttons will be added here -->
+      </div>
+    </div>
+    
+    <!-- No Data Message -->
+    <div id="noData" class="no-data-container">
+      <i class="fas fa-inbox no-data-icon"></i>
+      <h3 class="no-data-title">No inventory items found</h3>
+      <p>Click "Add Inventory Item" to add your first item</p>
+    </div>
+  </div>
+  
+  <!-- New Item Type Modal -->
+  <div id="typeModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Add New Item Type</h2>
+        <span class="close-btn" onclick="closeTypeModal()">&times;</span>
+      </div>
+      <div class="form-group">
+        <label class="required">Item Type</label>
+        <input type="text" id="newType" class="form-control" title="Item Type" required>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="closeTypeModal()">Close</button>
+        <button class="btn btn-primary" onclick="saveNewType()">Save</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- New Item Category Modal -->
+  <div id="categoryModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Add New Item Category</h2>
+        <span class="close-btn" onclick="closeCategoryModal()">&times;</span>
+      </div>
+      <div class="form-group">
+        <label class="required">Item Category</label>
+        <input type="text" id="newCategory" class="form-control" title="Item Category" required>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="closeCategoryModal()">Close</button>
+        <button class="btn btn-primary" onclick="saveNewCategory()">Save</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- New Item Subcategory Modal -->
+  <div id="subcategoryModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Add New Item Subcategory</h2>
+        <span class="close-btn" onclick="closeSubcategoryModal()">&times;</span>
+      </div>
+      <div class="form-group">
+        <label class="required">Item Subcategory</label>
+        <input type="text" id="newSubcategory" class="form-control" title="Item Subcategory" required>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="closeSubcategoryModal()">Close</button>
+        <button class="btn btn-primary" onclick="saveNewSubcategory()">Save</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- New Inventory Item Modal -->
+  <div id="inventoryModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Add New Inventory Item</h2>
+        <span class="close-btn" onclick="closeInventoryModal()">&times;</span>
+      </div>
+      <div class="form-group">
+        <label class="required">Item ID</label>
+        <div class="id-generate">
+          <input type="text" id="inventoryId" class="form-control id-field" title="Item ID" readonly>
+          <button class="btn btn-secondary" onclick="generateInventoryId()">Generate</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="required">Item Type</label>
+        <select id="itemType" class="form-control" title="Item Type"></select>
+      </div>
+      <div class="form-group">
+        <label class="required">Item Category</label>
+        <select id="itemCategory" class="form-control" title="Item Category"></select>
+      </div>
+      <div class="form-group">
+        <label class="required">Item Subcategory</label>
+        <select id="itemSubcategory" class="form-control" title="Item Sub-category"></select>
+      </div>
+      <div class="form-group">
+        <label class="required">Item Name</label>
+        <input type="text" id="itemName" class="form-control" title="Item Name" required>
+      </div>
+      <div class="form-group">
+        <label class="required">Reorder Level</label>
+        <input type="number" id="reorderLevel" class="form-control" min="0" title="Reorder level" required>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="closeInventoryModal()">Close</button>
+        <button class="btn btn-primary" onclick="saveNewInventoryItem()">Save</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Processing Overlay -->
+  <div id="processingOverlay" class="processing-overlay">
+    <div class="spinner"></div>
+    <p>Processing...</p>
+  </div>
+
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
+  <script src="Inventory.js"></script>
+  
+</body>
+</html>

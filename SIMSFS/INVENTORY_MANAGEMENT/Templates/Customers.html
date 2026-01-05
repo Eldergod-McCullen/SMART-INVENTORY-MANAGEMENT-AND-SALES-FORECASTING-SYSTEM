@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>  
+<base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>CUSTOMERS</title>
+  
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600&family=Poppins:wght@400;500;600&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+  
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Select2 -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css">
+  
+  <link rel="stylesheet" href="Customers.css">
+
+</head>
+
+<body>
+<div class="customer-container">
+  <!-- Header Section -->
+  <div class="customer-header">
+    <h1>CUSTOMERS</h1>
+    <p>VIEW AND MANAGE THE CUSTOMERS</p>
+  </div>
+  
+  <!-- Action Bar -->
+  <div class="action-bar">
+    <div class="btn-group">
+      <button class="btn btn-primary" onclick="custOpenNewCustomerModal()">
+        <i class="fas fa-plus"></i> New Customer
+      </button>
+      <button class="btn btn-secondary" onclick="custOpenNewStateModal()">
+        <i class="fas fa-plus"></i> New County
+      </button>
+      <button class="btn btn-secondary" onclick="custOpenNewCityModal()">
+        <i class="fas fa-plus"></i> New Town
+      </button>
+    </div>
+    
+    <div class="search-group">
+      <select id="custSearchCriteria" class="search-select" title="Search criteria filter">
+        <option value="all">All</option>
+        <option value="Customer Name">Customer Name</option>
+        <option value="County">County</option>
+        <option value="Town">Town</option>
+      </select>
+      <input type="text" id="custSearchInput" class="search-input" placeholder="Search...">
+      <button class="btn btn-outline" onclick="custSearchCustomers()">
+        <i class="fas fa-search"></i> Search
+      </button>
+      <button class="btn btn-outline" onclick="custClearSearch()">
+        <i class="fas fa-times"></i> Clear
+      </button>
+    </div>
+  </div>
+  
+  <!-- Customers Table -->
+  <div id="custTableContainer">
+    <table class="customer-table">
+      <thead>
+        <tr>
+          <th width="5%">Customer ID</th>
+          <th width="15%">Customer Name</th>
+          <th width="8%">Contact</th>
+          <th width="10%">E-Mail</th>
+          <th width="7%">County</th>
+          <th width="7%">Town</th>
+          <th width="7%">Total Sales</th>
+          <th width="7%">Receipts' Total</th>
+          <th width="7%">Balance payable</th>
+          <th width="7%">Actions</th>
+        </tr>
+      </thead>
+      <tbody id="custTableBody">
+        <!-- Data will be populated by JavaScript -->
+      </tbody>
+    </table>
+    
+    <!-- Pagination -->
+    <div class="pagination" id="custPagination">
+      <!-- Pagination buttons will be added here -->
+    </div>
+  </div>
+  
+  <!-- No Data Message -->
+  <div id="custNoData" class="custNoData">
+    <i class="fas fa-inbox"></i>
+    <h3>No customers found</h3>
+    <p>Click "New Customer" to add your first customer</p>
+  </div>
+</div>
+
+<!-- NEW COUNTY MODAL -->
+<div id="custStateModal" class="modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2>Add New County</h2>
+      <span class="close-btn" onclick="custCloseStateModal()">&times;</span>
+    </div>
+    <div class="form-group">
+      <label class="required">County Name</label>
+      <input type="text" id="custNewState" class="form-control" title="custNewState" required>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="custCloseStateModal()">Close</button>
+      <button class="btn btn-primary" onclick="custSaveNewState()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- New Town Modal -->
+<div id="custCityModal" class="modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2>Add New Town</h2>
+      <span class="close-btn" onclick="custCloseCityModal()">&times;</span>
+    </div>
+    <div class="form-group">
+      <label class="required">Town Name</label>
+      <input type="text" id="custNewCity" class="form-control" title="custNewCity" required>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="custCloseCityModal()">Close</button>
+      <button class="btn btn-primary" onclick="custSaveNewCity()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- New Customer Modal -->
+<div id="custCustomerModal" class="modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2>Add New Customer</h2>
+      <span class="close-btn" onclick="custCloseCustomerModal()">&times;</span>
+    </div>
+    <div class="form-group">
+      <label class="required">Customer ID</label>
+      <div class="id-generate">
+        <input type="text" id="custCustomerId" class="form-control id-field" title="custCustomerId" readonly>
+        <button class="btn btn-secondary" onclick="custGenerateCustomerId()">Generate</button>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="required">Customer Name</label>
+      <input type="text" id="custCustomerName" class="form-control" title="custCustomerName" required>
+    </div>
+    <div class="form-group">
+      <label>Contact</label>
+      <input type="text" id="custCustomerContact" class="form-control" title="custCustomerContact">
+    </div>
+    <div class="form-group">
+      <label>Email</label>
+      <input type="email" id="custCustomerEmail" class="form-control" title="custCustomerEmail">
+    </div>
+    <div class="form-group">
+      <label class="required">County</label>
+      <select id="custCustomerState" class="form-control" title="custCustomerState"></select>
+    </div>
+    <div class="form-group">
+      <label class="required">Town</label>
+      <select id="custCustomerCity" class="form-control" title="custCustomerCity"></select>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="custCloseCustomerModal()">Close</button>
+      <button class="btn btn-primary" onclick="custSaveNewCustomer()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Processing Overlay -->
+<div id="custProcessingOverlay" class="processing-overlay">
+  <div class="spinner"></div>
+  <p>Processing...</p>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
+<script src="Customers.js"></script>
+
+
+    
+</body>
+</html>

@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>MAIN PAGE</title>
+
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600&family=Poppins:wght@400;500;600&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+  
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <style>
+    :root {
+      --sidebar-bg: #2c3e50;
+      --topbar-bg: #ffffff;
+      --primary: #1abc9c;
+      --primary-light: #d1f2eb;
+      --secondary: #3498db;
+      --text-dark: #34495e;
+      --text-light: #ecf0f1;
+      --border-color: #e0e0e0;
+      --card-bg: #ffffff;
+      --hover-bg: #16a085;
+      --active-nav-color: #008080;
+      --sidebar-width: 260px;
+      --sidebar-collapsed-width: 80px;
+    }
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Roboto', sans-serif;
+      background-color: #f5f7fa;
+      color: var(--text-dark);
+      display: flex;
+      min-height: 100vh;
+    }
+    
+    /* Sidebar Styles */
+    .sidebar {
+      width: var(--sidebar-width);
+      background: var(--sidebar-bg);
+      color: var(--text-light);
+      transition: all 0.3s ease;
+      height: 100vh;
+      position: fixed;
+      overflow-y: auto;
+      box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+      z-index: 1000;
+    }
+
+    .sidebar.collapsed {
+      width: var(--sidebar-collapsed-width);
+    }
+    
+    .app-title {
+      font-family: 'Montserrat', sans-serif;
+      font-weight: 600;
+      font-size: 1.4rem;
+      padding: 24px 20px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .app-title-content {
+      display: flex;
+      align-items: center;
+      overflow: hidden;
+    }
+
+    .app-title-content i.fa-warehouse {
+      margin-right: 5px;
+      color: var(--primary);
+      flex-shrink: 0;
+    }
+
+    .app-title-text {
+      white-space: nowrap;
+      transition: opacity 0.3s ease;
+      font-size: 35px;
+    }
+
+    .sidebar.collapsed .app-title-text {
+      opacity: 0;
+      width: 0;
+    }
+
+    .menu-toggle {
+      cursor: pointer;
+      font-size: 1.2rem;
+      color: var(--primary);
+      transition: transform 0.3s ease;
+      flex-shrink: 0;
+    }
+
+    .menu-toggle:hover {
+      transform: scale(1.1);
+      color: var(--hover-bg);
+    }
+
+    .nav {
+      padding: 15px 0;
+    }
+    
+    .nav-item {
+      display: flex;
+      align-items: center;
+      padding: 12px 20px;
+      color: var(--text-light);
+      text-decoration: none;
+      font-family: 'Poppins', sans-serif;
+      font-size: 1rem;
+      transition: all 0.3s;
+      border-left: 4px solid transparent;
+      white-space: nowrap;
+      position: relative;
+    }
+    
+    .nav-item:hover {
+      background: #008080;
+      border-left: 4px solid var(--primary);
+      color: white;
+    }
+
+    .nav-item.active {
+      background: #008080;
+      border-left: 4px solid var(--active-nav-color);
+      color: white;
+    }
+    
+    .nav-item i {
+      width: 24px;
+      margin-right: 12px;
+      text-align: center;
+      flex-shrink: 0;
+    }
+
+    .nav-item span {
+      transition: opacity 0.3s ease;
+    }
+
+    .sidebar.collapsed .nav-item span {
+      opacity: 0;
+      width: 0;
+      overflow: hidden;
+    }
+
+    /* Tooltip for collapsed sidebar */
+    .sidebar.collapsed .nav-item:hover::after {
+      content: attr(data-title);
+      position: absolute;
+      left: 70px;
+      background: var(--sidebar-bg);
+      padding: 8px 12px;
+      border-radius: 4px;
+      white-space: nowrap;
+      z-index: 1001;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    }
+    
+    /* Main Content Area */
+    .main-content {
+      flex: 1;
+      margin-left: var(--sidebar-width);
+      display: flex;
+      flex-direction: column;
+      transition: margin-left 0.3s ease;
+    }
+
+    .sidebar.collapsed ~ .main-content {
+      margin-left: var(--sidebar-collapsed-width);
+    }
+    
+    /* Top Bar Styles */
+    .top-bar {
+      background: var(--topbar-bg);
+      padding: 15px 30px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+      position: sticky;
+      top: 0;
+      z-index: 999;
+    }
+
+    .page-title {
+      font-family: 'Montserrat', sans-serif;
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: var(--text-dark);
+    }
+
+    .user-welcome {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+
+    .welcome-text {
+      font-family: 'Poppins', sans-serif;
+      font-size: 1rem;
+      color: var(--text-dark);
+      font-weight: 500;
+    }
+
+    .welcome-text .username {
+      color: var(--primary);
+      font-weight: 600;
+    }
+    
+    .top-bar-links {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .top-bar-links a {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: #f8f9fa;
+      color: var(--text-dark);
+      transition: all 0.3s;
+      text-decoration: none;
+    }
+    
+    .top-bar-links a:hover {
+      background: var(--primary);
+      color: white;
+      transform: translateY(-2px);
+    }
+    
+    /* Content Area */
+    .content {
+      padding: 30px;
+      flex: 1;
+    }
+    
+    /* Responsive Design */
+    @media (max-width: 768px) {
+      .sidebar {
+        width: var(--sidebar-collapsed-width);
+      }
+      
+      .sidebar.collapsed {
+        width: 0;
+      }
+
+      .main-content {
+        margin-left: var(--sidebar-collapsed-width);
+      }
+
+      .sidebar.collapsed ~ .main-content {
+        margin-left: 0;
+      }
+
+      .page-title {
+        font-size: 1.2rem;
+      }
+
+      .welcome-text {
+        display: none;
+      }
+    }
+    
+    @media (max-width: 480px) {
+      .content {
+        padding: 15px;
+      }
+
+      .top-bar {
+        padding: 10px 15px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Sidebar Navigation -->
+  <div class="sidebar" id="sidebar">
+    <div class="app-title">
+      <div class="app-title-content">
+        <!--<i class="fas fa-warehouse"></i>-->
+        <i class="fa fa-warehouse"></i>
+        <span class="app-title-text">SIMSFS</span>
+      </div>
+      <i class="fa fa-bars menu-toggle" id="menuToggle"></i>
+    </div>
+
+    <nav class="nav">
+      <a href="Dashboard.html" class="nav-item" data-title="Dashboard">
+        <i class="fas fa-tachometer-alt"></i> <span>Dashboard</span>
+      </a>
+
+      <a href="Inventory-items.html" class="nav-item" data-title="Inventory Items">
+        <i class="fas fa-boxes"></i> <span>Inventory Items</span>
+      </a> 
+
+      <a href="Inventory.html" class="nav-item" data-title="Inventory">
+        <i class="fa fa-industry"></i> <span>Inventory</span>
+      </a>
+
+      <a href="Suppliers.html" class="nav-item" data-title="Suppliers">
+        <i class="fas fa-truck-loading"></i> <span>Suppliers</span>
+      </a>
+
+      <a href="Customers.html" class="nav-item" data-title="Customers">
+        <i class="fas fa-user-friends"></i> <span>Customers</span>
+      </a>
+
+      <a href="Purchases.html" class="nav-item" data-title="Purchases">
+        <i class="fas fa-file-invoice-dollar"></i> <span>Purchases</span>
+      </a>
+
+      <a href="Sales.html" class="nav-item" data-title="Sales">
+        <i class="fas fa-chart-line"></i> <span>Sales</span>
+      </a>
+
+      <a href="Receipts.html" class="nav-item" data-title="Receipts">
+        <i class="fas fa-receipt"></i> <span>Receipts</span>
+      </a>
+
+      <a href="Payments.html" class="nav-item" data-title="Payments">
+        <i class="fas fa-credit-card"></i> <span>Payments</span>
+      </a>
+
+      <a href="Reports.html" class="nav-item" data-title="Reports">
+        <i class="fas fa-chart-pie"></i> <span>Reports</span>
+      </a>
+
+      <a href="Forecasting.html" class="nav-item" data-title="Sales Forecasting">
+        <i class="fa fa-bar-chart"></i> <span>Sales Forecasting</span>
+      </a>
+
+      <a href="#" class="nav-item" data-title="Users">
+        <i class="fas fa-user-cog"></i> <span>Users</span>
+      </a>
+
+      <a href="#" class="nav-item" data-title="Settings">
+        <i class="fas fa-cogs"></i> <span>Settings</span>
+      </a>
+
+      <a href="#" class="nav-item" id="logout-link" data-title="Logout">
+        <i class="fas fa-sign-out-alt"></i> <span>Logout</span>
+      </a>
+    </nav>
+  </div>
+  
+  <!-- Main Content -->
+  <div class="main-content">
+    <!-- Top Bar -->
+    <div class="top-bar">
+      <h1 class="page-title">Dashboard</h1>
+      
+      <div class="user-welcome">
+        <span class="welcome-text">WELCOME <span class="username" id="username">ADMIN</span></span>
+        <div class="top-bar-links">
+          <a href="#" title="Notifications"><i class="fas fa-bell"></i></a>
+          <a href="#" title="Settings"><i class="fas fa-cog"></i></a>
+          <a href="#" title="Profile"><i class="fas fa-user"></i></a>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Dynamic Content Injection -->
+    <div class="content">
+      <!-- Your page content goes here -->
+      <p>This is where your dynamic content will be loaded.</p>
+    </div>
+  </div>
+  
+  <script>
+    // Sidebar Toggle Functionality
+    const menuToggle = document.getElementById('menuToggle');
+    const sidebar = document.getElementById('sidebar');
+    
+    menuToggle.addEventListener('click', function() {
+      sidebar.classList.toggle('collapsed');
+      
+      // Save state to localStorage
+      const isCollapsed = sidebar.classList.contains('collapsed');
+      localStorage.setItem('sidebarCollapsed', isCollapsed);
+    });
+
+    // Restore sidebar state on page load
+    window.addEventListener('DOMContentLoaded', function() {
+      const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+      if (isCollapsed) {
+        sidebar.classList.add('collapsed');
+      }
+    });
+
+    // Active navigation highlighting
+    document.addEventListener('DOMContentLoaded', function() {
+      const navItems = document.querySelectorAll('.nav-item');
+      const currentPage = window.location.pathname.split('/').pop() || 'Dashboard.html';
+      
+      navItems.forEach(item => {
+        const href = item.getAttribute('href');
+        if (href && href.includes(currentPage)) {
+          item.classList.add('active');
+        }
+      });
+    });
+
+    // Update username dynamically
+    // You can replace this with actual user data from your backend
+    window.addEventListener('DOMContentLoaded', function() {
+      // Example: Get username from session or local storage
+      const loggedInUser = sessionStorage.getItem('username') || 'ADMIN';
+      document.getElementById('username').textContent = loggedInUser;
+    });
+
+    // Logout functionality
+    const logoutLink = document.getElementById('logout-link');
+    if (logoutLink) {
+      logoutLink.addEventListener('click', function(event) {
+        event.preventDefault();
+        
+        if (confirm('Are you sure you want to logout?')) {
+          // Clear session data
+          sessionStorage.clear();
+          localStorage.clear();
+          
+          // Redirect to login page
+          window.location.href = 'Log-in_Register.html';
+        }
+      });
+    }
+  </script>
+</body>
+</html>
