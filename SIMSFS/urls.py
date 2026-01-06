@@ -21,5 +21,5 @@ from django.http import HttpResponse
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('', include('INVENTORY_MANAGEMENT.urls')),        # INCLUDING THE URLS FROM INVENTORY_MANAGEMENT APPLICATION
+    path('', include('SIMSFS.INVENTORY_MANAGEMENT.urls')),        # INCLUDING THE URLS FROM INVENTORY_MANAGEMENT APPLICATION
 ]
