@@ -142,7 +142,6 @@ def logout_view(request):
     return redirect('login')
 
 
-
 # API ENDPOINTS
 @csrf_exempt
 def api_get_inventory(request):
