@@ -37,7 +37,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'INVENTORY_MANAGEMENT',
+    'SIMSFS.INVENTORY_MANAGEMENT',
 ]
 
 MIDDLEWARE = [
@@ -55,7 +55,7 @@ ROOT_URLCONF = 'SIMSFS.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': ['INVENTORY_MANAGEMENT\Templates'],
+        'DIRS': [], # 'INVENTORY_MANAGEMENT\Templates'
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
