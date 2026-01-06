@@ -70,13 +70,20 @@
                     <i class="bx bxs-lock-alt"></i>
                 </div>
 
-                <!-- ADDITIONAL FOR THE ROLE -->
+                <!-- ROLE DROPDOWN WITH CONSISTENT STYLING -->
                 <div class="input-box">
-                    <input type="text" placeholder="Role" name="Role" alt="Role" required>
+                    <select name="Role" alt="Role" title="Role" required class="role-select">
+                        <option value="" disabled selected>Select Role</option>
+                        <option value="Admin">Admin</option>
+                        <option value="Manager">Manager</option>
+                        <option value="Sales Representative">Sales Representative</option>
+                        <option value="Inventory Clerk">Inventory Clerk</option>
+                        <option value="Accountant">Accountant</option>
+                        <!-- Add more roles as needed -->
+                    </select>
                     <i class='bx bxs-user-hexagon'></i> 
                 </div>
                 
-
                 <button type="submit" name="register" class="btn">REGISTER</button>
                 <p>or register with a social media account</p>
 
@@ -87,8 +94,6 @@
                     <a href="#" class="linkedin" title="LinkedIn"><i class="bx bxl-linkedin"></i></a>
                 </div>
             </form>
-            
-            <!--p>Already have an account? <a href="#">Sign in</a></!--p-->
         </div>
 
         <div class="toggle-box">
