@@ -1,22 +1,54 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {% csrf_token %}
+    <meta name="csrf-token" content="{{ csrf_token }}">
 
     <title>LOG IN/REGISTER</title>
 
-    <link rel="stylesheet" href="Log-in_Register.css">
+    <link rel="stylesheet" href="{% static 'Log-in_Register.css' %}">
     <link href='https://cdn.boxicons.com/3.0.3/fonts/basic/boxicons.min.css' rel='stylesheet'>
     <link href='https://cdn.boxicons.com/3.0.3/fonts/brands/boxicons-brands.min.css' rel='stylesheet'>
     <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
 </head>
 
+<script>
+    console.log('Inline script running');
+    
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('DOM Content Loaded');
+        
+        const loginBtn = document.querySelector('.form-box.login button[name="log-in"]');
+        console.log('Login button:', loginBtn);
+        
+        if (loginBtn) {
+            loginBtn.onclick = function(e) {
+                e.preventDefault();
+                alert('LOGIN BUTTON CLICKED!');
+            };
+        }
+        
+        const registerBtn = document.querySelector('.form-box.register button[name="register"]');
+        console.log('Register button:', registerBtn);
+        
+        if (registerBtn) {
+            registerBtn.onclick = function(e) {
+                e.preventDefault();
+                alert('REGISTER BUTTON CLICKED!');
+            };
+        }
+    });
+</script>
+
 <body>
     <div class="container">
         <div class="form-box login" id="form-login">
             <form action="" method="post">
+                {% csrf_token %}
                 <h1>LOG IN</h1>
 
                 <div class="input-box">
@@ -48,6 +80,7 @@
 
         <div class="form-box register" id="form-register">
             <form action="" method="post">
+                {% csrf_token %}
                 <h1>REGISTER</h1>
 
                 <div class="input-box">
@@ -74,17 +107,16 @@
                 <div class="input-box">
                     <select name="Role" alt="Role" title="Role" required class="role-select">
                         <option value="" disabled selected>Select Role</option>
-                        <option value="Admin">Admin</option>
-                        <option value="Manager">Manager</option>
-                        <option value="Sales Representative">Sales Representative</option>
-                        <option value="Inventory Clerk">Inventory Clerk</option>
-                        <option value="Accountant">Accountant</option>
+                        <option value="ADMINISTRATOR">ADMINISTRATOR</option>
+                        <option value="INVENTORY MANAGER">INVENTORY MANAGER</option>
+                        <option value="SALES MANAGER">SALES MANAGER</option>
+                        <option value="PROCUREMENT OFFICER">PROCUREMENT OFFICER</option>
                         <!-- Add more roles as needed -->
                     </select>
                     <i class='bx bxs-user-hexagon'></i> 
                 </div>
                 
-                <button type="submit" name="register" class="btn">REGISTER</button>
+                <button type="button" name="register" class="btn">REGISTER</button>
                 <p>or register with a social media account</p>
 
                 <div class="social-icons">
@@ -112,7 +144,7 @@
         
     </div>
     
-    <script src="Log-in_Register.js" defer></script>
+    <script src="{% static 'Log-in_Register.js' %}" defer></script>
     <script src="https://unpkg.com/boxicons@2.1.4/dist/boxicons.js"></script>
 </body>
 </html>
