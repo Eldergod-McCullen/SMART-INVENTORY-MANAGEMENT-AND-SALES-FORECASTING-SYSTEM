@@ -6,6 +6,7 @@ from django.db import models
 from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
+from django.contrib.auth.hashers import make_password, check_password
 
 # UNDERSTAND THAT WHEN DEFINING CLASS NAMES,YOU DEFINE THEM AS INDIVIDUALS--ItemCategory,PurchaseOrder
 # DIMENSION TABLES/REFERENCE TABLES ALWAYS COME FIRST
@@ -523,7 +524,15 @@ class User(AbstractBaseUser):
     def has_module_perms(self, app_label):
         return True
     
+    def check_password(self, raw_password):
+        """Check if the provided password matches the stored hash"""
+        from django.contrib.auth.hashers import check_password
+        return check_password(raw_password, self.password)
+    
+    def set_password(self, raw_password):
+        """Hash and set the password"""
+        self.password = make_password(raw_password)
+    
     @property
     def is_staff(self):
         return self.is_admin
-    
