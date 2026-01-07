@@ -15,17 +15,19 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
-from django.urls import path
 from django.urls import path, include
 from . import views
 
-
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('', views.index, name='index'),     # FOR THE MAIN INDEX PAGE
-    # Authentication
+    
+    # Authentication URLs
     path('login/', views.login_view, name='login'),
+    path('register/', views.register_view, name='register'),
     path('logout/', views.logout_view, name='logout'),
+    
+    # Main application
+    path('', views.index, name='index'),
     
     # Dynamic content loading endpoints
     path('content/dashboard/', views.dashboard_content, name='dashboard'),
@@ -40,6 +42,8 @@ urlpatterns = [
     path('content/reports/', views.reports_content, name='reports'),
     path('content/forecasting/', views.forecasting_content, name='forecasting'),
     path('content/settings/', views.settings_content, name='settings'),
+    
+    # API endpoints
+    path('api/inventory/', views.api_get_inventory, name='api_get_inventory'),
+    path('api/inventory/save/', views.api_save_inventory, name='api_save_inventory'),
 ]
-
-
