@@ -1,20 +1,17 @@
-from django.db import models
-
-# Create your models here.
-# MODELS ARE BASICALLY THE DATA REPRESENTATIONS GOING ONTO THE DATABASE 
+# Updated models with proper table naming conventions
+# Replace spaces with underscores in db_table and db_column
 
 from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
 from django.contrib.auth.hashers import make_password, check_password
 
-# UNDERSTAND THAT WHEN DEFINING CLASS NAMES,YOU DEFINE THEM AS INDIVIDUALS--ItemCategory,PurchaseOrder
-# DIMENSION TABLES/REFERENCE TABLES ALWAYS COME FIRST
+# DIMENSION TABLES
 class ItemType(models.Model):
     item_type = models.CharField(max_length=50, unique=True, primary_key=True)
     
     class Meta:
-        db_table = 'ITEM TYPES'
+        db_table = 'ITEM_TYPES'  # Changed from 'ITEM TYPES'
         verbose_name = 'Item Type'
         verbose_name_plural = 'Item Types'
     
@@ -26,7 +23,7 @@ class ItemCategory(models.Model):
     item_category = models.CharField(max_length=50, unique=True, primary_key=True)
     
     class Meta:
-        db_table = 'ITEM CATEGORIES'
+        db_table = 'ITEM_CATEGORIES'  # Changed
         verbose_name = 'Item Category'
         verbose_name_plural = 'Item Categories'
     
@@ -38,7 +35,7 @@ class ItemSubcategory(models.Model):
     item_subcategory = models.CharField(max_length=100, unique=True, primary_key=True)
     
     class Meta:
-        db_table = 'ITEM SUBCATEGORIES'
+        db_table = 'ITEM_SUBCATEGORIES'  # Changed
         verbose_name = 'Item Subcategory'
         verbose_name_plural = 'Item Subcategories'
     
@@ -50,7 +47,7 @@ class PaymentMode(models.Model):
     payment_mode = models.CharField(max_length=50, unique=True, primary_key=True)
     
     class Meta:
-        db_table = 'PAYMENT MODES'
+        db_table = 'PAYMENT_MODES'  # Changed
         verbose_name = 'Payment Mode'
         verbose_name_plural = 'Payment Modes'
     
@@ -86,7 +83,7 @@ class PaymentStatus(models.Model):
     payment_status = models.CharField(max_length=50, unique=True, primary_key=True)
     
     class Meta:
-        db_table = 'PAYMENT STATUSES'
+        db_table = 'PAYMENT_STATUSES'  # Changed
         verbose_name = 'Payment Status'
         verbose_name_plural = 'Payment Statuses'
     
@@ -98,7 +95,7 @@ class ReceiptStatus(models.Model):
     receipt_status = models.CharField(max_length=50, unique=True, primary_key=True)
     
     class Meta:
-        db_table = 'RECEIPT STATUSES'
+        db_table = 'RECEIPT_STATUSES'  # Changed
         verbose_name = 'Receipt Status'
         verbose_name_plural = 'Receipt Statuses'
     
@@ -110,7 +107,7 @@ class ShippingStatus(models.Model):
     shipping_status = models.CharField(max_length=50, unique=True, primary_key=True)
     
     class Meta:
-        db_table = 'SHIPPING STATUSES'
+        db_table = 'SHIPPING_STATUSES'  # Changed
         verbose_name = 'Shipping Status'
         verbose_name_plural = 'Shipping Statuses'
     
@@ -122,7 +119,7 @@ class UserRole(models.Model):
     user_role = models.CharField(max_length=50, unique=True, primary_key=True)
     
     class Meta:
-        db_table = 'USER ROLES'
+        db_table = 'USER_ROLES'  # Changed
         verbose_name = 'User Role'
         verbose_name_plural = 'User Roles'
     
@@ -138,9 +135,9 @@ class Inventory(models.Model):
     ]
     
     item_id = models.CharField(max_length=7, unique=True, primary_key=True)
-    item_type = models.ForeignKey(ItemType, on_delete=models.PROTECT, db_column='ITEM TYPE')
-    item_category = models.ForeignKey(ItemCategory, on_delete=models.PROTECT, db_column='ITEM CATEGORY')
-    item_subcategory = models.ForeignKey(ItemSubcategory, on_delete=models.PROTECT, db_column='ITEM SUBCATEGORY')
+    item_type = models.ForeignKey(ItemType, on_delete=models.PROTECT, db_column='ITEM_TYPE')  # Changed
+    item_category = models.ForeignKey(ItemCategory, on_delete=models.PROTECT, db_column='ITEM_CATEGORY')  # Changed
+    item_subcategory = models.ForeignKey(ItemSubcategory, on_delete=models.PROTECT, db_column='ITEM_SUBCATEGORY')  # Changed
     item_name = models.CharField(max_length=100)
     
     purchase_price = models.DecimalField(max_digits=12, decimal_places=2, default=0)
@@ -148,7 +145,6 @@ class Inventory(models.Model):
     
     quantity_purchased = models.IntegerField(default=0)
     quantity_sold = models.IntegerField(default=0)
-    # quantity_remaining IS A COMPUTED PROPERTY
     
     reorder_level = models.IntegerField(default=0)
     reorder_required = models.CharField(max_length=3, choices=REORDER_CHOICES, default='NO')
@@ -163,7 +159,6 @@ class Inventory(models.Model):
         return self.quantity_purchased - self.quantity_sold
     
     def save(self, *args, **kwargs):
-        # SETTING reorder_required BASED ON quantity_remaining
         if self.quantity_remaining <= self.reorder_level:
             self.reorder_required = 'YES'
         else:
@@ -176,15 +171,15 @@ class Inventory(models.Model):
 
 class InventoryItem(models.Model):
     item_id = models.CharField(max_length=7, unique=True, primary_key=True)
-    item_type = models.ForeignKey(ItemType, on_delete=models.PROTECT, db_column='ITEM TYPE')
-    item_category = models.ForeignKey(ItemCategory, on_delete=models.PROTECT, db_column='ITEM CATEGORY')
-    item_subcategory = models.ForeignKey(ItemSubcategory, on_delete=models.PROTECT, db_column='ITEM SUBCATEGORY')
+    item_type = models.ForeignKey(ItemType, on_delete=models.PROTECT, db_column='ITEM_TYPE')
+    item_category = models.ForeignKey(ItemCategory, on_delete=models.PROTECT, db_column='ITEM_CATEGORY')
+    item_subcategory = models.ForeignKey(ItemSubcategory, on_delete=models.PROTECT, db_column='ITEM_SUBCATEGORY')
     item_name = models.CharField(max_length=100)
     purchase_price = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     sale_price = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     
     class Meta:
-        db_table = 'INVENTORY ITEMS'
+        db_table = 'INVENTORY_ITEMS'  # Changed
         verbose_name = 'Inventory Item Master'
         verbose_name_plural = 'Inventory Items Master'
     
@@ -203,7 +198,6 @@ class Supplier(models.Model):
     
     total_purchases = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     total_payments = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    # balance_payable IS A COMPUTED PROPERTY
     
     class Meta:
         db_table = 'SUPPLIERS'
@@ -229,7 +223,6 @@ class Customer(models.Model):
     
     total_sales = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     total_payments = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    # balance_payable IS A COMPUTED PROPERTY
     
     class Meta:
         db_table = 'CUSTOMERS'
@@ -248,7 +241,7 @@ class PurchaseOrder(models.Model):
     po_id = models.CharField(max_length=7, unique=True, primary_key=True)
     date = models.DateField()
     
-    supplier_id = models.ForeignKey(Supplier, on_delete=models.PROTECT, db_column='SUPPLIER ID')
+    supplier_id = models.ForeignKey(Supplier, on_delete=models.PROTECT, db_column='SUPPLIER_ID')  # Changed
     supplier_name = models.CharField(max_length=100)
     bill_number = models.CharField(max_length=6, unique=True)
     
@@ -257,13 +250,12 @@ class PurchaseOrder(models.Model):
     
     total_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     amount_paid = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    # balance_left IS A COMPUTED PROPERTY
     
-    payment_status = models.ForeignKey(PaymentStatus, on_delete=models.PROTECT, db_column='PAYMENT STATUS', blank=True, null=True)
-    shipping_status = models.ForeignKey(ShippingStatus, on_delete=models.PROTECT, db_column='SHIPPING STATUS', blank=True, null=True)
+    payment_status = models.ForeignKey(PaymentStatus, on_delete=models.PROTECT, db_column='PAYMENT_STATUS', blank=True, null=True)  # Changed
+    shipping_status = models.ForeignKey(ShippingStatus, on_delete=models.PROTECT, db_column='SHIPPING_STATUS', blank=True, null=True)  # Changed
     
     class Meta:
-        db_table = 'PURCHASE ORDERS'
+        db_table = 'PURCHASE_ORDERS'  # Changed
         verbose_name = 'Purchase Order'
         verbose_name_plural = 'Purchase Orders'
     
@@ -279,7 +271,7 @@ class SalesOrder(models.Model):
     so_id = models.CharField(max_length=7, unique=True, primary_key=True)
     date = models.DateField()
     
-    customer_id = models.ForeignKey(Customer, on_delete=models.PROTECT, db_column='CUSTOMER ID')
+    customer_id = models.ForeignKey(Customer, on_delete=models.PROTECT, db_column='CUSTOMER_ID')  # Changed
     customer_name = models.CharField(max_length=100)
     invoice_number = models.CharField(max_length=6, unique=True)
     
@@ -288,13 +280,12 @@ class SalesOrder(models.Model):
     
     total_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     amount_received = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    # balance_left IS A COMPUTED PROPERTY
     
-    receipt_status = models.ForeignKey(ReceiptStatus, on_delete=models.PROTECT, db_column='RECEIPT STATUS', blank=True, null=True)
-    shipping_status = models.ForeignKey(ShippingStatus, on_delete=models.PROTECT, db_column='SHIPPING STATUS', blank=True, null=True)
+    receipt_status = models.ForeignKey(ReceiptStatus, on_delete=models.PROTECT, db_column='RECEIPT_STATUS', blank=True, null=True)  # Changed
+    shipping_status = models.ForeignKey(ShippingStatus, on_delete=models.PROTECT, db_column='SHIPPING_STATUS', blank=True, null=True)  # Changed
     
     class Meta:
-        db_table = 'SALES ORDERS'
+        db_table = 'SALES_ORDERS'  # Changed
         verbose_name = 'Sales Order'
         verbose_name_plural = 'Sales Orders'
     
@@ -308,17 +299,17 @@ class SalesOrder(models.Model):
 
 class PurchaseDetail(models.Model):
     detail_id = models.CharField(max_length=6, unique=True, primary_key=True)
-    po_id = models.ForeignKey(PurchaseOrder, on_delete=models.CASCADE, db_column='PO ID')
+    po_id = models.ForeignKey(PurchaseOrder, on_delete=models.CASCADE, db_column='PO_ID')  # Changed
     date = models.DateField()
     
-    supplier_id = models.ForeignKey(Supplier, on_delete=models.PROTECT, db_column='SUPPLIER ID')
+    supplier_id = models.ForeignKey(Supplier, on_delete=models.PROTECT, db_column='SUPPLIER_ID')
     supplier_name = models.CharField(max_length=100)
     county = models.ForeignKey(County, on_delete=models.PROTECT, db_column='COUNTY', blank=True, null=True)
     town = models.ForeignKey(Town, on_delete=models.PROTECT, db_column='TOWN', blank=True, null=True)
     
     bill_number = models.CharField(max_length=6)
     
-    item_id = models.ForeignKey(Inventory, on_delete=models.PROTECT, db_column='ITEM ID')
+    item_id = models.ForeignKey(Inventory, on_delete=models.PROTECT, db_column='ITEM_ID')
     item_type = models.CharField(max_length=50)
     item_category = models.CharField(max_length=50)
     item_subcategory = models.CharField(max_length=50)
@@ -326,15 +317,10 @@ class PurchaseDetail(models.Model):
     
     quantity_purchased = models.IntegerField()
     unit_cost = models.DecimalField(max_digits=12, decimal_places=2)
-    # cost_excluding_tax IS A COMPUTED PROPERTY
     tax_rate = models.DecimalField(max_digits=5, decimal_places=2, default=0)
-    # total_tax IS A COMPUTED PROPERTY
-    # cost_including_tax IS A COMPUTED PROPERTY
-    # shipping_fees IS A COMPUTED PROPERTY
-    # total_purchase_price IS A COMPUTED PROPERTY
     
     class Meta:
-        db_table = 'PURCHASE DETAILS'
+        db_table = 'PURCHASE_DETAILS'  # Changed
         verbose_name = 'Purchase Detail'
         verbose_name_plural = 'Purchase Details'
     
@@ -364,17 +350,17 @@ class PurchaseDetail(models.Model):
 
 class SalesDetail(models.Model):
     detail_id = models.CharField(max_length=6, unique=True, primary_key=True)
-    so_id = models.ForeignKey(SalesOrder, on_delete=models.CASCADE, db_column='SO ID')
+    so_id = models.ForeignKey(SalesOrder, on_delete=models.CASCADE, db_column='SO_ID')  # Changed
     date = models.DateField()
     
-    customer_id = models.ForeignKey(Customer, on_delete=models.PROTECT, db_column='CUSTOMER ID')
+    customer_id = models.ForeignKey(Customer, on_delete=models.PROTECT, db_column='CUSTOMER_ID')
     customer_name = models.CharField(max_length=100)
     county = models.ForeignKey(County, on_delete=models.PROTECT, db_column='COUNTY', blank=True, null=True)
     town = models.ForeignKey(Town, on_delete=models.PROTECT, db_column='TOWN', blank=True, null=True)
     
     invoice_number = models.CharField(max_length=6)
     
-    item_id = models.ForeignKey(Inventory, on_delete=models.PROTECT, db_column='ITEM ID')
+    item_id = models.ForeignKey(Inventory, on_delete=models.PROTECT, db_column='ITEM_ID')
     item_type = models.CharField(max_length=50)
     item_category = models.CharField(max_length=50)
     item_subcategory = models.CharField(max_length=50)
@@ -382,15 +368,10 @@ class SalesDetail(models.Model):
     
     quantity_sold = models.IntegerField()
     unit_price = models.DecimalField(max_digits=12, decimal_places=2)
-    # price_excluding_tax IS A COMPUTED PROPERTY
     tax_rate = models.DecimalField(max_digits=5, decimal_places=2, default=0)
-    # total_tax IS A COMPUTED PROPERTY
-    # price_including_tax IS A COMPUTED PROPERTY
-    # shipping_fees IS A COMPUTED PROPERTY
-    # total_sales_price IS A COMPUTED PROPERTY
     
     class Meta:
-        db_table = 'SALES DETAILS'
+        db_table = 'SALES_DETAILS'  # Changed
         verbose_name = 'Sales Detail'
         verbose_name_plural = 'Sales Details'
     
@@ -422,15 +403,15 @@ class Payment(models.Model):
     transaction_id = models.CharField(max_length=13, unique=True, primary_key=True)
     date = models.DateField()
     
-    supplier_id = models.ForeignKey(Supplier, on_delete=models.PROTECT, db_column='SUPPLIER ID')
+    supplier_id = models.ForeignKey(Supplier, on_delete=models.PROTECT, db_column='SUPPLIER_ID')
     supplier_name = models.CharField(max_length=100)
     county = models.ForeignKey(County, on_delete=models.PROTECT, db_column='COUNTY', blank=True, null=True)
     town = models.ForeignKey(Town, on_delete=models.PROTECT, db_column='TOWN', blank=True, null=True)
     
-    po_id = models.ForeignKey(PurchaseOrder, on_delete=models.PROTECT, db_column='PO ID')
+    po_id = models.ForeignKey(PurchaseOrder, on_delete=models.PROTECT, db_column='PO_ID')
     bill_number = models.CharField(max_length=6)
     
-    payment_mode = models.ForeignKey(PaymentMode, on_delete=models.PROTECT, db_column='PAYMENT MODE')
+    payment_mode = models.ForeignKey(PaymentMode, on_delete=models.PROTECT, db_column='PAYMENT_MODE')
     amount_paid = models.DecimalField(max_digits=12, decimal_places=2)
     
     class Meta:
@@ -446,15 +427,15 @@ class Receipt(models.Model):
     transaction_id = models.CharField(max_length=12, unique=True, primary_key=True)
     date = models.DateField()
     
-    customer_id = models.ForeignKey(Customer, on_delete=models.PROTECT, db_column='CUSTOMER ID')
+    customer_id = models.ForeignKey(Customer, on_delete=models.PROTECT, db_column='CUSTOMER_ID')
     customer_name = models.CharField(max_length=100)
     county = models.ForeignKey(County, on_delete=models.PROTECT, db_column='COUNTY', blank=True, null=True)
     town = models.ForeignKey(Town, on_delete=models.PROTECT, db_column='TOWN', blank=True, null=True)
     
-    so_id = models.ForeignKey(SalesOrder, on_delete=models.PROTECT, db_column='SO ID')
+    so_id = models.ForeignKey(SalesOrder, on_delete=models.PROTECT, db_column='SO_ID')
     invoice_number = models.CharField(max_length=6)
     
-    payment_mode = models.ForeignKey(PaymentMode, on_delete=models.PROTECT, db_column='PAYMENT MODE')
+    payment_mode = models.ForeignKey(PaymentMode, on_delete=models.PROTECT, db_column='PAYMENT_MODE')
     amount_received = models.DecimalField(max_digits=12, decimal_places=2)
     
     class Meta:
@@ -488,7 +469,7 @@ class UserManager(BaseUserManager):
             full_name=full_name,
             phone_number=phone_number,
             password=password,
-            user_role=None  # Set appropriate admin role
+            user_role=None
         )
         user.is_admin = True
         user.save(using=self._db)
@@ -499,8 +480,8 @@ class User(AbstractBaseUser):
     full_name = models.CharField(max_length=100)
     email = models.EmailField(max_length=100, unique=True, primary_key=True)
     phone_number = models.CharField(max_length=12)
-    password = models.CharField(max_length=128)  # Django handles hashing
-    user_role = models.ForeignKey(UserRole, on_delete=models.PROTECT, db_column='USER ROLE', blank=True, null=True)
+    password = models.CharField(max_length=128)
+    user_role = models.ForeignKey(UserRole, on_delete=models.PROTECT, db_column='USER_ROLE', blank=True, null=True)  # Changed
     
     is_active = models.BooleanField(default=True)
     is_admin = models.BooleanField(default=False)
@@ -525,12 +506,10 @@ class User(AbstractBaseUser):
         return True
     
     def check_password(self, raw_password):
-        """Check if the provided password matches the stored hash"""
         from django.contrib.auth.hashers import check_password
         return check_password(raw_password, self.password)
     
     def set_password(self, raw_password):
-        """Hash and set the password"""
         self.password = make_password(raw_password)
     
     @property

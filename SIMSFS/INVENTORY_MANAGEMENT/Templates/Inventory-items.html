@@ -1,10 +1,15 @@
+{% load static %}
 <!DOCTYPE html>
 <html>
 <head>
   <base target="_top">
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Inventory Items</title>
+
+  {% csrf_token %}
+  <meta name="csrf-token" content="{{ csrf_token }}">
+
+  <title>INVENTORY ITEMS</title>
   
   <!-- Google Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600&family=Poppins:wght@400;500;600&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
@@ -464,8 +469,8 @@
     <div class="inventory-container">
     <!-- Header Section -->
     <div class="header-section">
-      <h1>Inventory Items</h1>
-      <p>Add and manage your inventory items</p>
+      <h1>ADD AND MANAGE YOUR INVENTORY ITEMS</h1>
+      <!--p>Inventory Items</!--p-->
     </div>
     
     <!-- Action Bar -->
@@ -514,12 +519,9 @@
             <th width="10%">Item Category</th>
             <th width="12%">Item Subcategory</th>
             <th width="25%">Item Name</th>
-            <th width="7%">QTY Purchased</th>
-            <th width="7%">QTY Sold</th>
-            <th width="7%">Remaining QTY</th>
-            <th width="5%">Reorder Level</th>
-            <th width="5%">Reorder Required</th>
-            <th width="7%">Actions</th>
+            <th width="7%">Purchase price</th>
+            <th width="7%">Sales price</th>
+            
           </tr>
         </thead>
         <tbody id="tableBody">

@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 
@@ -6,7 +7,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <title>INVENTORY</title>
+  <title>{% block title %} INVENTORY {% endblock %}</title>
   
   <!-- Google Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600&family=Poppins:wght@400;500;600&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
@@ -17,7 +18,7 @@
   <!-- Select2 -->
   <link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" rel="stylesheet" />
   
-  <link rel="stylesheet" href="Inventory.css">
+  <link rel="stylesheet" href="{% static 'Inventory.css' %}">
 
 </head>
 
@@ -206,7 +207,7 @@
 
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
-  <script src="Inventory.js"></script>
+  <script src="{% static 'Inventory.js' %}"></script>
   
 </body>
 </html>
