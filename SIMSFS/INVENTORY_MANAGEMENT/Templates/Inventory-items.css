@@ -1,3 +1,4 @@
+
     :root {
       --primary: #1abc9c;
       --primary-light: #d1f2eb;
@@ -156,14 +157,6 @@
     
     .inventory-table tr:hover {
       background-color: rgba(26, 188, 156, 0.05);
-    }
-    
-    .inventory-table .low-stock {
-      background-color: rgba(243, 156, 18, 0.1);
-    }
-    
-    .inventory-table .reorder-needed {
-      background-color: rgba(231, 76, 60, 0.1);
     }
     
     .action-cell {
@@ -391,52 +384,4 @@
       color: var(--gray);
       margin-bottom: 10px;
       font-family: 'Montserrat', sans-serif;
-    }
-    
-    .reorder-flag {
-      display: inline-block;
-      padding: 4px 10px;
-      border-radius: 12px;
-      font-size: 0.85rem;
-      font-weight: 500;
-    }
-    
-    .reorder-yes {
-      background-color: rgba(231, 76, 60, 0.15);
-      color: var(--error);
-    }
-    
-    .reorder-no {
-      background-color: rgba(46, 204, 113, 0.15);
-      color: var(--success);
-    }
-    
-    @media (max-width: 900px) {
-      .action-bar {
-        flex-direction: column;
-      }
-      
-      .btn-group {
-        width: 100%;
-        justify-content: center;
-      }
-      
-      .search-group {
-        width: 100%;
-        justify-content: center;
-      }
-    }
-    
-    @media (max-width: 600px) {
-      .search-group {
-        flex-wrap: wrap;
-      }
-      
-      .search-input {
-        width: 100%;
-      }
-      
-      .inventory-container {
-        padding: 15px;
-      }
     }

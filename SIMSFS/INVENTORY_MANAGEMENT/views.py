@@ -19,8 +19,9 @@ from .models import Customer,SalesOrder,SalesDetail,Receipt
 from .models import UserManager,User
 
 
+# A TEST VIEW TO SEE WHETHER THE Test.html DOCUMENT IS PERFECTLY LOADING
 def test_page(request):
-    return render(request, 'test.html')
+    return render(request, 'Test.html')
 
 # ============= AUTHENTICATION VIEWS =============
 
@@ -210,11 +211,12 @@ def dashboard_content(request):
 
 @login_required(login_url='/login/')
 def inventory_items_content(request):
-    """Load Inventory Items content"""
-    inventory_items = InventoryItem.objects.all()
-    context = {'inventory_items': inventory_items}
-    return render(request, 'Inventory-items.html', context)
-
+    # """Load Inventory Items content"""
+    #inventory_items = InventoryItem.objects.all()
+    #context = {'inventory_items': inventory_items}
+    #return render(request, 'Inventory-items.html', context)
+    """Load Inventory Items content - Returns content only, not full page"""
+    return render(request, 'Inventory-items.html')
 
 @login_required(login_url='/login/')
 def inventory_content(request):

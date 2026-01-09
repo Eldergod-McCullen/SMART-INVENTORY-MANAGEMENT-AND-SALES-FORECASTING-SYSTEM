@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 
@@ -425,92 +426,120 @@
       }
     });
 
-    // Dynamic Content Loading
-    const contentArea = document.getElementById('contentArea');
-    const pageTitle = document.getElementById('pageTitle');
-    const loadingSpinner = document.getElementById('loadingSpinner');
-    const navItems = document.querySelectorAll('.nav-item[data-page]');
+    // Dynamic Content Loading - FIXED VERSION
+const contentArea = document.getElementById('contentArea');
+const pageTitle = document.getElementById('pageTitle');
+const loadingSpinner = document.getElementById('loadingSpinner');
+const navItems = document.querySelectorAll('.nav-item[data-page]');
 
-    // Function to load content dynamically
-    async function loadContent(page, title) {
-      try {
-        // Show loading spinner
-        loadingSpinner.classList.add('active');
-        contentArea.innerHTML = '';
-        contentArea.appendChild(loadingSpinner);
+// Function to load content dynamically
+async function loadContent(page, title) {
+  try {
+    // Show loading spinner
+    loadingSpinner.classList.add('active');
+    contentArea.innerHTML = '';
+    contentArea.appendChild(loadingSpinner);
 
-        // Update page title
-        pageTitle.textContent = title;
+    // Update page title
+    pageTitle.textContent = title;
 
-        // Fetch content from Django backend
-        const response = await fetch(`/content/${page}/`);
-        
-        if (!response.ok) {
-          throw new Error('Failed to load content');
-        }
+    // Fetch content from Django backend
+    const response = await fetch(`/content/${page}/`);
+    
+    if (!response.ok) {
+      throw new Error('Failed to load content');
+    }
 
-        const html = await response.text();
-        
-        // Hide loading spinner
-        loadingSpinner.classList.remove('active');
-        
-        // Insert new content
-        contentArea.innerHTML = html;
+    const html = await response.text();
+    
+    // Hide loading spinner
+    loadingSpinner.classList.remove('active');
+    
+    // Insert new content
+    contentArea.innerHTML = html;
+
+        // KEY FIX: Extract and execute scripts from the loaded content
+        executeScripts(contentArea);
 
         // Save current page to localStorage
         localStorage.setItem('currentPage', page);
         localStorage.setItem('currentTitle', title);
 
       } catch (error) {
-        console.error('Error loading content:', error);
-        loadingSpinner.classList.remove('active');
-        contentArea.innerHTML = `
-          <div style="text-align: center; padding: 50px;">
-            <i class="fas fa-exclamation-triangle" style="font-size: 3rem; color: #e74c3c; margin-bottom: 20px;"></i>
-            <h3 style="color: #e74c3c;">Error Loading Content</h3>
-            <p>Unable to load the requested page. Please try again.</p>
-            <button class="btn" onclick="location.reload()" style="margin-top: 20px; padding: 10px 20px; background: #1abc9c; color: white; border: none; border-radius: 4px; cursor: pointer;">
-              Refresh Page
-            </button>
-          </div>
-        `;
-      }
+    console.error('Error loading content:', error);
+    loadingSpinner.classList.remove('active');
+    contentArea.innerHTML = `
+      <div style="text-align: center; padding: 50px;">
+        <i class="fas fa-exclamation-triangle" style="font-size: 3rem; color: #e74c3c; margin-bottom: 20px;"></i>
+        <h3 style="color: #e74c3c;">Error Loading Content</h3>
+        <p>Unable to load the requested page. Please try again.</p>
+        <button class="btn" onclick="location.reload()" style="margin-top: 20px; padding: 10px 20px; background: #1abc9c; color: white; border: none; border-radius: 4px; cursor: pointer;">
+          Refresh Page
+        </button>
+      </div>
+    `;
+  }
     }
 
-    // Add click event listeners to navigation items
-    navItems.forEach(item => {
-      item.addEventListener('click', function(e) {
-        e.preventDefault();
-        
-        const page = this.getAttribute('data-page');
-        const title = this.getAttribute('data-title');
-
-        // Remove active class from all items
-        navItems.forEach(nav => nav.classList.remove('active'));
-        
-        // Add active class to clicked item
-        this.classList.add('active');
-
-        // Load content
-        loadContent(page, title);
-      });
+// ⭐ NEW FUNCTION: Execute scripts from dynamically loaded content
+function executeScripts(container) {
+  // Find all script tags in the loaded content
+  const scripts = container.querySelectorAll('script');
+  
+  scripts.forEach(oldScript => {
+    // Create a new script element
+    const newScript = document.createElement('script');
+    
+    // Copy all attributes
+    Array.from(oldScript.attributes).forEach(attr => {
+      newScript.setAttribute(attr.name, attr.value);
     });
+    
+    // Copy the script content
+    newScript.textContent = oldScript.textContent;
+    
+    // Replace old script with new one (this triggers execution)
+    oldScript.parentNode.replaceChild(newScript, oldScript);
+  });
+  
+  console.log(`✅ Executed ${scripts.length} script(s) in loaded content`);
+}
+
+
+    // Add click event listeners to navigation items
+navItems.forEach(item => {
+  item.addEventListener('click', function(e) {
+    e.preventDefault();
+    
+    const page = this.getAttribute('data-page');
+    const title = this.getAttribute('data-title');
+
+    // Remove active class from all items
+    navItems.forEach(nav => nav.classList.remove('active'));
+    
+    // Add active class to clicked item
+    this.classList.add('active');
+
+    // Load content
+    loadContent(page, title);
+  });
+});
 
     // Load last visited page or dashboard on page load
-    window.addEventListener('DOMContentLoaded', function() {
-      const lastPage = localStorage.getItem('currentPage') || 'dashboard';
-      const lastTitle = localStorage.getItem('currentTitle') || 'Dashboard';
-      
-      // Find and activate the nav item
-      const activeNav = document.querySelector(`.nav-item[data-page="${lastPage}"]`);
-      if (activeNav) {
-        navItems.forEach(nav => nav.classList.remove('active'));
-        activeNav.classList.add('active');
-      }
+window.addEventListener('DOMContentLoaded', function() {
+  const lastPage = localStorage.getItem('currentPage') || 'dashboard';
+  const lastTitle = localStorage.getItem('currentTitle') || 'Dashboard';
+  
+  // Find and activate the nav item
+  const activeNav = document.querySelector(`.nav-item[data-page="${lastPage}"]`);
+  if (activeNav) {
+    navItems.forEach(nav => nav.classList.remove('active'));
+    activeNav.classList.add('active');
+  }
 
-      // Load the content
-      loadContent(lastPage, lastTitle);
-    });
+  // Load the content
+  loadContent(lastPage, lastTitle);
+});
 
     // Logout functionality
     const logoutLink = document.getElementById('logout-link');
@@ -530,4 +559,4 @@
     }
   </script>
 </body>
-</html>
+</!--html>
