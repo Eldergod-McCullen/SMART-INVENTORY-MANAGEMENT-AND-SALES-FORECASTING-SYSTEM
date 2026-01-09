@@ -43,7 +43,26 @@ urlpatterns = [
     path('content/forecasting/', views.forecasting_content, name='forecasting'),
     path('content/settings/', views.settings_content, name='settings'),
     
-    # API endpoints
+    # API ENDPOINTS
     path('api/inventory/', views.api_get_inventory, name='api_get_inventory'),
     path('api/inventory/save/', views.api_save_inventory, name='api_save_inventory'),
+    
+    # INVENTORY-ITEM URLS
+    path('api/inventory-items/types/', views.api_get_item_types, name='api_get_item_types'),
+    path('api/inventory-items/types/add/', views.api_add_item_type, name='api_add_item_type'),
+    
+    path('api/inventory-items/categories/', views.api_get_item_categories, name='api_get_item_categories'),
+    path('api/inventory-items/categories/add/', views.api_add_item_category, name='api_add_item_category'),
+    
+    path('api/inventory-items/subcategories/', views.api_get_item_subcategories, name='api_get_item_subcategories'),
+    path('api/inventory-items/subcategories/add/', views.api_add_item_subcategory, name='api_add_item_subcategory'),
+    
+    path('api/inventory-items/generate-id/', views.api_generate_item_id, name='api_generate_item_id'),
+    path('api/inventory-items/', views.api_get_inventory_items, name='api_get_inventory_items'),
+    path('api/inventory-items/add/', views.api_add_inventory_item, name='api_add_inventory_item'),
+    path('api/inventory-items/update/', views.api_update_inventory_item, name='api_update_inventory_item'),
+    path('api/inventory-items/delete/', views.api_delete_inventory_item, name='api_delete_inventory_item'),
+    
+    path('test/', views.test_page, name='test'),
+
 ]

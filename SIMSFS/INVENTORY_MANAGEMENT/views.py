@@ -9,12 +9,18 @@ from django.contrib.auth.hashers import make_password
 from django.contrib.auth import authenticate, login, logout
 from django.db.models import Q                                          # IMPORTS FOR COMPLEX QUERIES
 import json                                                             # REMEMBER TO REVIEW THIS GUY AT THE ENDPOINTS
+from django.db import transaction
+from django.db.models import Max
 
 from .models import ItemType,ItemCategory,ItemSubcategory,PaymentMode,County,Town,PaymentStatus,ReceiptStatus,ShippingStatus,UserRole
 from .models import Inventory,InventoryItem
 from .models import Supplier,PurchaseOrder,PurchaseDetail,Payment
 from .models import Customer,SalesOrder,SalesDetail,Receipt
 from .models import UserManager,User
+
+
+def test_page(request):
+    return render(request, 'test.html')
 
 # ============= AUTHENTICATION VIEWS =============
 
@@ -306,3 +312,379 @@ def api_save_inventory(request):
         # Process and save data
         return JsonResponse({'status': 'success'})
     return JsonResponse({'status': 'error'}, status=405)
+
+
+# ============= INVENTORY ITEMS VIEWS =============
+
+@login_required(login_url='/login/')
+def inventory_items_content(request):
+    """Load Inventory Items content"""
+    return render(request, 'Inventory-items.html')
+
+
+@csrf_exempt
+@login_required(login_url='/login/')
+def api_get_item_types(request):
+    """Get all item types"""
+    try:
+        types = list(ItemType.objects.values_list('item_type', flat=True))
+        return JsonResponse({'success': True, 'data': types})
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+@login_required(login_url='/login/')
+def api_add_item_type(request):
+    """Add new item type"""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Invalid request method'}, status=405)
+    
+    try:
+        data = json.loads(request.body)
+        type_name = data.get('type_name', '').strip()
+        
+        if not type_name:
+            return JsonResponse({'success': False, 'message': 'Item type name is required'}, status=400)
+        
+        # Check if already exists
+        if ItemType.objects.filter(item_type=type_name).exists():
+            return JsonResponse({'success': False, 'message': 'Item type already exists'}, status=400)
+        
+        # Create new item type
+        ItemType.objects.create(item_type=type_name)
+        
+        return JsonResponse({'success': True, 'message': 'Item type added successfully'})
+    
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'message': 'Invalid JSON data'}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+@login_required(login_url='/login/')
+def api_get_item_categories(request):
+    """Get all item categories"""
+    try:
+        categories = list(ItemCategory.objects.values_list('item_category', flat=True))
+        return JsonResponse({'success': True, 'data': categories})
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+@login_required(login_url='/login/')
+def api_add_item_category(request):
+    """Add new item category"""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Invalid request method'}, status=405)
+    
+    try:
+        data = json.loads(request.body)
+        category_name = data.get('category_name', '').strip()
+        
+        if not category_name:
+            return JsonResponse({'success': False, 'message': 'Item category name is required'}, status=400)
+        
+        # Check if already exists
+        if ItemCategory.objects.filter(item_category=category_name).exists():
+            return JsonResponse({'success': False, 'message': 'Item category already exists'}, status=400)
+        
+        # Create new item category
+        ItemCategory.objects.create(item_category=category_name)
+        
+        return JsonResponse({'success': True, 'message': 'Item category added successfully'})
+    
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'message': 'Invalid JSON data'}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+@login_required(login_url='/login/')
+def api_get_item_subcategories(request):
+    """Get all item subcategories"""
+    try:
+        subcategories = list(ItemSubcategory.objects.values_list('item_subcategory', flat=True))
+        return JsonResponse({'success': True, 'data': subcategories})
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+@login_required(login_url='/login/')
+def api_add_item_subcategory(request):
+    """Add new item subcategory"""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Invalid request method'}, status=405)
+    
+    try:
+        data = json.loads(request.body)
+        subcategory_name = data.get('subcategory_name', '').strip()
+        
+        if not subcategory_name:
+            return JsonResponse({'success': False, 'message': 'Item subcategory name is required'}, status=400)
+        
+        # Check if already exists
+        if ItemSubcategory.objects.filter(item_subcategory=subcategory_name).exists():
+            return JsonResponse({'success': False, 'message': 'Item subcategory already exists'}, status=400)
+        
+        # Create new item subcategory
+        ItemSubcategory.objects.create(item_subcategory=subcategory_name)
+        
+        return JsonResponse({'success': True, 'message': 'Item subcategory added successfully'})
+    
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'message': 'Invalid JSON data'}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+@login_required(login_url='/login/')
+def api_generate_item_id(request):
+    """Generate unique item ID in format IT00001"""
+    try:
+        # Get the maximum item ID
+        max_item = InventoryItem.objects.aggregate(Max('item_id'))['item_id__max']
+        
+        if max_item:
+            # Extract numeric part and increment
+            num_part = int(max_item[2:]) + 1
+        else:
+            num_part = 1
+        
+        # Format as IT00001
+        new_id = f"IT{num_part:05d}"
+        
+        return JsonResponse({'success': True, 'item_id': new_id})
+    
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+@login_required(login_url='/login/')
+def api_get_inventory_items(request):
+    """Get all inventory items"""
+    try:
+        items = InventoryItem.objects.select_related(
+            'item_type', 'item_category', 'item_subcategory'
+        ).all()
+        
+        items_list = []
+        for item in items:
+            items_list.append({
+                'id': item.item_id,
+                'type': item.item_type.item_type,
+                'category': item.item_category.item_category,
+                'subcategory': item.item_subcategory.item_subcategory,
+                'name': item.item_name,
+                'purchase_price': float(item.purchase_price),
+                'sale_price': float(item.sale_price)
+            })
+        
+        return JsonResponse({'success': True, 'data': items_list})
+    
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+@login_required(login_url='/login/')
+def api_add_inventory_item(request):
+    """Add new inventory item"""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Invalid request method'}, status=405)
+    
+    try:
+        data = json.loads(request.body)
+        
+        # Extract and validate data
+        item_id = data.get('item_id', '').strip()
+        item_type_name = data.get('item_type', '').strip()
+        item_category_name = data.get('item_category', '').strip()
+        item_subcategory_name = data.get('item_subcategory', '').strip()
+        item_name = data.get('item_name', '').strip()
+        purchase_price = data.get('purchase_price', 0)
+        sale_price = data.get('sale_price', 0)
+        
+        # Validation
+        if not all([item_id, item_type_name, item_category_name, item_subcategory_name, item_name]):
+            return JsonResponse({
+                'success': False, 
+                'message': 'All fields are required'
+            }, status=400)
+        
+        # Check if item ID already exists
+        if InventoryItem.objects.filter(item_id=item_id).exists():
+            return JsonResponse({
+                'success': False, 
+                'message': 'Item ID already exists'
+            }, status=400)
+        
+        # Get foreign key objects
+        try:
+            item_type = ItemType.objects.get(item_type=item_type_name)
+            item_category = ItemCategory.objects.get(item_category=item_category_name)
+            item_subcategory = ItemSubcategory.objects.get(item_subcategory=item_subcategory_name)
+        except (ItemType.DoesNotExist, ItemCategory.DoesNotExist, ItemSubcategory.DoesNotExist) as e:
+            return JsonResponse({
+                'success': False, 
+                'message': 'Invalid type, category, or subcategory'
+            }, status=400)
+        
+        # Create inventory item
+        with transaction.atomic():
+            inventory_item = InventoryItem.objects.create(
+                item_id=item_id,
+                item_type=item_type,
+                item_category=item_category,
+                item_subcategory=item_subcategory,
+                item_name=item_name,
+                purchase_price=purchase_price,
+                sale_price=sale_price
+            )
+            
+            # Also create corresponding Inventory record
+            Inventory.objects.create(
+                item_id=item_id,
+                item_type=item_type,
+                item_category=item_category,
+                item_subcategory=item_subcategory,
+                item_name=item_name,
+                purchase_price=purchase_price,
+                sale_price=sale_price,
+                quantity_purchased=0,
+                quantity_sold=0,
+                reorder_level=0,
+                reorder_required='NO'
+            )
+        
+        return JsonResponse({
+            'success': True, 
+            'message': 'Inventory item added successfully'
+        })
+    
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'message': 'Invalid JSON data'}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+@login_required(login_url='/login/')
+def api_update_inventory_item(request):
+    """Update inventory item"""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Invalid request method'}, status=405)
+    
+    try:
+        data = json.loads(request.body)
+        
+        item_id = data.get('item_id', '').strip()
+        item_type_name = data.get('item_type', '').strip()
+        item_category_name = data.get('item_category', '').strip()
+        item_subcategory_name = data.get('item_subcategory', '').strip()
+        item_name = data.get('item_name', '').strip()
+        purchase_price = data.get('purchase_price', 0)
+        sale_price = data.get('sale_price', 0)
+        
+        # Get the item
+        try:
+            item = InventoryItem.objects.get(item_id=item_id)
+        except InventoryItem.DoesNotExist:
+            return JsonResponse({'success': False, 'message': 'Item not found'}, status=404)
+        
+        # Get foreign key objects
+        try:
+            item_type = ItemType.objects.get(item_type=item_type_name)
+            item_category = ItemCategory.objects.get(item_category=item_category_name)
+            item_subcategory = ItemSubcategory.objects.get(item_subcategory=item_subcategory_name)
+        except (ItemType.DoesNotExist, ItemCategory.DoesNotExist, ItemSubcategory.DoesNotExist):
+            return JsonResponse({
+                'success': False, 
+                'message': 'Invalid type, category, or subcategory'
+            }, status=400)
+        
+        # Update item
+        with transaction.atomic():
+            item.item_type = item_type
+            item.item_category = item_category
+            item.item_subcategory = item_subcategory
+            item.item_name = item_name
+            item.purchase_price = purchase_price
+            item.sale_price = sale_price
+            item.save()
+            
+            # Also update Inventory record
+            try:
+                inventory = Inventory.objects.get(item_id=item_id)
+                inventory.item_type = item_type
+                inventory.item_category = item_category
+                inventory.item_subcategory = item_subcategory
+                inventory.item_name = item_name
+                inventory.purchase_price = purchase_price
+                inventory.sale_price = sale_price
+                inventory.save()
+            except Inventory.DoesNotExist:
+                pass
+        
+        return JsonResponse({
+            'success': True, 
+            'message': 'Inventory item updated successfully'
+        })
+    
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'message': 'Invalid JSON data'}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+@login_required(login_url='/login/')
+def api_delete_inventory_item(request):
+    """Delete inventory item"""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Invalid request method'}, status=405)
+    
+    try:
+        data = json.loads(request.body)
+        item_id = data.get('item_id', '').strip()
+        
+        if not item_id:
+            return JsonResponse({'success': False, 'message': 'Item ID is required'}, status=400)
+        
+        try:
+            item = InventoryItem.objects.get(item_id=item_id)
+            
+            # Check if item has inventory (quantity purchased or sold)
+            try:
+                inventory = Inventory.objects.get(item_id=item_id)
+                if inventory.quantity_purchased > 0 or inventory.quantity_sold > 0:
+                    return JsonResponse({
+                        'success': False, 
+                        'message': 'Cannot delete item with existing inventory transactions'
+                    }, status=400)
+            except Inventory.DoesNotExist:
+                pass
+            
+            # Delete both records
+            with transaction.atomic():
+                Inventory.objects.filter(item_id=item_id).delete()
+                item.delete()
+            
+            return JsonResponse({
+                'success': True, 
+                'message': 'Inventory item deleted successfully'
+            })
+        
+        except InventoryItem.DoesNotExist:
+            return JsonResponse({'success': False, 'message': 'Item not found'}, status=404)
+    
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'message': 'Invalid JSON data'}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
