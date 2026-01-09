@@ -520,8 +520,8 @@
             <th width="12%">Item Subcategory</th>
             <th width="25%">Item Name</th>
             <th width="7%">Purchase price</th>
-            <th width="7%">Sales price</th>
-            
+            <th width="7%">Sale price</th>
+            <th width="7%">Actions</th>
           </tr>
         </thead>
         <tbody id="tableBody">
@@ -628,9 +628,14 @@
         <input type="text" id="itemName" class="form-control" required>
       </div>
       <div class="form-group">
-        <label class="required">Reorder Level</label>
-        <input type="number" id="reorderLevel" class="form-control" min="0" required>
+        <label class="required">Purchase Price</label>
+        <input type="number" step="0.01" id="PurchasePrice" class="form-control" required>
       </div>
+      <div class="form-group">
+        <label class="required">Sale Price</label>
+        <input type="number" step="0.01" id="SalePrice" class="form-control" required>
+      </div>
+      
       <div class="modal-footer">
         <button class="btn btn-outline" onclick="closeInventoryModal()">Close</button>
         <button class="btn btn-primary" onclick="saveNewInventoryItem()">Save</button>
