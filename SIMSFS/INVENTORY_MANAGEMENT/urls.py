@@ -64,5 +64,9 @@ urlpatterns = [
     path('api/inventory-items/delete/', views.api_delete_inventory_item, name='api_delete_inventory_item'),
     
     path('test/', views.test_page, name='test'),
-
+    
+    # INVENTORY URLS / Inventory API endpoints
+    path('api/inventory/all/', views.api_get_inventory, name='api_get_inventory'),
+    path('api/inventory/update-reorder/', views.api_update_reorder_level, name='api_update_reorder_level'),
+    path('api/inventory/delete/', views.api_delete_inventory_item, name='api_delete_inventory_item'),
 ]

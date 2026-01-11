@@ -316,7 +316,7 @@ def api_save_inventory(request):
     return JsonResponse({'status': 'error'}, status=405)
 
 
-# ============= INVENTORY ITEMS VIEWS =============
+# =========================== INVENTORY ITEMS VIEWS ======================================================================
 
 @login_required(login_url='/login/')
 def inventory_items_content(request):
@@ -684,6 +684,124 @@ def api_delete_inventory_item(request):
             })
         
         except InventoryItem.DoesNotExist:
+            return JsonResponse({'success': False, 'message': 'Item not found'}, status=404)
+    
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'message': 'Invalid JSON data'}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+    
+# ================================= ADDED FOR THE INVENTORY MODULE ============================================
+    # Get all inventory with calculated fields
+@csrf_exempt
+@login_required(login_url='/login/')
+def api_get_inventory(request):
+    """Get all inventory items with quantities and reorder status"""
+    try:
+        inventory_items = Inventory.objects.select_related(
+            'item_type', 'item_category', 'item_subcategory'
+        ).all()
+        
+        items_list = []
+        for item in inventory_items:
+            remaining_qty = item.quantity_purchased - item.quantity_sold
+            reorder_required = 'YES' if remaining_qty <= item.reorder_level else 'NO'
+            
+            items_list.append({
+                'id': item.item_id,
+                'type': item.item_type.item_type,
+                'category': item.item_category.item_category,
+                'subcategory': item.item_subcategory.item_subcategory,
+                'name': item.item_name,
+                'purchasedQty': item.quantity_purchased,
+                'soldQty': item.quantity_sold,
+                'remainingQty': remaining_qty,
+                'reorderLevel': item.reorder_level,
+                'reorderRequired': reorder_required
+            })
+        
+        return JsonResponse({'success': True, 'data': items_list})
+    
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
+# Update reorder level only
+@csrf_exempt
+@login_required(login_url='/login/')
+def api_update_reorder_level(request):
+    """Update only the reorder level for an inventory item"""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Invalid request method'}, status=405)
+    
+    try:
+        data = json.loads(request.body)
+        item_id = data.get('item_id', '').strip()
+        reorder_level = int(data.get('reorder_level', 0))
+        
+        if not item_id:
+            return JsonResponse({'success': False, 'message': 'Item ID is required'}, status=400)
+        
+        if reorder_level < 0:
+            return JsonResponse({'success': False, 'message': 'Reorder level must be non-negative'}, status=400)
+        
+        try:
+            item = Inventory.objects.get(item_id=item_id)
+            item.reorder_level = reorder_level
+            item.save()  # This will trigger the model's save() method to update reorder_required
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Reorder level updated successfully'
+            })
+        
+        except Inventory.DoesNotExist:
+            return JsonResponse({'success': False, 'message': 'Item not found'}, status=404)
+    
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'message': 'Invalid JSON data'}, status=400)
+    except ValueError:
+        return JsonResponse({'success': False, 'message': 'Reorder level must be a number'}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
+# Delete inventory item (with validation)
+@csrf_exempt
+@login_required(login_url='/login/')
+def api_delete_inventory_item(request):
+    """Delete inventory item only if no stock exists"""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Invalid request method'}, status=405)
+    
+    try:
+        data = json.loads(request.body)
+        item_id = data.get('item_id', '').strip()
+        
+        if not item_id:
+            return JsonResponse({'success': False, 'message': 'Item ID is required'}, status=400)
+        
+        try:
+            item = Inventory.objects.get(item_id=item_id)
+            
+            # Check if item has stock
+            if item.quantity_purchased > 0 or item.quantity_sold > 0:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Cannot delete item with existing stock transactions'
+                }, status=400)
+            
+            # Delete from both tables
+            with transaction.atomic():
+                InventoryItem.objects.filter(item_id=item_id).delete()
+                item.delete()
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Inventory item deleted successfully'
+            })
+        
+        except Inventory.DoesNotExist:
             return JsonResponse({'success': False, 'message': 'Item not found'}, status=404)
     
     except json.JSONDecodeError:

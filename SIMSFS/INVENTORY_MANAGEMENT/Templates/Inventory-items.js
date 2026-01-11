@@ -1,4 +1,4 @@
-    console.log('Starting Inventory Items script...');
+console.log('Starting Inventory Items script...');
     
     // Global variables
     let currentPage = 1;
