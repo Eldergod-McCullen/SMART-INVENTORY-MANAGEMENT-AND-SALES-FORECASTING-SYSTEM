@@ -718,109 +718,43 @@
     </div>
   </div>
   
-  <!-- New Item Type Modal 
-  <div id="typeModal" class="modal">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h2>Add New Item Type</h2>
-        <span class="close-btn" onclick="closeTypeModal()">&times;</span>
-      </div>
-      <div class="form-group">
-        <label class="required">Item Type</label>
-        <input type="text" id="newType" class="form-control" title="Item Type" required>
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-outline" onclick="closeTypeModal()">Close</button>
-        <button class="btn btn-primary" onclick="saveNewType()">Save</button>
-      </div>
-    </div>
-  </div>
-  -->
-
-  <!-- New Item Category Modal 
-  <div id="categoryModal" class="modal">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h2>Add New Item Category</h2>
-        <span class="close-btn" onclick="closeCategoryModal()">&times;</span>
-      </div>
-      <div class="form-group">
-        <label class="required">Item Category</label>
-        <input type="text" id="newCategory" class="form-control" title="Item Category" required>
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-outline" onclick="closeCategoryModal()">Close</button>
-        <button class="btn btn-primary" onclick="saveNewCategory()">Save</button>
-      </div>
-    </div>
-  </div>
-  -->
-
-  <!-- New Item Subcategory Modal 
-  <div id="subcategoryModal" class="modal">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h2>Add New Item Subcategory</h2>
-        <span class="close-btn" onclick="closeSubcategoryModal()">&times;</span>
-      </div>
-      <div class="form-group">
-        <label class="required">Item Subcategory</label>
-        <input type="text" id="newSubcategory" class="form-control" title="Item Subcategory" required>
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-outline" onclick="closeSubcategoryModal()">Close</button>
-        <button class="btn btn-primary" onclick="saveNewSubcategory()">Save</button>
-      </div>
-    </div>
-  </div>
-  -->
-  <!-- New Inventory Item Modal
-  <div id="inventoryModal" class="modal">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h2>Add New Inventory Item</h2>
-        <span class="close-btn" onclick="closeInventoryModal()">&times;</span>
-      </div>
-      <div class="form-group">
-        <label class="required">Item ID</label>
-        <div class="id-generate">
-          <input type="text" id="inventoryId" class="form-control id-field" title="Item ID" readonly>
-          <button class="btn btn-secondary" onclick="generateInventoryId()">Generate</button>
-        </div>
-      </div>
-      <div class="form-group">
-        <label class="required">Item Type</label>
-        <select id="itemType" class="form-control" title="Item Type"></select>
-      </div>
-      <div class="form-group">
-        <label class="required">Item Category</label>
-        <select id="itemCategory" class="form-control" title="Item Category"></select>
-      </div>
-      <div class="form-group">
-        <label class="required">Item Subcategory</label>
-        <select id="itemSubcategory" class="form-control" title="Item Sub-category"></select>
-      </div>
-      <div class="form-group">
-        <label class="required">Item Name</label>
-        <input type="text" id="itemName" class="form-control" title="Item Name" required>
-      </div>
-      <div class="form-group">
-        <label class="required">Reorder Level</label>
-        <input type="number" id="reorderLevel" class="form-control" min="0" title="Reorder level" required>
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-outline" onclick="closeInventoryModal()">Close</button>
-        <button class="btn btn-primary" onclick="saveNewInventoryItem()">Save</button>
-      </div>
-    </div>
-  </div>
-   -->
-
   <!-- Processing Overlay -->
   <div id="processingOverlay" class="processing-overlay">
     <div class="spinner"></div>
     <p>Processing...</p>
   </div>
+
+  <!-- DELETE CONFIRMATION MODAL - ADD THIS -->
+<div id="deleteConfirmModal" class="modal">
+  <div class="modal-content" style="width: 450px;">
+    <div class="modal-header">
+      <h2>Confirm Deletion</h2>
+      <span class="close-btn" onclick="closeDeleteModal()">&times;</span>
+    </div>
+    <div class="modal-body" style="padding: 20px 0;">
+      <i class="fas fa-exclamation-triangle" style="font-size: 3rem; color: #e74c3c; display: block; text-align: center; margin-bottom: 15px;"></i>
+      <p style="text-align: center; font-size: 1.1rem; color: #34495e; margin-bottom: 10px;">
+        Are you sure you want to delete this item?
+      </p>
+      <div id="deleteItemInfo" style="background: #f8f9fa; padding: 15px; border-radius: 6px; margin-top: 15px;">
+        <p style="margin: 5px 0;"><strong>Item ID:</strong> <span id="deleteItemId"></span></p>
+        <p style="margin: 5px 0;"><strong>Item Name:</strong> <span id="deleteItemName"></span></p>
+        <p style="margin: 5px 0;"><strong>Quantity Remaining:</strong> <span id="deleteItemQty" style="font-weight: 600; color: #e74c3c;"></span></p>
+      </div>
+      <p style="text-align: center; font-size: 0.9rem; color: #7f8c8d; margin-top: 15px;">
+        This action cannot be undone.
+      </p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeDeleteModal()">
+        <i class="fas fa-times"></i> Cancel
+      </button>
+      <button class="btn" style="background-color: #e74c3c;" onclick="confirmDelete()">
+        <i class="fas fa-trash"></i> Confirm Delete
+      </button>
+    </div>
+  </div>
+</div>
 
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
@@ -834,6 +768,7 @@ let currentPage = 1;
 const pageSize = 25;
 let allItems = [];
 let filteredItems = [];
+let itemToDelete = null; // Store item data for deletion
 
 // CSRF Token helper
 function getCSRFToken() {
@@ -932,7 +867,9 @@ function renderItemTable() {
                 <button class="action-btn edit-btn" data-item-id="${item.id}">
                     <i class="fas fa-edit"></i>
                 </button>
-                <button class="action-btn delete-btn" data-item-id="${item.id}">
+                <button class="action-btn delete-btn" data-item-id="${item.id}" 
+                        data-item-name="${item.name}" 
+                        data-item-qty="${item.remainingQty}">
                     <i class="fas fa-trash"></i>
                 </button>
                 <button class="action-btn update-btn" style="display:none;" data-item-id="${item.id}">
@@ -949,7 +886,7 @@ function renderItemTable() {
             editItem(this);
         });
         row.querySelector('.delete-btn').addEventListener('click', function() {
-            deleteItem(this.getAttribute('data-item-id'));
+            openDeleteModal(this);
         });
         row.querySelector('.update-btn').addEventListener('click', function() {
             updateItem(this);
@@ -1031,13 +968,60 @@ async function updateItem(button) {
     }
 }
 
-// Delete item
-async function deleteItem(itemId) {
-    if (!confirm('Are you sure you want to delete this inventory item?')) {
+// Open delete confirmation modal
+function openDeleteModal(button) {
+    const itemId = button.getAttribute('data-item-id');
+    const itemName = button.getAttribute('data-item-name');
+    const itemQty = parseInt(button.getAttribute('data-item-qty')) || 0;
+    
+    // Store item data for deletion
+    itemToDelete = {
+        id: itemId,
+        name: itemName,
+        qty: itemQty
+    };
+    
+    // Populate modal with item info
+    document.getElementById('deleteItemId').textContent = itemId;
+    document.getElementById('deleteItemName').textContent = itemName;
+    document.getElementById('deleteItemQty').textContent = itemQty;
+    
+    // Change qty color based on value
+    const qtyElement = document.getElementById('deleteItemQty');
+    if (itemQty > 0) {
+        qtyElement.style.color = '#e74c3c'; // Red for items with stock
+    } else {
+        qtyElement.style.color = '#27ae60'; // Green for zero stock
+    }
+    
+    // Show modal
+    document.getElementById('deleteConfirmModal').style.display = 'block';
+}
+
+// Close delete modal
+function closeDeleteModal() {
+    document.getElementById('deleteConfirmModal').style.display = 'none';
+    itemToDelete = null;
+}
+
+// Confirm delete
+async function confirmDelete() {
+    if (!itemToDelete) {
+        closeDeleteModal();
         return;
     }
     
+    // Check if item has stock
+    if (itemToDelete.qty > 0) {
+        closeDeleteModal();
+        alert('❌ Item with stock in hand can\'t be deleted\n\nItem: ' + itemToDelete.name + '\nQuantity Remaining: ' + itemToDelete.qty);
+        return;
+    }
+    
+    // Proceed with deletion
     showProcessing();
+    closeDeleteModal();
+    
     try {
         const response = await fetch('/api/inventory/delete/', {
             method: 'POST',
@@ -1046,12 +1030,12 @@ async function deleteItem(itemId) {
                 'X-CSRFToken': getCSRFToken()
             },
             credentials: 'same-origin',
-            body: JSON.stringify({ item_id: itemId })
+            body: JSON.stringify({ item_id: itemToDelete.id })
         });
         
         const result = await response.json();
         if (result.success) {
-            alert('Item deleted successfully');
+            alert('✅ Item deleted successfully');
             await loadInventoryItems();
         } else {
             alert('Error: ' + result.message);
@@ -1061,6 +1045,7 @@ async function deleteItem(itemId) {
         alert('Failed to delete item');
     } finally {
         hideProcessing();
+        itemToDelete = null;
     }
 }
 
@@ -1192,7 +1177,15 @@ document.getElementById('searchCriteria')?.addEventListener('change', function()
         helper.style.display = 'none';
     }
 });
-  </script>
+
+// Close modal when clicking outside
+window.onclick = function(event) {
+    const modal = document.getElementById('deleteConfirmModal');
+    if (event.target === modal) {
+        closeDeleteModal();
+    }
+}
+</script>
   
 </body>
 </html>

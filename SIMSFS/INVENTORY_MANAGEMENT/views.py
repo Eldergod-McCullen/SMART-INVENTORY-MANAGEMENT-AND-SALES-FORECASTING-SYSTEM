@@ -7,10 +7,10 @@ from django.contrib import messages                                     # IMPORT
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.hashers import make_password
 from django.contrib.auth import authenticate, login, logout
-from django.db.models import Q                                          # IMPORTS FOR COMPLEX QUERIES
+from django.db.models import Q, Sum, Max                                          # IMPORTS FOR COMPLEX QUERIES
 import json                                                             # REMEMBER TO REVIEW THIS GUY AT THE ENDPOINTS
 from django.db import transaction
-from django.db.models import Max
+from decimal import Decimal
 
 from .models import ItemType,ItemCategory,ItemSubcategory,PaymentMode,County,Town,PaymentStatus,ReceiptStatus,ShippingStatus,UserRole
 from .models import Inventory,InventoryItem
@@ -648,7 +648,7 @@ def api_update_inventory_item(request):
 @csrf_exempt
 @login_required(login_url='/login/')
 def api_delete_inventory_item(request):
-    """Delete inventory item"""
+    """Delete inventory item only if no stock exists"""
     if request.method != 'POST':
         return JsonResponse({'success': False, 'message': 'Invalid request method'}, status=405)
     
@@ -660,30 +660,27 @@ def api_delete_inventory_item(request):
             return JsonResponse({'success': False, 'message': 'Item ID is required'}, status=400)
         
         try:
-            item = InventoryItem.objects.get(item_id=item_id)
+            item = Inventory.objects.get(item_id=item_id)
             
-            # Check if item has inventory (quantity purchased or sold)
-            try:
-                inventory = Inventory.objects.get(item_id=item_id)
-                if inventory.quantity_purchased > 0 or inventory.quantity_sold > 0:
-                    return JsonResponse({
-                        'success': False, 
-                        'message': 'Cannot delete item with existing inventory transactions'
-                    }, status=400)
-            except Inventory.DoesNotExist:
-                pass
+            # Check if item has stock
+            remaining_qty = item.quantity_purchased - item.quantity_sold
+            if remaining_qty > 0:
+                return JsonResponse({
+                    'success': False,
+                    'message': f'Item with stock in hand can\'t be deleted. Quantity Remaining: {remaining_qty}'
+                }, status=400)
             
-            # Delete both records
+            # Delete from both tables
             with transaction.atomic():
-                Inventory.objects.filter(item_id=item_id).delete()
+                InventoryItem.objects.filter(item_id=item_id).delete()
                 item.delete()
             
             return JsonResponse({
-                'success': True, 
+                'success': True,
                 'message': 'Inventory item deleted successfully'
             })
         
-        except InventoryItem.DoesNotExist:
+        except Inventory.DoesNotExist:
             return JsonResponse({'success': False, 'message': 'Item not found'}, status=404)
     
     except json.JSONDecodeError:
@@ -808,3 +805,338 @@ def api_delete_inventory_item(request):
         return JsonResponse({'success': False, 'message': 'Invalid JSON data'}, status=400)
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
+    
+
+# ===================== SUPPLIERS MODULE VIEWS =====================
+
+@login_required(login_url='/login/')
+def suppliers_content(request):
+    """Load Suppliers content page"""
+    return render(request, 'Suppliers.html')
+
+
+# ===================== API ENDPOINTS =====================
+
+@csrf_exempt
+@login_required(login_url='/login/')
+def api_get_counties(request):
+    """Get all counties from database"""
+    try:
+        counties = list(County.objects.values_list('county', flat=True).order_by('county'))
+        return JsonResponse({'success': True, 'data': counties})
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+@login_required(login_url='/login/')
+def api_get_towns(request):
+    """Get all towns from database"""
+    try:
+        towns = list(Town.objects.values_list('town', flat=True).order_by('town'))
+        return JsonResponse({'success': True, 'data': towns})
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+@login_required(login_url='/login/')
+def api_add_county(request):
+    """Add new county"""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Invalid request method'}, status=405)
+    
+    try:
+        data = json.loads(request.body)
+        county_name = data.get('county_name', '').strip()
+        
+        if not county_name:
+            return JsonResponse({'success': False, 'message': 'County name is required'}, status=400)
+        
+        # Check if already exists
+        if County.objects.filter(county__iexact=county_name).exists():
+            return JsonResponse({'success': False, 'message': 'County already exists'}, status=400)
+        
+        # Create new county
+        County.objects.create(county=county_name)
+        
+        return JsonResponse({'success': True, 'message': 'County added successfully'})
+    
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'message': 'Invalid JSON data'}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+@login_required(login_url='/login/')
+def api_add_town(request):
+    """Add new town"""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Invalid request method'}, status=405)
+    
+    try:
+        data = json.loads(request.body)
+        town_name = data.get('town_name', '').strip()
+        
+        if not town_name:
+            return JsonResponse({'success': False, 'message': 'Town name is required'}, status=400)
+        
+        # Check if already exists
+        if Town.objects.filter(town__iexact=town_name).exists():
+            return JsonResponse({'success': False, 'message': 'Town already exists'}, status=400)
+        
+        # Create new town
+        Town.objects.create(town=town_name)
+        
+        return JsonResponse({'success': True, 'message': 'Town added successfully'})
+    
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'message': 'Invalid JSON data'}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+@login_required(login_url='/login/')
+def api_generate_supplier_id(request):
+    """Generate unique supplier ID in format SUP001"""
+    try:
+        # Get the maximum supplier ID
+        max_supplier = Supplier.objects.aggregate(Max('supplier_id'))['supplier_id__max']
+        
+        if max_supplier:
+            # Extract numeric part and increment
+            num_part = int(max_supplier[3:]) + 1
+        else:
+            num_part = 1
+        
+        # Format as SUP001
+        new_id = f"SUP{num_part:03d}"
+        
+        # Make sure it doesn't exist (safety check)
+        while Supplier.objects.filter(supplier_id=new_id).exists():
+            num_part += 1
+            new_id = f"SUP{num_part:03d}"
+        
+        return JsonResponse({'success': True, 'supplier_id': new_id})
+    
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+@login_required(login_url='/login/')
+def api_get_suppliers(request):
+    """Get all suppliers with calculated totals"""
+    try:
+        suppliers = Supplier.objects.select_related('county', 'town').all()
+        
+        suppliers_list = []
+        for supplier in suppliers:
+            # Calculate totals from PurchaseOrders
+            purchase_totals = PurchaseOrder.objects.filter(
+                supplier_id=supplier
+            ).aggregate(
+                total_purchases=Sum('total_amount'),
+                total_payments=Sum('amount_paid')
+            )
+            
+            total_purchases = purchase_totals['total_purchases'] or Decimal('0.00')
+            total_payments = purchase_totals['total_payments'] or Decimal('0.00')
+            balance = total_purchases - total_payments
+            
+            # Update supplier record with calculated values
+            supplier.total_purchases = total_purchases
+            supplier.total_payments = total_payments
+            supplier.save()
+            
+            suppliers_list.append({
+                'id': supplier.supplier_id,
+                'name': supplier.supplier_name,
+                'contact': supplier.phone_number or '',
+                'email': supplier.email or '',
+                'state': supplier.county.county if supplier.county else '',
+                'city': supplier.town.town if supplier.town else '',
+                'purchases': float(total_purchases),
+                'payments': float(total_payments),
+                'balance': float(balance)
+            })
+        
+        return JsonResponse({'success': True, 'data': suppliers_list})
+    
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+@login_required(login_url='/login/')
+def api_add_supplier(request):
+    """Add new supplier"""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Invalid request method'}, status=405)
+    
+    try:
+        data = json.loads(request.body)
+        
+        # Extract and validate data
+        supplier_id = data.get('id', '').strip()
+        supplier_name = data.get('name', '').strip()
+        phone_number = data.get('contact', '').strip()
+        email = data.get('email', '').strip()
+        county_name = data.get('state', '').strip()
+        town_name = data.get('city', '').strip()
+        
+        # Validation
+        if not all([supplier_id, supplier_name, county_name, town_name]):
+            return JsonResponse({
+                'success': False, 
+                'message': 'Supplier ID, Name, County, and Town are required'
+            }, status=400)
+        
+        # Check if supplier ID already exists
+        if Supplier.objects.filter(supplier_id=supplier_id).exists():
+            return JsonResponse({
+                'success': False, 
+                'message': 'Supplier ID already exists'
+            }, status=400)
+        
+        # Get foreign key objects
+        try:
+            county = County.objects.get(county=county_name)
+            town = Town.objects.get(town=town_name)
+        except (County.DoesNotExist, Town.DoesNotExist):
+            return JsonResponse({
+                'success': False, 
+                'message': 'Invalid county or town'
+            }, status=400)
+        
+        # Create supplier
+        Supplier.objects.create(
+            supplier_id=supplier_id,
+            supplier_name=supplier_name,
+            phone_number=phone_number if phone_number else None,
+            email=email if email else None,
+            county=county,
+            town=town,
+            total_purchases=Decimal('0.00'),
+            total_payments=Decimal('0.00')
+        )
+        
+        return JsonResponse({
+            'success': True, 
+            'message': 'Supplier added successfully'
+        })
+    
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'message': 'Invalid JSON data'}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+@login_required(login_url='/login/')
+def api_update_supplier(request):
+    """Update supplier information"""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Invalid request method'}, status=405)
+    
+    try:
+        data = json.loads(request.body)
+        
+        supplier_id = data.get('id', '').strip()
+        supplier_name = data.get('name', '').strip()
+        phone_number = data.get('contact', '').strip()
+        email = data.get('email', '').strip()
+        county_name = data.get('state', '').strip()
+        town_name = data.get('city', '').strip()
+        
+        # Get the supplier
+        try:
+            supplier = Supplier.objects.get(supplier_id=supplier_id)
+        except Supplier.DoesNotExist:
+            return JsonResponse({'success': False, 'message': 'Supplier not found'}, status=404)
+        
+        # Get foreign key objects
+        try:
+            county = County.objects.get(county=county_name)
+            town = Town.objects.get(town=town_name)
+        except (County.DoesNotExist, Town.DoesNotExist):
+            return JsonResponse({
+                'success': False, 
+                'message': 'Invalid county or town'
+            }, status=400)
+        
+        # Update supplier
+        supplier.supplier_name = supplier_name
+        supplier.phone_number = phone_number if phone_number else None
+        supplier.email = email if email else None
+        supplier.county = county
+        supplier.town = town
+        supplier.save()
+        
+        return JsonResponse({
+            'success': True, 
+            'message': 'Supplier updated successfully'
+        })
+    
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'message': 'Invalid JSON data'}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+@login_required(login_url='/login/')
+def api_delete_supplier(request):
+    """Delete supplier (only if balance is zero)"""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Invalid request method'}, status=405)
+    
+    try:
+        data = json.loads(request.body)
+        supplier_id = data.get('supplier_id', '').strip()
+        
+        if not supplier_id:
+            return JsonResponse({'success': False, 'message': 'Supplier ID is required'}, status=400)
+        
+        try:
+            supplier = Supplier.objects.get(supplier_id=supplier_id)
+            
+            # Calculate balance
+            purchase_totals = PurchaseOrder.objects.filter(
+                supplier_id=supplier
+            ).aggregate(
+                total_purchases=Sum('total_amount'),
+                total_payments=Sum('amount_paid')
+            )
+            
+            total_purchases = purchase_totals['total_purchases'] or Decimal('0.00')
+            total_payments = purchase_totals['total_payments'] or Decimal('0.00')
+            balance = total_purchases - total_payments
+            
+            # Check if balance is zero
+            if balance > Decimal('0.00'):
+                return JsonResponse({
+                    'success': False, 
+                    'message': 'Cannot delete supplier with outstanding balance. Please clear all dues first.',
+                    'has_balance': True
+                }, status=400)
+            
+            # Delete supplier
+            supplier.delete()
+            
+            return JsonResponse({
+                'success': True, 
+                'message': 'Supplier deleted successfully'
+            })
+        
+        except Supplier.DoesNotExist:
+            return JsonResponse({'success': False, 'message': 'Supplier not found'}, status=404)
+    
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'message': 'Invalid JSON data'}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+    
+    

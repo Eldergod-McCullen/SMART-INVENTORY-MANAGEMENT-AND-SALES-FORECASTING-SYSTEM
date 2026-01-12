@@ -69,4 +69,17 @@ urlpatterns = [
     path('api/inventory/all/', views.api_get_inventory, name='api_get_inventory'),
     path('api/inventory/update-reorder/', views.api_update_reorder_level, name='api_update_reorder_level'),
     path('api/inventory/delete/', views.api_delete_inventory_item, name='api_delete_inventory_item'),
+    
+     # Suppliers Module URLs
+    path('api/suppliers/counties/', views.api_get_counties, name='api_get_counties'),
+    path('api/suppliers/counties/add/', views.api_add_county, name='api_add_county'),
+    
+    path('api/suppliers/towns/', views.api_get_towns, name='api_get_towns'),
+    path('api/suppliers/towns/add/', views.api_add_town, name='api_add_town'),
+    
+    path('api/suppliers/generate-id/', views.api_generate_supplier_id, name='api_generate_supplier_id'),
+    path('api/suppliers/', views.api_get_suppliers, name='api_get_suppliers'),
+    path('api/suppliers/add/', views.api_add_supplier, name='api_add_supplier'),
+    path('api/suppliers/update/', views.api_update_supplier, name='api_update_supplier'),
+    path('api/suppliers/delete/', views.api_delete_supplier, name='api_delete_supplier'),
 ]
