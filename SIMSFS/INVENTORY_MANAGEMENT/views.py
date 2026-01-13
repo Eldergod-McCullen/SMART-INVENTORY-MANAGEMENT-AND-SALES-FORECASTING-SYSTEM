@@ -1140,3 +1140,346 @@ def api_delete_supplier(request):
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
     
     
+# ========================== CUSTOMER MODULE VIEWS =========================================================================================================
+
+@login_required(login_url='/login/')
+def customers_content(request):
+    """Load Customers content page"""
+    return render(request, 'Customers.html')
+
+
+# =========================== API ENDPOINTS ==========================================================================================================================
+
+@csrf_exempt
+@login_required(login_url='/login/')
+def api_get_counties(request):
+    """Get all counties from database"""
+    try:
+        counties = list(County.objects.values_list('county', flat=True).order_by('county'))
+        return JsonResponse({'success': True, 'data': counties})
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+@login_required(login_url='/login/')
+def api_get_towns(request):
+    """Get all towns from database"""
+    try:
+        towns = list(Town.objects.values_list('town', flat=True).order_by('town'))
+        return JsonResponse({'success': True, 'data': towns})
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+@login_required(login_url='/login/')
+def api_add_county(request):
+    """Add new county"""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Invalid request method'}, status=405)
+    
+    try:
+        data = json.loads(request.body)
+        county_name = data.get('county_name', '').strip()
+        
+        if not county_name:
+            return JsonResponse({'success': False, 'message': 'County name is required'}, status=400)
+        
+        # Check if already exists
+        if County.objects.filter(county__iexact=county_name).exists():
+            return JsonResponse({'success': False, 'message': 'County already exists'}, status=400)
+        
+        # Create new county
+        County.objects.create(county=county_name)
+        
+        return JsonResponse({'success': True, 'message': 'County added successfully'})
+    
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'message': 'Invalid JSON data'}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+@login_required(login_url='/login/')
+def api_add_town(request):
+    """Add new town"""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Invalid request method'}, status=405)
+    
+    try:
+        data = json.loads(request.body)
+        town_name = data.get('town_name', '').strip()
+        
+        if not town_name:
+            return JsonResponse({'success': False, 'message': 'Town name is required'}, status=400)
+        
+        # Check if already exists
+        if Town.objects.filter(town__iexact=town_name).exists():
+            return JsonResponse({'success': False, 'message': 'Town already exists'}, status=400)
+        
+        # Create new town
+        Town.objects.create(town=town_name)
+        
+        return JsonResponse({'success': True, 'message': 'Town added successfully'})
+    
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'message': 'Invalid JSON data'}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+@login_required(login_url='/login/')
+def api_generate_customer_id(request):
+    """Generate unique customer ID in format CUST00001"""
+    try:
+        # Get the maximum customer ID
+        max_customer = Customer.objects.aggregate(Max('customer_id'))['customer_id__max']
+        
+        if max_customer:
+            # Extract numeric part and increment
+            num_part = int(max_customer[4:]) + 1
+        else:
+            num_part = 1
+        
+        # Format as CUST00001
+        new_id = f"CUST{num_part:05d}"
+        
+        # Make sure it doesn't exist (safety check)
+        while Customer.objects.filter(customer_id=new_id).exists():
+            num_part += 1
+            new_id = f"CUST{num_part:05d}"
+        
+        return JsonResponse({'success': True, 'customer_id': new_id})
+    
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+@login_required(login_url='/login/')
+def api_get_customers(request):
+    """Get all customers with calculated totals"""
+    try:
+        customers = Customer.objects.select_related('county', 'town').all()
+        
+        customers_list = []
+        for customer in customers:
+            # Calculate totals from SalesOrders and Receipts
+            sales_totals = SalesOrder.objects.filter(
+                customer_id=customer
+            ).aggregate(
+                total_sales=Sum('total_amount')
+            )
+            
+            receipt_totals = Receipt.objects.filter(
+                customer_id=customer
+            ).aggregate(
+                total_receipts=Sum('amount_received')
+            )
+            
+            total_sales = sales_totals['total_sales'] or Decimal('0.00')
+            total_receipts = receipt_totals['total_receipts'] or Decimal('0.00')
+            balance = total_sales - total_receipts
+            
+            # Update customer record with calculated values
+            customer.total_sales = total_sales
+            customer.total_receipts = total_receipts
+            customer.save()
+            
+            customers_list.append({
+                'id': customer.customer_id,
+                'name': customer.customer_name,
+                'contact': customer.phone_number or '',
+                'email': customer.email or '',
+                'state': customer.county.county if customer.county else '',
+                'city': customer.town.town if customer.town else '',
+                'sales': float(total_sales),
+                'receipts': float(total_receipts),
+                'balance': float(balance)
+            })
+        
+        return JsonResponse({'success': True, 'data': customers_list})
+    
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+@login_required(login_url='/login/')
+def api_add_customer(request):
+    """Add new customer"""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Invalid request method'}, status=405)
+    
+    try:
+        data = json.loads(request.body)
+        
+        # Extract and validate data
+        customer_id = data.get('id', '').strip()
+        customer_name = data.get('name', '').strip()
+        phone_number = data.get('contact', '').strip()
+        email = data.get('email', '').strip()
+        county_name = data.get('state', '').strip()
+        town_name = data.get('city', '').strip()
+        
+        # Validation
+        if not all([customer_id, customer_name, county_name, town_name]):
+            return JsonResponse({
+                'success': False, 
+                'message': 'Customer ID, Name, County, and Town are required'
+            }, status=400)
+        
+        # Check if customer ID already exists
+        if Customer.objects.filter(customer_id=customer_id).exists():
+            return JsonResponse({
+                'success': False, 
+                'message': 'Customer ID already exists'
+            }, status=400)
+        
+        # Get foreign key objects
+        try:
+            county = County.objects.get(county=county_name)
+            town = Town.objects.get(town=town_name)
+        except (County.DoesNotExist, Town.DoesNotExist):
+            return JsonResponse({
+                'success': False, 
+                'message': 'Invalid county or town'
+            }, status=400)
+        
+        # Create customer
+        Customer.objects.create(
+            customer_id=customer_id,
+            customer_name=customer_name,
+            phone_number=phone_number if phone_number else None,
+            email=email if email else None,
+            county=county,
+            town=town,
+            total_sales=Decimal('0.00'),
+            total_receipts=Decimal('0.00')
+        )
+        
+        return JsonResponse({
+            'success': True, 
+            'message': 'Customer added successfully'
+        })
+    
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'message': 'Invalid JSON data'}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+@login_required(login_url='/login/')
+def api_update_customer(request):
+    """Update customer information"""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Invalid request method'}, status=405)
+    
+    try:
+        data = json.loads(request.body)
+        
+        customer_id = data.get('id', '').strip()
+        customer_name = data.get('name', '').strip()
+        phone_number = data.get('contact', '').strip()
+        email = data.get('email', '').strip()
+        county_name = data.get('state', '').strip()
+        town_name = data.get('city', '').strip()
+        
+        # Get the customer
+        try:
+            customer = Customer.objects.get(customer_id=customer_id)
+        except Customer.DoesNotExist:
+            return JsonResponse({'success': False, 'message': 'Customer not found'}, status=404)
+        
+        # Get foreign key objects
+        try:
+            county = County.objects.get(county=county_name)
+            town = Town.objects.get(town=town_name)
+        except (County.DoesNotExist, Town.DoesNotExist):
+            return JsonResponse({
+                'success': False, 
+                'message': 'Invalid county or town'
+            }, status=400)
+        
+        # Update customer
+        customer.customer_name = customer_name
+        customer.phone_number = phone_number if phone_number else None
+        customer.email = email if email else None
+        customer.county = county
+        customer.town = town
+        customer.save()
+        
+        return JsonResponse({
+            'success': True, 
+            'message': 'Customer updated successfully'
+        })
+    
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'message': 'Invalid JSON data'}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+@login_required(login_url='/login/')
+def api_delete_customer(request):
+    """Delete customer (only if balance is zero)"""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Invalid request method'}, status=405)
+    
+    try:
+        data = json.loads(request.body)
+        customer_id = data.get('customer_id', '').strip()
+        
+        if not customer_id:
+            return JsonResponse({'success': False, 'message': 'Customer ID is required'}, status=400)
+        
+        try:
+            customer = Customer.objects.get(customer_id=customer_id)
+            
+            # Calculate balance
+            sales_totals = SalesOrder.objects.filter(
+                customer_id=customer
+            ).aggregate(
+                total_sales=Sum('total_amount')
+            )
+            
+            receipt_totals = Receipt.objects.filter(
+                customer_id=customer
+            ).aggregate(
+                total_receipts=Sum('amount_received')
+            )
+            
+            total_sales = sales_totals['total_sales'] or Decimal('0.00')
+            total_receipts = receipt_totals['total_receipts'] or Decimal('0.00')
+            balance = total_sales - total_receipts
+            
+            # Check if balance is zero
+            if balance > Decimal('0.00'):
+                return JsonResponse({
+                    'success': False, 
+                    'message': 'Customer has outstanding balance. Please clear all dues first.',
+                    'has_balance': True
+                }, status=400)
+            
+            # Delete customer
+            customer.delete()
+            
+            return JsonResponse({
+                'success': True, 
+                'message': 'Customer deleted successfully'
+            })
+        
+        except Customer.DoesNotExist:
+            return JsonResponse({'success': False, 'message': 'Customer not found'}, status=404)
+    
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'message': 'Invalid JSON data'}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+    
+    

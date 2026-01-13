@@ -82,4 +82,17 @@ urlpatterns = [
     path('api/suppliers/add/', views.api_add_supplier, name='api_add_supplier'),
     path('api/suppliers/update/', views.api_update_supplier, name='api_update_supplier'),
     path('api/suppliers/delete/', views.api_delete_supplier, name='api_delete_supplier'),
+    
+    # CUSTOMER URLS
+    path('api/customers/counties/', views.api_get_counties, name='api_get_counties'),
+path('api/customers/counties/add/', views.api_add_county, name='api_add_county_customer'),
+
+path('api/customers/towns/', views.api_get_towns, name='api_get_towns'),
+path('api/customers/towns/add/', views.api_add_town, name='api_add_town_customer'),
+
+path('api/customers/generate-id/', views.api_generate_customer_id, name='api_generate_customer_id'),
+path('api/customers/', views.api_get_customers, name='api_get_customers'),
+path('api/customers/add/', views.api_add_customer, name='api_add_customer'),
+path('api/customers/update/', views.api_update_customer, name='api_update_customer'),
+path('api/customers/delete/', views.api_delete_customer, name='api_delete_customer'),
 ]
