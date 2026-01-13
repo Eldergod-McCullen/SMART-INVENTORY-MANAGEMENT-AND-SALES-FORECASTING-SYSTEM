@@ -900,24 +900,24 @@ def api_add_town(request):
 @csrf_exempt
 @login_required(login_url='/login/')
 def api_generate_supplier_id(request):
-    """Generate unique supplier ID in format SUP001"""
+    """Generate unique supplier ID in format S00001"""
     try:
         # Get the maximum supplier ID
         max_supplier = Supplier.objects.aggregate(Max('supplier_id'))['supplier_id__max']
         
         if max_supplier:
             # Extract numeric part and increment
-            num_part = int(max_supplier[3:]) + 1
+            num_part = int(max_supplier[5:]) + 1
         else:
             num_part = 1
         
         # Format as SUP001
-        new_id = f"SUP{num_part:03d}"
+        new_id = f"S{num_part:05d}"
         
         # Make sure it doesn't exist (safety check)
         while Supplier.objects.filter(supplier_id=new_id).exists():
             num_part += 1
-            new_id = f"SUP{num_part:03d}"
+            new_id = f"S{num_part:05d}"
         
         return JsonResponse({'success': True, 'supplier_id': new_id})
     
@@ -1233,24 +1233,24 @@ def api_add_town(request):
 @csrf_exempt
 @login_required(login_url='/login/')
 def api_generate_customer_id(request):
-    """Generate unique customer ID in format CUST00001"""
+    """Generate unique customer ID in format C00001"""
     try:
         # Get the maximum customer ID
         max_customer = Customer.objects.aggregate(Max('customer_id'))['customer_id__max']
         
         if max_customer:
             # Extract numeric part and increment
-            num_part = int(max_customer[4:]) + 1
+            num_part = int(max_customer[5:]) + 1
         else:
             num_part = 1
         
-        # Format as CUST00001
-        new_id = f"CUST{num_part:05d}"
+        # Format as C00001
+        new_id = f"C{num_part:05d}"
         
         # Make sure it doesn't exist (safety check)
         while Customer.objects.filter(customer_id=new_id).exists():
             num_part += 1
-            new_id = f"CUST{num_part:05d}"
+            new_id = f"C{num_part:05d}"
         
         return JsonResponse({'success': True, 'customer_id': new_id})
     
@@ -1277,16 +1277,16 @@ def api_get_customers(request):
             receipt_totals = Receipt.objects.filter(
                 customer_id=customer
             ).aggregate(
-                total_receipts=Sum('amount_received')
+                total_payments=Sum('amount_received')
             )
             
             total_sales = sales_totals['total_sales'] or Decimal('0.00')
-            total_receipts = receipt_totals['total_receipts'] or Decimal('0.00')
-            balance = total_sales - total_receipts
+            total_payments = receipt_totals['total_receipts'] or Decimal('0.00')
+            balance = total_sales - total_payments
             
             # Update customer record with calculated values
             customer.total_sales = total_sales
-            customer.total_receipts = total_receipts
+            customer.total_payments = total_payments
             customer.save()
             
             customers_list.append({
@@ -1297,7 +1297,7 @@ def api_get_customers(request):
                 'state': customer.county.county if customer.county else '',
                 'city': customer.town.town if customer.town else '',
                 'sales': float(total_sales),
-                'receipts': float(total_receipts),
+                'receipts': float(total_payments),
                 'balance': float(balance)
             })
         
@@ -1358,7 +1358,7 @@ def api_add_customer(request):
             county=county,
             town=town,
             total_sales=Decimal('0.00'),
-            total_receipts=Decimal('0.00')
+            total_payments=Decimal('0.00')
         )
         
         return JsonResponse({
