@@ -95,4 +95,27 @@ path('api/customers/', views.api_get_customers, name='api_get_customers'),
 path('api/customers/add/', views.api_add_customer, name='api_add_customer'),
 path('api/customers/update/', views.api_update_customer, name='api_update_customer'),
 path('api/customers/delete/', views.api_delete_customer, name='api_delete_customer'),
+
+
+# ====================================== PURCHASES MODULE URLs =========================================================================================
+    
+    # Content page
+    path('content/purchases/', views.purchases_content, name='purchases'),
+    
+    # Payment Status APIs
+    path('api/purchases/payment-statuses/', views.api_get_payment_statuses, name='api_get_payment_statuses'),
+    path('api/purchases/payment-statuses/add/', views.api_add_payment_status, name='api_add_payment_status'),
+    
+    # Shipping Status APIs
+    path('api/purchases/shipping-statuses/', views.api_get_shipping_statuses, name='api_get_shipping_statuses'),
+    path('api/purchases/shipping-statuses/add/', views.api_add_shipping_status, name='api_add_shipping_status'),
+    
+    # Purchase Order APIs
+    path('api/purchases/generate-po-id/', views.api_generate_po_id, name='api_generate_po_id'),
+    path('api/purchases/generate-detail-id/', views.api_generate_detail_id, name='api_generate_detail_id'),
+    path('api/purchases/', views.api_get_purchase_orders, name='api_get_purchase_orders'),
+    path('api/purchases/details/<str:po_id>/', views.api_get_po_details, name='api_get_po_details'),
+    path('api/purchases/add/', views.api_add_purchase_order, name='api_add_purchase_order'),
+    path('api/purchases/update/', views.api_update_purchase_order, name='api_update_purchase_order'),
+    path('api/purchases/delete-detail/', views.api_delete_purchase_detail, name='api_delete_purchase_detail'),
 ]

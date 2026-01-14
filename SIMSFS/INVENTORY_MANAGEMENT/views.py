@@ -7,10 +7,11 @@ from django.contrib import messages                                     # IMPORT
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.hashers import make_password
 from django.contrib.auth import authenticate, login, logout
-from django.db.models import Q, Sum, Max                                          # IMPORTS FOR COMPLEX QUERIES
+from django.db.models import Q, Sum, Max, F                                          # IMPORTS FOR COMPLEX QUERIES
 import json                                                             # REMEMBER TO REVIEW THIS GUY AT THE ENDPOINTS
 from django.db import transaction
 from decimal import Decimal
+from datetime import datetime
 
 from .models import ItemType,ItemCategory,ItemSubcategory,PaymentMode,County,Town,PaymentStatus,ReceiptStatus,ShippingStatus,UserRole
 from .models import Inventory,InventoryItem
@@ -1140,7 +1141,7 @@ def api_delete_supplier(request):
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
     
     
-# ========================== CUSTOMER MODULE VIEWS =========================================================================================================
+# ========================================== CUSTOMER MODULE VIEWS ================================================================================
 
 @login_required(login_url='/login/')
 def customers_content(request):
@@ -1148,7 +1149,7 @@ def customers_content(request):
     return render(request, 'Customers.html')
 
 
-# =========================== API ENDPOINTS ==========================================================================================================================
+# ================================================ API ENDPOINTS ====================================================================================
 
 @csrf_exempt
 @login_required(login_url='/login/')
@@ -1240,7 +1241,11 @@ def api_generate_customer_id(request):
         
         if max_customer:
             # Extract numeric part and increment
-            num_part = int(max_customer[5:]) + 1
+            # Handle both C00001 and CUST00001 formats
+            if max_customer.startswith('C'):
+                num_part = int(max_customer[4:]) + 1
+            else:
+                num_part = int(max_customer[1:]) + 1
         else:
             num_part = 1
         
@@ -1261,28 +1266,36 @@ def api_generate_customer_id(request):
 @csrf_exempt
 @login_required(login_url='/login/')
 def api_get_customers(request):
-    """Get all customers with calculated totals"""
+    """
+    Get all customers with calculated totals
+    
+    Logic:
+    - total_sales = Sum of all SalesOrder.total_amount for this customer
+    - total_payments = Sum of all Receipt.amount_received for this customer
+    - balance_receivable = total_sales - total_payments
+    """
     try:
         customers = Customer.objects.select_related('county', 'town').all()
         
         customers_list = []
         for customer in customers:
-            # Calculate totals from SalesOrders and Receipts
+            # Calculate total sales from SalesOrders
             sales_totals = SalesOrder.objects.filter(
                 customer_id=customer
             ).aggregate(
                 total_sales=Sum('total_amount')
             )
             
-            receipt_totals = Receipt.objects.filter(
+            # Calculate total payments from Receipts
+            payment_totals = Receipt.objects.filter(
                 customer_id=customer
             ).aggregate(
                 total_payments=Sum('amount_received')
             )
             
             total_sales = sales_totals['total_sales'] or Decimal('0.00')
-            total_payments = receipt_totals['total_receipts'] or Decimal('0.00')
-            balance = total_sales - total_payments
+            total_payments = payment_totals['total_payments'] or Decimal('0.00')
+            balance_receivable = total_sales - total_payments
             
             # Update customer record with calculated values
             customer.total_sales = total_sales
@@ -1297,8 +1310,8 @@ def api_get_customers(request):
                 'state': customer.county.county if customer.county else '',
                 'city': customer.town.town if customer.town else '',
                 'sales': float(total_sales),
-                'receipts': float(total_payments),
-                'balance': float(balance)
+                'receipts': float(total_payments),  # This is what we send to frontend
+                'balance': float(balance_receivable)
             })
         
         return JsonResponse({'success': True, 'data': customers_list})
@@ -1349,7 +1362,7 @@ def api_add_customer(request):
                 'message': 'Invalid county or town'
             }, status=400)
         
-        # Create customer
+        # Create customer with correct field names
         Customer.objects.create(
             customer_id=customer_id,
             customer_name=customer_name,
@@ -1358,7 +1371,7 @@ def api_add_customer(request):
             county=county,
             town=town,
             total_sales=Decimal('0.00'),
-            total_payments=Decimal('0.00')
+            total_payments=Decimal('0.00')  # CORRECTED: Using total_payments not total_receipts
         )
         
         return JsonResponse({
@@ -1427,7 +1440,14 @@ def api_update_customer(request):
 @csrf_exempt
 @login_required(login_url='/login/')
 def api_delete_customer(request):
-    """Delete customer (only if balance is zero)"""
+    """
+    Delete customer (only if balance is zero)
+    
+    Logic:
+    - Calculate total_sales from all SalesOrders
+    - Calculate total_payments from all Receipts
+    - If balance (total_sales - total_payments) > 0, prevent deletion
+    """
     if request.method != 'POST':
         return JsonResponse({'success': False, 'message': 'Invalid request method'}, status=405)
     
@@ -1441,29 +1461,30 @@ def api_delete_customer(request):
         try:
             customer = Customer.objects.get(customer_id=customer_id)
             
-            # Calculate balance
+            # Calculate balance from SalesOrders and Receipts
             sales_totals = SalesOrder.objects.filter(
                 customer_id=customer
             ).aggregate(
                 total_sales=Sum('total_amount')
             )
             
-            receipt_totals = Receipt.objects.filter(
+            payment_totals = Receipt.objects.filter(
                 customer_id=customer
             ).aggregate(
-                total_receipts=Sum('amount_received')
+                total_payments=Sum('amount_received')
             )
             
             total_sales = sales_totals['total_sales'] or Decimal('0.00')
-            total_receipts = receipt_totals['total_receipts'] or Decimal('0.00')
-            balance = total_sales - total_receipts
+            total_payments = payment_totals['total_payments'] or Decimal('0.00')
+            balance_receivable = total_sales - total_payments
             
             # Check if balance is zero
-            if balance > Decimal('0.00'):
+            if balance_receivable > Decimal('0.00'):
                 return JsonResponse({
                     'success': False, 
-                    'message': 'Customer has outstanding balance. Please clear all dues first.',
-                    'has_balance': True
+                    'message': f'Customer has outstanding balance of {float(balance_receivable):.2f}. Please clear all dues first.',
+                    'has_balance': True,
+                    'balance_amount': float(balance_receivable)
                 }, status=400)
             
             # Delete customer
@@ -1483,3 +1504,545 @@ def api_delete_customer(request):
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
     
     
+# ============================================ PURCHASES MODULE VIEWS ======================================================================================
+
+@login_required(login_url='/login/')
+def purchases_content(request):
+    """Load Purchases content page"""
+    return render(request, 'Purchases.html')
+
+# ================================================ PAYMENT STATUS APIs =====================================================================================
+
+@csrf_exempt
+@login_required(login_url='/login/')
+def api_get_payment_statuses(request):
+    """Get all payment statuses"""
+    try:
+        statuses = list(PaymentStatus.objects.values_list('payment_status', flat=True).order_by('payment_status'))
+        return JsonResponse({'success': True, 'data': statuses})
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+@csrf_exempt
+@login_required(login_url='/login/')
+def api_add_payment_status(request):
+    """Add new payment status"""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Invalid request method'}, status=405)
+    
+    try:
+        data = json.loads(request.body)
+        status_name = data.get('status_name', '').strip()
+        
+        if not status_name:
+            return JsonResponse({'success': False, 'message': 'Payment status name is required'}, status=400)
+        
+        if PaymentStatus.objects.filter(payment_status__iexact=status_name).exists():
+            return JsonResponse({'success': False, 'message': 'Payment status already exists'}, status=400)
+        
+        PaymentStatus.objects.create(payment_status=status_name)
+        
+        return JsonResponse({'success': True, 'message': 'Payment status added successfully'})
+    
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'message': 'Invalid JSON data'}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+# ================================================== SHIPPING STATUS APIs =======================================================================================
+
+@csrf_exempt
+@login_required(login_url='/login/')
+def api_get_shipping_statuses(request):
+    """Get all shipping statuses"""
+    try:
+        statuses = list(ShippingStatus.objects.values_list('shipping_status', flat=True).order_by('shipping_status'))
+        return JsonResponse({'success': True, 'data': statuses})
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+@csrf_exempt
+@login_required(login_url='/login/')
+def api_add_shipping_status(request):
+    """Add new shipping status"""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Invalid request method'}, status=405)
+    
+    try:
+        data = json.loads(request.body)
+        status_name = data.get('status_name', '').strip()
+        
+        if not status_name:
+            return JsonResponse({'success': False, 'message': 'Shipping status name is required'}, status=400)
+        
+        if ShippingStatus.objects.filter(shipping_status__iexact=status_name).exists():
+            return JsonResponse({'success': False, 'message': 'Shipping status already exists'}, status=400)
+        
+        ShippingStatus.objects.create(shipping_status=status_name)
+        
+        return JsonResponse({'success': True, 'message': 'Shipping status added successfully'})
+    
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'message': 'Invalid JSON data'}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+# =================================== PURCHASE ORDER APIs ===================================================================================================
+
+@csrf_exempt
+@login_required(login_url='/login/')
+def api_generate_po_id(request):
+    """Generate unique PO ID in format PO00001 and corresponding Bill Number B00001"""
+    try:
+        max_po = PurchaseOrder.objects.aggregate(Max('po_id'))['po_id__max']
+        
+        if max_po:
+            num_part = int(max_po[2:]) + 1
+        else:
+            num_part = 1
+        
+        new_po_id = f"PO{num_part:05d}"
+        
+        # Make sure it doesn't exist
+        while PurchaseOrder.objects.filter(po_id=new_po_id).exists():
+            num_part += 1
+            new_po_id = f"PO{num_part:05d}"
+        
+        # Generate corresponding bill number
+        bill_number = f"B{num_part:05d}"
+        
+        return JsonResponse({
+            'success': True, 
+            'po_id': new_po_id,
+            'bill_number': bill_number
+        })
+    
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+@csrf_exempt
+@login_required(login_url='/login/')
+def api_generate_detail_id(request):
+    """Generate unique Detail ID in format D00001 - globally incremental"""
+    try:
+        # Get the maximum detail_id from ALL purchase details
+        max_detail = PurchaseDetail.objects.aggregate(Max('detail_id'))['detail_id__max']
+        
+        if max_detail:
+            # Extract numeric part (remove 'D' prefix) and increment
+            num_part = int(max_detail[1:]) + 1
+        else:
+            # First detail ever
+            num_part = 1
+        
+        # Format as D00001
+        new_detail_id = f"D{num_part:05d}"
+        
+        # Safety check: ensure it doesn't exist (should never happen, but good practice)
+        while PurchaseDetail.objects.filter(detail_id=new_detail_id).exists():
+            num_part += 1
+            new_detail_id = f"D{num_part:05d}"
+        
+        return JsonResponse({'success': True, 'detail_id': new_detail_id})
+    
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+    
+    """    LOGIC BEHIND THE DETAIL ID GENERATION
+        # OLD (WRONG - was filtering by PO):
+          max_detail = PurchaseDetail.objects.filter(po_id=current_po).aggregate(Max('detail_id'))
+
+        # NEW (CORRECT - checks ALL details globally):
+          max_detail = PurchaseDetail.objects.aggregate(Max('detail_id'))['detail_id__max']
+    """
+
+@csrf_exempt
+@login_required(login_url='/login/')
+def api_get_purchase_orders(request):
+    """Get all purchase orders with calculated totals"""
+    try:
+        purchase_orders = PurchaseOrder.objects.select_related(
+            'supplier_id', 'county', 'town', 'payment_status', 'shipping_status'
+        ).all().order_by('-date')
+        
+        po_list = []
+        for po in purchase_orders:
+            # Format date as DD/MM/YYYY
+            date_str = po.date.strftime('%d/%m/%Y') if po.date else ''
+            
+            po_list.append({
+                'po_id': po.po_id,
+                'date': date_str,
+                'supplier_id': po.supplier_id.supplier_id if po.supplier_id else '',
+                'supplier_name': po.supplier_name,
+                'bill_number': po.bill_number,
+                'county': po.county.county if po.county else '',
+                'town': po.town.town if po.town else '',
+                'total_amount': float(po.total_amount),
+                'amount_paid': float(po.amount_paid),
+                'balance_left': float(po.total_amount - po.amount_paid),
+                'payment_status': po.payment_status.payment_status if po.payment_status else '',
+                'shipping_status': po.shipping_status.shipping_status if po.shipping_status else ''
+            })
+        
+        return JsonResponse({'success': True, 'data': po_list})
+    
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+@csrf_exempt
+@login_required(login_url='/login/')
+def api_get_po_details(request, po_id):
+    """Get purchase order details including all line items"""
+    try:
+        # Get purchase order
+        po = PurchaseOrder.objects.select_related(
+            'supplier_id', 'county', 'town', 'payment_status', 'shipping_status'
+        ).get(po_id=po_id)
+        
+        # Format date
+        date_str = po.date.strftime('%d/%m/%Y') if po.date else ''
+        
+        po_data = {
+            'po_id': po.po_id,
+            'date': date_str,
+            'supplier_id': po.supplier_id.supplier_id if po.supplier_id else '',
+            'supplier_name': po.supplier_name,
+            'bill_number': po.bill_number,
+            'county': po.county.county if po.county else '',
+            'town': po.town.town if po.town else '',
+            'total_amount': float(po.total_amount),
+            'amount_paid': float(po.amount_paid),
+            'payment_status': po.payment_status.payment_status if po.payment_status else '',
+            'shipping_status': po.shipping_status.shipping_status if po.shipping_status else ''
+        }
+        
+        # Get purchase details
+        details = PurchaseDetail.objects.filter(po_id=po).order_by('detail_id')
+        details_list = []
+        
+        for detail in details:
+            detail_date_str = detail.date.strftime('%d/%m/%Y') if detail.date else ''
+            
+            details_list.append({
+                'detail_id': detail.detail_id,
+                'date': detail_date_str,
+                'po_id': detail.po_id.po_id,
+                'supplier_id': detail.supplier_id.supplier_id if detail.supplier_id else '',
+                'supplier_name': detail.supplier_name,
+                'county': detail.county.county if detail.county else '',
+                'town': detail.town.town if detail.town else '',
+                'bill_number': detail.bill_number,
+                'item_id': detail.item_id.item_id if detail.item_id else '',
+                'item_type': detail.item_type,
+                'item_category': detail.item_category,
+                'item_subcategory': detail.item_subcategory,
+                'item_name': detail.item_name,
+                'quantity_purchased': detail.quantity_purchased,
+                'unit_cost': float(detail.unit_cost),
+                'tax_rate': float(detail.tax_rate),
+                'cost_excluding_tax': float(detail.cost_excluding_tax),
+                'total_tax': float(detail.total_tax),
+                'cost_including_tax': float(detail.cost_including_tax),
+                'shipping_fees': float(detail.shipping_fees),
+                'total_purchase_price': float(detail.total_purchase_price)
+            })
+        
+        return JsonResponse({
+            'success': True,
+            'data': {
+                'purchase_order': po_data,
+                'purchase_details': details_list
+            }
+        })
+    
+    except PurchaseOrder.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Purchase order not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+def parse_date(date_str):
+    """Parse date from DD/MM/YYYY format"""
+    try:
+        return datetime.strptime(date_str, '%d/%m/%Y').date()
+    except:
+        return None
+
+@csrf_exempt
+@login_required(login_url='/login/')
+def api_add_purchase_order(request):
+    """Add new purchase order with details"""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Invalid request method'}, status=405)
+    
+    try:
+        data = json.loads(request.body)
+        
+        # Extract PO header data
+        po_id = data.get('po_id', '').strip()
+        date_str = data.get('date', '').strip()
+        supplier_id = data.get('supplier_id', '').strip()
+        supplier_name = data.get('supplier_name', '').strip()
+        county_name = data.get('county', '').strip()
+        town_name = data.get('town', '').strip()
+        bill_number = data.get('bill_number', '').strip()
+        items = data.get('items', [])
+        
+        # Validation
+        if not all([po_id, date_str, supplier_name, bill_number]):
+            return JsonResponse({
+                'success': False, 
+                'message': 'All PO header fields are required'
+            }, status=400)
+        
+        if not items:
+            return JsonResponse({
+                'success': False, 
+                'message': 'At least one item is required'
+            }, status=400)
+        
+        # Parse date
+        po_date = parse_date(date_str)
+        if not po_date:
+            return JsonResponse({
+                'success': False, 
+                'message': 'Invalid date format. Use DD/MM/YYYY'
+            }, status=400)
+        
+        # Check if PO already exists
+        if PurchaseOrder.objects.filter(po_id=po_id).exists():
+            return JsonResponse({
+                'success': False, 
+                'message': 'Purchase Order ID already exists'
+            }, status=400)
+        
+        # Get foreign key objects
+        try:
+            supplier = Supplier.objects.get(supplier_id=supplier_id)
+            county = County.objects.get(county=county_name) if county_name else None
+            town = Town.objects.get(town=town_name) if town_name else None
+        except (Supplier.DoesNotExist, County.DoesNotExist, Town.DoesNotExist) as e:
+            return JsonResponse({
+                'success': False, 
+                'message': f'Invalid reference: {str(e)}'
+            }, status=400)
+        
+        # Start transaction
+        with transaction.atomic():
+            # Calculate total amount
+            total_amount = sum(Decimal(str(item['total_purchase_price'])) for item in items)
+            
+            # Create Purchase Order
+            purchase_order = PurchaseOrder.objects.create(
+                po_id=po_id,
+                date=po_date,
+                supplier_id=supplier,
+                supplier_name=supplier_name,
+                bill_number=bill_number,
+                county=county,
+                town=town,
+                total_amount=total_amount,
+                amount_paid=Decimal('0.00'),
+                payment_status=None,
+                shipping_status=None
+            )
+            
+            # Create Purchase Details and update inventory
+            for item_data in items:
+                detail_date = parse_date(item_data['date'])
+                if not detail_date:
+                    detail_date = po_date
+                
+                # Get inventory item
+                try:
+                    inventory_item = Inventory.objects.get(item_id=item_data['item_id'])
+                except Inventory.DoesNotExist:
+                    raise Exception(f"Inventory item {item_data['item_id']} not found")
+                
+                # Create purchase detail
+                PurchaseDetail.objects.create(
+                    detail_id=item_data['detail_id'],
+                    po_id=purchase_order,
+                    date=detail_date,
+                    supplier_id=supplier,
+                    supplier_name=supplier_name,
+                    county=county,
+                    town=town,
+                    bill_number=bill_number,
+                    item_id=inventory_item,
+                    item_type=item_data['item_type'],
+                    item_category=item_data['item_category'],
+                    item_subcategory=item_data['item_subcategory'],
+                    item_name=item_data['item_name'],
+                    quantity_purchased=item_data['quantity_purchased'],
+                    unit_cost=Decimal(str(item_data['unit_cost'])),
+                    tax_rate=Decimal(str(item_data['tax_rate']))
+                )
+                
+                # Update inventory quantities
+                inventory_item.quantity_purchased += item_data['quantity_purchased']
+                inventory_item.save()  # This will trigger reorder check
+            
+            # Update supplier total purchases
+            supplier.total_purchases += total_amount
+            supplier.save()
+        
+        return JsonResponse({
+            'success': True, 
+            'message': 'Purchase Order created successfully'
+        })
+    
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'message': 'Invalid JSON data'}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+@csrf_exempt
+@login_required(login_url='/login/')
+def api_update_purchase_order(request):
+    """Update existing purchase order"""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Invalid request method'}, status=405)
+    
+    try:
+        data = json.loads(request.body)
+        
+        po_id = data.get('po_id', '').strip()
+        items = data.get('items', [])
+        
+        if not po_id:
+            return JsonResponse({'success': False, 'message': 'PO ID is required'}, status=400)
+        
+        # Get existing PO
+        try:
+            purchase_order = PurchaseOrder.objects.get(po_id=po_id)
+        except PurchaseOrder.DoesNotExist:
+            return JsonResponse({'success': False, 'message': 'Purchase order not found'}, status=404)
+        
+        with transaction.atomic():
+            # Get existing details to calculate old quantities
+            existing_details = {d.detail_id: d for d in PurchaseDetail.objects.filter(po_id=purchase_order)}
+            
+            # Process each item
+            new_total = Decimal('0.00')
+            processed_details = set()
+            
+            for item_data in items:
+                detail_id = item_data['detail_id']
+                processed_details.add(detail_id)
+                
+                new_qty = item_data['quantity_purchased']
+                total_price = Decimal(str(item_data['total_purchase_price']))
+                new_total += total_price
+                
+                if detail_id in existing_details:
+                    # Update existing detail
+                    detail = existing_details[detail_id]
+                    old_qty = detail.quantity_purchased
+                    qty_diff = new_qty - old_qty
+                    
+                    # Update detail
+                    detail.quantity_purchased = new_qty
+                    detail.unit_cost = Decimal(str(item_data['unit_cost']))
+                    detail.tax_rate = Decimal(str(item_data['tax_rate']))
+                    detail.item_type = item_data['item_type']
+                    detail.item_category = item_data['item_category']
+                    detail.item_subcategory = item_data['item_subcategory']
+                    detail.item_name = item_data['item_name']
+                    
+                    # Update item_id if changed
+                    new_item = Inventory.objects.get(item_id=item_data['item_id'])
+                    if detail.item_id != new_item:
+                        # Reverse old item quantity
+                        detail.item_id.quantity_purchased -= old_qty
+                        detail.item_id.save()
+                        
+                        # Add to new item
+                        new_item.quantity_purchased += new_qty
+                        new_item.save()
+                        
+                        detail.item_id = new_item
+                    else:
+                        # Same item, adjust quantity
+                        detail.item_id.quantity_purchased += qty_diff
+                        detail.item_id.save()
+                    
+                    detail.save()
+            
+            # Handle deleted items (items in DB but not in update)
+            for detail_id, detail in existing_details.items():
+                if detail_id not in processed_details:
+                    # This item was deleted - reverse inventory
+                    detail.item_id.quantity_purchased -= detail.quantity_purchased
+                    detail.item_id.save()
+                    detail.delete()
+            
+            # Update PO total
+            old_total = purchase_order.total_amount
+            total_diff = new_total - old_total
+            
+            purchase_order.total_amount = new_total
+            purchase_order.save()
+            
+            # Update supplier total purchases
+            supplier = purchase_order.supplier_id
+            supplier.total_purchases += total_diff
+            supplier.save()
+        
+        return JsonResponse({
+            'success': True, 
+            'message': 'Purchase Order updated successfully'
+        })
+    
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'message': 'Invalid JSON data'}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+@csrf_exempt
+@login_required(login_url='/login/')
+def api_delete_purchase_detail(request):
+    """Delete a purchase detail and update related records"""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Invalid request method'}, status=405)
+    
+    try:
+        data = json.loads(request.body)
+        detail_id = data.get('detail_id', '').strip()
+        
+        if not detail_id:
+            return JsonResponse({'success': False, 'message': 'Detail ID is required'}, status=400)
+        
+        try:
+            detail = PurchaseDetail.objects.get(detail_id=detail_id)
+        except PurchaseDetail.DoesNotExist:
+            return JsonResponse({'success': False, 'message': 'Purchase detail not found'}, status=404)
+        
+        with transaction.atomic():
+            # Reverse inventory quantity
+            inventory_item = detail.item_id
+            inventory_item.quantity_purchased -= detail.quantity_purchased
+            inventory_item.save()
+            
+            # Update PO total
+            po = detail.po_id
+            po.total_amount -= detail.total_purchase_price
+            po.save()
+            
+            # Update supplier total
+            supplier = detail.supplier_id
+            supplier.total_purchases -= detail.total_purchase_price
+            supplier.save()
+            
+            # Delete detail
+            detail.delete()
+        
+        return JsonResponse({
+            'success': True, 
+            'message': 'Purchase detail deleted successfully'
+        })
+    
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'message': 'Invalid JSON data'}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
