@@ -118,4 +118,26 @@ path('api/customers/delete/', views.api_delete_customer, name='api_delete_custom
     path('api/purchases/add/', views.api_add_purchase_order, name='api_add_purchase_order'),
     path('api/purchases/update/', views.api_update_purchase_order, name='api_update_purchase_order'),
     path('api/purchases/delete-detail/', views.api_delete_purchase_detail, name='api_delete_purchase_detail'),
+    path('api/purchases/get-next-detail-number/', views.api_get_next_detail_number, name='api_get_next_detail_number'),
+    
+    # ====================================== SALES MODULE URLs =========================================================================================
+    
+    # Content page
+    path('content/sales/', views.sales_content, name='sales'),
+    
+    # Receipt Status APIs
+    path('api/sales/receipt-statuses/', views.api_get_receipt_statuses, name='api_get_receipt_statuses'),   
+    path('api/sales/receipt-statuses/add/', views.api_add_receipt_status, name='api_add_receipt_status'),
+    
+    # Shipping Status APIs (reused from purchases)
+    path('api/sales/shipping-statuses/', views.api_get_shipping_statuses_sales, name='api_get_shipping_statuses_sales'),
+    
+    # Sales Order APIs
+    path('api/sales/generate-so-id/', views.api_generate_so_id, name='api_generate_so_id'),
+    path('api/sales/generate-detail-id/', views.api_generate_sales_detail_id, name='api_generate_sales_detail_id'),
+    path('api/sales/', views.api_get_sales_orders, name='api_get_sales_orders'),
+    path('api/sales/details/<str:so_id>/', views.api_get_so_details, name='api_get_so_details'),
+    path('api/sales/add/', views.api_add_sales_order, name='api_add_sales_order'),
+    path('api/sales/update/', views.api_update_sales_order, name='api_update_sales_order'),
+    path('api/sales/delete-detail/', views.api_delete_sales_detail, name='api_delete_sales_detail'),
 ]

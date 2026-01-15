@@ -471,7 +471,7 @@
   <div class="purchase-container">
     <!-- Header Section -->
     <div class="header-section">
-      <h1>CREATE AND MANAGE YOUR PURCHASE ORDERS</h1>
+      <h1>CREATE AND MANAGE YOUR PURCHASE ORDERS AND THEIR DETAILS</h1>
     </div>
     
     <!-- Action Bar -->
@@ -652,18 +652,18 @@
                 <th>Supplier Name</th>
                 <th>County</th>
                 <th>Town</th>
-                <th>Bill Num</th>
+                <th>Bill Number</th>
                 <th>Item ID</th>
                 <th>Item Type</th>
                 <th>Item Category</th>
                 <th>Item Subcategory</th>
                 <th>Item Name</th>
-                <th>QTY</th>
+                <th>Quantity</th>
                 <th>Unit Cost</th>
-                <th>Cost Excl Tax</th>
+                <th>Cost Excluding Tax</th>
                 <th>Tax Rate (%)</th>
                 <th>Total Tax</th>
-                <th>Cost Incl Tax</th>
+                <th>Cost Inclusive of Tax</th>
                 <th>Shipping Fees</th>
                 <th>Total Price</th>
                 <th>Action</th>
@@ -708,6 +708,7 @@
     let poIsEditMode = false;
     let poCurrentPOID = null;
     let poDetailCounter = 1;
+    let poNextDetailNumber = null;          // Global variable to track the detail counter
 
     // CSRF Token
     function getCSRFToken() {
@@ -1042,103 +1043,142 @@
       }
     }
 
-    // Add item row
-    async function poAddItemRow() {
-      const poID = document.getElementById('poPOID').value;
-      const poDate = document.getElementById('poPODate').value;
-      const supplierID = document.getElementById('poSupplierID').value;
-      const supplierName = $('#poSupplierName').val();
-      const county = document.getElementById('poCounty').value;
-      const town = document.getElementById('poTown').value;
-      const billNum = document.getElementById('poBillNum').value;
-      
-      if (!poID || !poDate || !supplierName) {
-        alert('Please fill PO ID, Date, and Supplier Name first');
-        return;
-      }
-      
-      // Generate detail ID
-      showProcessing();
-      try {
-        const response = await fetch('/api/purchases/generate-detail-id/', {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': getCSRFToken()
-          },
-          credentials: 'same-origin'
-        });
-        
-        const result = await response.json();
-        if (result.success) {
-          const detailID = result.detail_id;
-          
-          const tbody = document.getElementById('poItemsTableBody');
-          const row = document.createElement('tr');
-          row.setAttribute('data-detail-id', detailID);
-          
-          // Create item name dropdown options
-          let itemOptions = '<option value="">Select Item</option>';
-          poInventoryItems.forEach(item => {
-            itemOptions += `<option value="${item.name}" data-item-id="${item.id}" data-type="${item.type}" data-category="${item.category}" data-subcategory="${item.subcategory}" data-purchase-price="${item.purchase_price}">${item.name}</option>`;
-          });
-          
-          row.innerHTML = `
-            <td><input type="text" class="readonly" value="${poDate}" readonly></td>
-            <td><input type="text" class="readonly" value="${poID}" readonly></td>
-            <td><input type="text" class="readonly" value="${detailID}" readonly></td>
-            <td><input type="text" class="readonly" value="${supplierID}" readonly></td>
-            <td><input type="text" class="readonly" value="${supplierName}" readonly></td>
-            <td><input type="text" class="readonly" value="${county}" readonly></td>
-            <td><input type="text" class="readonly" value="${town}" readonly></td>
-            <td><input type="text" class="readonly" value="${billNum}" readonly></td>
-            <td><input type="text" class="readonly item-id" value="" readonly></td>
-            <td><input type="text" class="readonly item-type" value="" readonly></td>
-            <td><input type="text" class="readonly item-category" value="" readonly></td>
-            <td><input type="text" class="readonly item-subcategory" value="" readonly></td>
-            <td><select class="item-name-select" style="min-width: 200px;">${itemOptions}</select></td>
-            <td><input type="number" class="qty-input" min="1" value="1"></td>
-            <td><input type="text" class="readonly unit-cost" value="0.00" readonly></td>
-            <td><input type="text" class="readonly cost-excl-tax" value="0.00" readonly></td>
-            <td><input type="number" class="tax-rate-input" step="0.01" min="0" value="0"></td>
-            <td><input type="text" class="readonly total-tax" value="0.00" readonly></td>
-            <td><input type="text" class="readonly cost-incl-tax" value="0.00" readonly></td>
-            <td><input type="text" class="readonly shipping-fees" value="0.00" readonly></td>
-            <td><input type="text" class="readonly total-price" value="0.00" readonly></td>
-            <td>
-              <button class="remove-item-btn" onclick="poRemoveItemRow(this)">
-                <i class="fas fa-trash"></i>
-              </button>
-            </td>
-          `;
-          
-          tbody.appendChild(row);
-          
-          // Initialize Select2 for item name
-          $(row).find('.item-name-select').select2({
-            placeholder: 'Select Item',
-            allowClear: true,
-            dropdownParent: $('#poNewPOModal')
-          }).on('change', function() {
-            poItemChanged(this);
-          });
-          
-          // Add event listeners for calculations
-          $(row).find('.qty-input, .tax-rate-input').on('input', function() {
-            poCalculateRowTotals(row);
-          });
-          
-          poDetailCounter++;
-        } else {
-          alert('Error generating Detail ID: ' + result.message);
-        }
-      } catch (error) {
-        console.error('Error generating Detail ID:', error);
-        alert('Failed to generate Detail ID');
-      } finally {
-        hideProcessing();
-      }
+    // Load the next available detail number on page load
+async function loadNextDetailNumber() {
+  try {
+    const response = await fetch('/api/purchases/get-next-detail-number/', {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': getCSRFToken()
+      },
+      credentials: 'same-origin'
+    });
+    
+    const result = await response.json();
+    if (result.success) {
+      poNextDetailNumber = result.next_number;
     }
+  } catch (error) {
+    console.error('Error loading next detail number:', error);
+    poNextDetailNumber = 1;
+  }
+}
+
+// Update DOMContentLoaded to load the next detail number
+document.addEventListener('DOMContentLoaded', function() {
+  console.log('DOM loaded, initializing purchases...');
+  loadSuppliers();
+  loadInventoryItems();
+  loadPMTStatuses();
+  loadShippingStatuses();
+  loadPurchaseOrders();
+  loadNextDetailNumber(); // ← Add this line
+  initializeDatePicker();
+});
+
+// FIXED: Add item row with client-side Detail ID generation
+async function poAddItemRow() {
+  const poID = document.getElementById('poPOID').value;
+  const poDate = document.getElementById('poPODate').value;
+  const supplierID = document.getElementById('poSupplierID').value;
+  const supplierName = $('#poSupplierName').val();
+  const county = document.getElementById('poCounty').value;
+  const town = document.getElementById('poTown').value;
+  const billNum = document.getElementById('poBillNum').value;
+  
+  if (!poID || !poDate || !supplierName) {
+    alert('Please fill PO ID, Date, and Supplier Name first');
+    return;
+  }
+  
+  // Generate Detail ID on CLIENT SIDE (no server call needed)
+  if (poNextDetailNumber === null) {
+    await loadNextDetailNumber();
+  }
+  
+  const detailID = `D${String(poNextDetailNumber).padStart(5, '0')}`;
+  poNextDetailNumber++; // Increment for next item
+  
+  const tbody = document.getElementById('poItemsTableBody');
+  const row = document.createElement('tr');
+  row.setAttribute('data-detail-id', detailID);
+  
+  // Create item name dropdown options
+  let itemOptions = '<option value="">Select Item</option>';
+  poInventoryItems.forEach(item => {
+    itemOptions += `<option value="${item.name}" data-item-id="${item.id}" data-type="${item.type}" data-category="${item.category}" data-subcategory="${item.subcategory}" data-purchase-price="${item.purchase_price}">${item.name}</option>`;
+  });
+  
+  row.innerHTML = `
+    <td><input type="text" class="readonly" value="${poDate}" readonly></td>
+    <td><input type="text" class="readonly" value="${poID}" readonly></td>
+    <td><input type="text" class="readonly" value="${detailID}" readonly></td>
+    <td><input type="text" class="readonly" value="${supplierID}" readonly></td>
+    <td><input type="text" class="readonly" value="${supplierName}" readonly></td>
+    <td><input type="text" class="readonly" value="${county}" readonly></td>
+    <td><input type="text" class="readonly" value="${town}" readonly></td>
+    <td><input type="text" class="readonly" value="${billNum}" readonly></td>
+    <td><input type="text" class="readonly item-id" value="" readonly></td>
+    <td><input type="text" class="readonly item-type" value="" readonly></td>
+    <td><input type="text" class="readonly item-category" value="" readonly></td>
+    <td><input type="text" class="readonly item-subcategory" value="" readonly></td>
+    <td><select class="item-name-select" style="min-width: 200px;">${itemOptions}</select></td>
+    <td><input type="number" class="qty-input" min="1" value="1"></td>
+    <td><input type="text" class="readonly unit-cost" value="0.00" readonly></td>
+    <td><input type="text" class="readonly cost-excl-tax" value="0.00" readonly></td>
+    <td><input type="number" class="tax-rate-input" step="0.01" min="0" value="0"></td>
+    <td><input type="text" class="readonly total-tax" value="0.00" readonly></td>
+    <td><input type="text" class="readonly cost-incl-tax" value="0.00" readonly></td>
+    <td><input type="text" class="readonly shipping-fees" value="0.00" readonly></td>
+    <td><input type="text" class="readonly total-price" value="0.00" readonly></td>
+    <td>
+      <button class="remove-item-btn" onclick="poRemoveItemRow(this)">
+        <i class="fas fa-trash"></i>
+      </button>
+    </td>
+  `;
+  
+  tbody.appendChild(row);
+  
+  // Initialize Select2 for item name
+  $(row).find('.item-name-select').select2({
+    placeholder: 'Select Item',
+    allowClear: true,
+    dropdownParent: $('#poNewPOModal')
+  }).on('change', function() {
+    poItemChanged(this);
+  });
+  
+  // Add event listeners for calculations
+  $(row).find('.qty-input, .tax-rate-input').on('input', function() {
+    poCalculateRowTotals(row);
+  });
+}
+
+// Update poOpenNewPOModal to reset counter when opening new PO
+function poOpenNewPOModal() {
+  poIsEditMode = false;
+  poCurrentPOID = null;
+  document.getElementById('poModalTitle').textContent = 'Create New Purchase Order';
+  document.getElementById('poSaveBtn').textContent = 'Save PO';
+  document.getElementById('poGenerateBtn').style.display = 'inline-block';
+  
+  // Clear form
+  document.getElementById('poPOID').value = '';
+  document.getElementById('poPODate').value = '';
+  $('#poSupplierName').val('').trigger('change');
+  document.getElementById('poSupplierID').value = '';
+  document.getElementById('poCounty').value = '';
+  document.getElementById('poTown').value = '';
+  document.getElementById('poBillNum').value = '';
+  document.getElementById('poItemsTableBody').innerHTML = '';
+  
+  // Reset detail counter for new PO
+  loadNextDetailNumber(); // ← Reload to get latest number
+  
+  document.getElementById('poNewPOModal').style.display = 'block';
+}
 
     // Item changed event
     function poItemChanged(selectElement) {

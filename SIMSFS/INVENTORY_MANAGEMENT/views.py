@@ -1655,7 +1655,26 @@ def api_generate_detail_id(request):
         # NEW (CORRECT - checks ALL details globally):
           max_detail = PurchaseDetail.objects.aggregate(Max('detail_id'))['detail_id__max']
     """
-
+    
+# ======================== API FOR GENERATING A NEW DETAIL ID FOR EVERY PURCHASE ORDER ITEM ===================================================================
+@csrf_exempt
+@login_required(login_url='/login/')
+def api_get_next_detail_number(request):
+    """Get the next available detail number (not full ID, just the number)"""
+    try:
+        max_detail = PurchaseDetail.objects.aggregate(Max('detail_id'))['detail_id__max']
+        
+        if max_detail:
+            next_number = int(max_detail[1:]) + 1
+        else:
+            next_number = 1
+        
+        return JsonResponse({'success': True, 'next_number': next_number})
+    
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+    
+    
 @csrf_exempt
 @login_required(login_url='/login/')
 def api_get_purchase_orders(request):
@@ -2040,6 +2059,526 @@ def api_delete_purchase_detail(request):
         return JsonResponse({
             'success': True, 
             'message': 'Purchase detail deleted successfully'
+        })
+    
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'message': 'Invalid JSON data'}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+    
+    
+# ============================================ SALES MODULE VIEWS ======================================================================================
+
+@login_required(login_url='/login/')
+def sales_content(request):
+    """Load Sales content page"""
+    return render(request, 'Sales.html')
+
+# ================================================ RECEIPT STATUS APIs =====================================================================================
+
+@csrf_exempt
+@login_required(login_url='/login/')
+def api_get_receipt_statuses(request):
+    """Get all receipt statuses"""
+    try:
+        statuses = list(ReceiptStatus.objects.values_list('receipt_status', flat=True).order_by('receipt_status'))
+        return JsonResponse({'success': True, 'data': statuses})
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+@csrf_exempt
+@login_required(login_url='/login/')
+def api_add_receipt_status(request):
+    """Add new receipt status"""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Invalid request method'}, status=405)
+    
+    try:
+        data = json.loads(request.body)
+        status_name = data.get('status_name', '').strip()
+        
+        if not status_name:
+            return JsonResponse({'success': False, 'message': 'Receipt status name is required'}, status=400)
+        
+        if ReceiptStatus.objects.filter(receipt_status__iexact=status_name).exists():
+            return JsonResponse({'success': False, 'message': 'Receipt status already exists'}, status=400)
+        
+        ReceiptStatus.objects.create(receipt_status=status_name)
+        
+        return JsonResponse({'success': True, 'message': 'Receipt status added successfully'})
+    
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'message': 'Invalid JSON data'}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+# ================================================== SHIPPING STATUS APIs (REUSED FROM THE PURCHASES MODULE AS IT IS THE SAME THING) =======================================================================================
+
+@csrf_exempt
+@login_required(login_url='/login/')
+def api_get_shipping_statuses_sales(request):
+    """Get all shipping statuses"""
+    try:
+        statuses = list(ShippingStatus.objects.values_list('shipping_status', flat=True).order_by('shipping_status'))
+        return JsonResponse({'success': True, 'data': statuses})
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+# =================================== SALES ORDER APIs ===================================================================================================
+
+@csrf_exempt
+@login_required(login_url='/login/')
+def api_generate_so_id(request):
+    """Generate unique SO ID in format SO00001 and corresponding Invoice Number I00001"""
+    try:
+        max_so = SalesOrder.objects.aggregate(Max('so_id'))['so_id__max']
+        
+        if max_so:
+            num_part = int(max_so[2:]) + 1
+        else:
+            num_part = 1
+        
+        new_so_id = f"SO{num_part:05d}"
+        
+        # Make sure it doesn't exist
+        while SalesOrder.objects.filter(so_id=new_so_id).exists():
+            num_part += 1
+            new_so_id = f"SO{num_part:05d}"
+        
+        # Generate corresponding invoice number
+        invoice_number = f"I{num_part:05d}"
+        
+        return JsonResponse({
+            'success': True, 
+            'so_id': new_so_id,
+            'invoice_number': invoice_number
+        })
+    
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+@csrf_exempt
+@login_required(login_url='/login/')
+def api_generate_sales_detail_id(request):
+    """
+    Generate unique Detail ID in format D00001 - globally incremental across BOTH purchases and sales
+    This ensures Detail IDs are unique across the entire system
+    """
+    try:
+        # Get the maximum detail_id from BOTH PurchaseDetail AND SalesDetail
+        max_purchase_detail = PurchaseDetail.objects.aggregate(Max('detail_id'))['detail_id__max']
+        max_sales_detail = SalesDetail.objects.aggregate(Max('detail_id'))['detail_id__max']
+        
+        # Compare both and get the highest
+        max_details = [max_purchase_detail, max_sales_detail]
+        max_details = [d for d in max_details if d is not None]  # Remove None values
+        
+        if max_details:
+            # Extract numeric parts and get the maximum
+            max_nums = [int(d[1:]) for d in max_details]
+            num_part = max(max_nums) + 1
+        else:
+            # First detail ever in the entire system
+            num_part = 1
+        
+        # Format as D00001
+        new_detail_id = f"D{num_part:05d}"
+        
+        # Safety check: ensure it doesn't exist in EITHER table
+        while (PurchaseDetail.objects.filter(detail_id=new_detail_id).exists() or 
+               SalesDetail.objects.filter(detail_id=new_detail_id).exists()):
+            num_part += 1
+            new_detail_id = f"D{num_part:05d}"
+        
+        return JsonResponse({'success': True, 'detail_id': new_detail_id})
+    
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+@csrf_exempt
+@login_required(login_url='/login/')
+def api_get_sales_orders(request):
+    """Get all sales orders with calculated totals"""
+    try:
+        sales_orders = SalesOrder.objects.select_related(
+            'customer_id', 'county', 'town', 'receipt_status', 'shipping_status'
+        ).all().order_by('-date')
+        
+        so_list = []
+        for so in sales_orders:
+            # Format date as DD/MM/YYYY
+            date_str = so.date.strftime('%d/%m/%Y') if so.date else ''
+            
+            so_list.append({
+                'so_id': so.so_id,
+                'date': date_str,
+                'customer_id': so.customer_id.customer_id if so.customer_id else '',
+                'customer_name': so.customer_name,
+                'invoice_number': so.invoice_number,
+                'county': so.county.county if so.county else '',
+                'town': so.town.town if so.town else '',
+                'total_amount': float(so.total_amount),
+                'amount_received': float(so.amount_received),
+                'balance_left': float(so.total_amount - so.amount_received),
+                'receipt_status': so.receipt_status.receipt_status if so.receipt_status else '',
+                'shipping_status': so.shipping_status.shipping_status if so.shipping_status else ''
+            })
+        
+        return JsonResponse({'success': True, 'data': so_list})
+    
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+@csrf_exempt
+@login_required(login_url='/login/')
+def api_get_so_details(request, so_id):
+    """Get sales order details including all line items"""
+    try:
+        # Get sales order
+        so = SalesOrder.objects.select_related(
+            'customer_id', 'county', 'town', 'receipt_status', 'shipping_status'
+        ).get(so_id=so_id)
+        
+        # Format date
+        date_str = so.date.strftime('%d/%m/%Y') if so.date else ''
+        
+        so_data = {
+            'so_id': so.so_id,
+            'date': date_str,
+            'customer_id': so.customer_id.customer_id if so.customer_id else '',
+            'customer_name': so.customer_name,
+            'invoice_number': so.invoice_number,
+            'county': so.county.county if so.county else '',
+            'town': so.town.town if so.town else '',
+            'total_amount': float(so.total_amount),
+            'amount_received': float(so.amount_received),
+            'receipt_status': so.receipt_status.receipt_status if so.receipt_status else '',
+            'shipping_status': so.shipping_status.shipping_status if so.shipping_status else ''
+        }
+        
+        # Get sales details
+        details = SalesDetail.objects.filter(so_id=so).order_by('detail_id')
+        details_list = []
+        
+        for detail in details:
+            detail_date_str = detail.date.strftime('%d/%m/%Y') if detail.date else ''
+            
+            details_list.append({
+                'detail_id': detail.detail_id,
+                'date': detail_date_str,
+                'so_id': detail.so_id.so_id,
+                'customer_id': detail.customer_id.customer_id if detail.customer_id else '',
+                'customer_name': detail.customer_name,
+                'county': detail.county.county if detail.county else '',
+                'town': detail.town.town if detail.town else '',
+                'invoice_number': detail.invoice_number,
+                'item_id': detail.item_id.item_id if detail.item_id else '',
+                'item_type': detail.item_type,
+                'item_category': detail.item_category,
+                'item_subcategory': detail.item_subcategory,
+                'item_name': detail.item_name,
+                'quantity_sold': detail.quantity_sold,
+                'unit_price': float(detail.unit_price),
+                'tax_rate': float(detail.tax_rate),
+                'price_excluding_tax': float(detail.price_excluding_tax),
+                'total_tax': float(detail.total_tax),
+                'price_including_tax': float(detail.price_including_tax),
+                'shipping_fees': float(detail.shipping_fees),
+                'total_sales_price': float(detail.total_sales_price)
+            })
+        
+        return JsonResponse({
+            'success': True,
+            'data': {
+                'sales_order': so_data,
+                'sales_details': details_list
+            }
+        })
+    
+    except SalesOrder.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Sales order not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+@csrf_exempt
+@login_required(login_url='/login/')
+def api_add_sales_order(request):
+    """Add new sales order with details - DECREASES inventory quantities"""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Invalid request method'}, status=405)
+    
+    try:
+        data = json.loads(request.body)
+        
+        # Extract SO header data
+        so_id = data.get('so_id', '').strip()
+        date_str = data.get('date', '').strip()
+        customer_id = data.get('customer_id', '').strip()
+        customer_name = data.get('customer_name', '').strip()
+        county_name = data.get('county', '').strip()
+        town_name = data.get('town', '').strip()
+        invoice_number = data.get('invoice_number', '').strip()
+        items = data.get('items', [])
+        
+        # Validation
+        if not all([so_id, date_str, customer_name, invoice_number]):
+            return JsonResponse({
+                'success': False, 
+                'message': 'All SO header fields are required'
+            }, status=400)
+        
+        if not items:
+            return JsonResponse({
+                'success': False, 
+                'message': 'At least one item is required'
+            }, status=400)
+        
+        # Parse date
+        so_date = parse_date(date_str)
+        if not so_date:
+            return JsonResponse({
+                'success': False, 
+                'message': 'Invalid date format. Use DD/MM/YYYY'
+            }, status=400)
+        
+        # Check if SO already exists
+        if SalesOrder.objects.filter(so_id=so_id).exists():
+            return JsonResponse({
+                'success': False, 
+                'message': 'Sales Order ID already exists'
+            }, status=400)
+        
+        # Get foreign key objects
+        try:
+            customer = Customer.objects.get(customer_id=customer_id)
+            county = County.objects.get(county=county_name) if county_name else None
+            town = Town.objects.get(town=town_name) if town_name else None
+        except (Customer.DoesNotExist, County.DoesNotExist, Town.DoesNotExist) as e:
+            return JsonResponse({
+                'success': False, 
+                'message': f'Invalid reference: {str(e)}'
+            }, status=400)
+        
+        # Start transaction
+        with transaction.atomic():
+            # Calculate total amount
+            total_amount = sum(Decimal(str(item['total_sales_price'])) for item in items)
+            
+            # Create Sales Order
+            sales_order = SalesOrder.objects.create(
+                so_id=so_id,
+                date=so_date,
+                customer_id=customer,
+                customer_name=customer_name,
+                invoice_number=invoice_number,
+                county=county,
+                town=town,
+                total_amount=total_amount,
+                amount_received=Decimal('0.00'),
+                receipt_status=None,
+                shipping_status=None
+            )
+            
+            # Create Sales Details and update inventory
+            for item_data in items:
+                detail_date = parse_date(item_data['date'])
+                if not detail_date:
+                    detail_date = so_date
+                
+                # Get inventory item
+                try:
+                    inventory_item = Inventory.objects.get(item_id=item_data['item_id'])
+                except Inventory.DoesNotExist:
+                    raise Exception(f"Inventory item {item_data['item_id']} not found")
+                
+                # Check if sufficient stock exists
+                qty_to_sell = item_data['quantity_sold']
+                available_qty = inventory_item.quantity_purchased - inventory_item.quantity_sold
+                
+                if qty_to_sell > available_qty:
+                    raise Exception(f"Insufficient stock for {item_data['item_name']}. Available: {available_qty}, Requested: {qty_to_sell}")
+                
+                # Create sales detail
+                SalesDetail.objects.create(
+                    detail_id=item_data['detail_id'],
+                    so_id=sales_order,
+                    date=detail_date,
+                    customer_id=customer,
+                    customer_name=customer_name,
+                    county=county,
+                    town=town,
+                    invoice_number=invoice_number,
+                    item_id=inventory_item,
+                    item_type=item_data['item_type'],
+                    item_category=item_data['item_category'],
+                    item_subcategory=item_data['item_subcategory'],
+                    item_name=item_data['item_name'],
+                    quantity_sold=qty_to_sell,
+                    unit_price=Decimal(str(item_data['unit_price'])),
+                    tax_rate=Decimal(str(item_data['tax_rate']))
+                )
+                
+                # Update inventory quantities (DECREASE quantity_sold)
+                inventory_item.quantity_sold += qty_to_sell
+                inventory_item.save()  # This will trigger reorder check
+            
+            # Update customer total sales
+            customer.total_sales += total_amount
+            customer.save()
+        
+        return JsonResponse({
+            'success': True, 
+            'message': 'Sales Order created successfully'
+        })
+    
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'message': 'Invalid JSON data'}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+@csrf_exempt
+@login_required(login_url='/login/')
+def api_update_sales_order(request):
+    """Update existing sales order"""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Invalid request method'}, status=405)
+    
+    try:
+        data = json.loads(request.body)
+        
+        so_id = data.get('so_id', '').strip()
+        items = data.get('items', [])
+        
+        if not so_id:
+            return JsonResponse({'success': False, 'message': 'SO ID is required'}, status=400)
+        
+        # Get existing SO
+        try:
+            sales_order = SalesOrder.objects.get(so_id=so_id)
+        except SalesOrder.DoesNotExist:
+            return JsonResponse({'success': False, 'message': 'Sales order not found'}, status=404)
+        
+        with transaction.atomic():
+            # Get existing details to calculate old quantities
+            existing_details = {d.detail_id: d for d in SalesDetail.objects.filter(so_id=sales_order)}
+            
+            # Process each item
+            new_total = Decimal('0.00')
+            processed_details = set()
+            
+            for item_data in items:
+                detail_id = item_data['detail_id']
+                processed_details.add(detail_id)
+                
+                new_qty = item_data['quantity_sold']
+                total_price = Decimal(str(item_data['total_sales_price']))
+                new_total += total_price
+                
+                if detail_id in existing_details:
+                    # Update existing detail
+                    detail = existing_details[detail_id]
+                    old_qty = detail.quantity_sold
+                    qty_diff = new_qty - old_qty
+                    
+                    # Update detail
+                    detail.quantity_sold = new_qty
+                    detail.unit_price = Decimal(str(item_data['unit_price']))
+                    detail.tax_rate = Decimal(str(item_data['tax_rate']))
+                    detail.item_type = item_data['item_type']
+                    detail.item_category = item_data['item_category']
+                    detail.item_subcategory = item_data['item_subcategory']
+                    detail.item_name = item_data['item_name']
+                    
+                    # Update item_id if changed
+                    new_item = Inventory.objects.get(item_id=item_data['item_id'])
+                    if detail.item_id != new_item:
+                        # Reverse old item quantity (add back)
+                        detail.item_id.quantity_sold -= old_qty
+                        detail.item_id.save()
+                        
+                        # Deduct from new item
+                        new_item.quantity_sold += new_qty
+                        new_item.save()
+                        
+                        detail.item_id = new_item
+                    else:
+                        # Same item, adjust quantity
+                        detail.item_id.quantity_sold += qty_diff
+                        detail.item_id.save()
+                    
+                    detail.save()
+            
+            # Handle deleted items (items in DB but not in update)
+            for detail_id, detail in existing_details.items():
+                if detail_id not in processed_details:
+                    # This item was deleted - reverse inventory (add back)
+                    detail.item_id.quantity_sold -= detail.quantity_sold
+                    detail.item_id.save()
+                    detail.delete()
+            
+            # Update SO total
+            old_total = sales_order.total_amount
+            total_diff = new_total - old_total
+            
+            sales_order.total_amount = new_total
+            sales_order.save()
+            
+            # Update customer total sales
+            customer = sales_order.customer_id
+            customer.total_sales += total_diff
+            customer.save()
+        
+        return JsonResponse({
+            'success': True, 
+            'message': 'Sales Order updated successfully'
+        })
+    
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'message': 'Invalid JSON data'}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+@csrf_exempt
+@login_required(login_url='/login/')
+def api_delete_sales_detail(request):
+    """Delete a sales detail and update related records"""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Invalid request method'}, status=405)
+    
+    try:
+        data = json.loads(request.body)
+        detail_id = data.get('detail_id', '').strip()
+        
+        if not detail_id:
+            return JsonResponse({'success': False, 'message': 'Detail ID is required'}, status=400)
+        
+        try:
+            detail = SalesDetail.objects.get(detail_id=detail_id)
+        except SalesDetail.DoesNotExist:
+            return JsonResponse({'success': False, 'message': 'Sales detail not found'}, status=404)
+        
+        with transaction.atomic():
+            # Reverse inventory quantity (add back)
+            inventory_item = detail.item_id
+            inventory_item.quantity_sold -= detail.quantity_sold
+            inventory_item.save()
+            
+            # Update SO total
+            so = detail.so_id
+            so.total_amount -= detail.total_sales_price
+            so.save()
+            
+            # Update customer total
+            customer = detail.customer_id
+            customer.total_sales -= detail.total_sales_price
+            customer.save()
+            
+            # Delete detail
+            detail.delete()
+        
+        return JsonResponse({
+            'success': True, 
+            'message': 'Sales detail deleted successfully'
         })
     
     except json.JSONDecodeError:
