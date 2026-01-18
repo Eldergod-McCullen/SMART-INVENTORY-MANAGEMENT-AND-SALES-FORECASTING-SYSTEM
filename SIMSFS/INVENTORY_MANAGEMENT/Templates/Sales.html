@@ -1042,103 +1042,166 @@
       }
     }
 
-    // Add item row
-    async function soAddItemRow() {
-      const soID = document.getElementById('soSOID').value;
-      const soDate = document.getElementById('soSODate').value;
-      const customerID = document.getElementById('soCustomerID').value;
-      const customerName = $('#soCustomerName').val();
-      const county = document.getElementById('soCounty').value;
-      const town = document.getElementById('soTown').value;
-      const invoiceNum = document.getElementById('soInvoiceNum').value;
-      
-      if (!soID || !soDate || !customerName) {
-        alert('Please fill SO ID, Date, and Customer Name first');
-        return;
-      }
-      
-      // Generate detail ID
-      showProcessing();
-      try {
-        const response = await fetch('/api/sales/generate-detail-id/', {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': getCSRFToken()
-          },
-          credentials: 'same-origin'
-        });
-        
-        const result = await response.json();
-        if (result.success) {
-          const detailID = result.detail_id;
-          
-          const tbody = document.getElementById('soItemsTableBody');
-          const row = document.createElement('tr');
-          row.setAttribute('data-detail-id', detailID);
-          
-          // Create item name dropdown options
-          let itemOptions = '<option value="">Select Item</option>';
-          soInventoryItems.forEach(item => {
-            itemOptions += `<option value="${item.name}" data-item-id="${item.id}" data-type="${item.type}" data-category="${item.category}" data-subcategory="${item.subcategory}" data-sale-price="${item.sale_price}">${item.name}</option>`;
-          });
-          
-          row.innerHTML = `
-            <td><input type="text" class="readonly" value="${soDate}" readonly></td>
-            <td><input type="text" class="readonly" value="${soID}" readonly></td>
-            <td><input type="text" class="readonly" value="${detailID}" readonly></td>
-            <td><input type="text" class="readonly" value="${customerID}" readonly></td>
-            <td><input type="text" class="readonly" value="${customerName}" readonly></td>
-            <td><input type="text" class="readonly" value="${county}" readonly></td>
-            <td><input type="text" class="readonly" value="${town}" readonly></td>
-            <td><input type="text" class="readonly" value="${invoiceNum}" readonly></td>
-            <td><input type="text" class="readonly item-id" value="" readonly></td>
-            <td><input type="text" class="readonly item-type" value="" readonly></td>
-            <td><input type="text" class="readonly item-category" value="" readonly></td>
-            <td><input type="text" class="readonly item-subcategory" value="" readonly></td>
-            <td><select class="item-name-select" style="min-width: 200px;">${itemOptions}</select></td>
-            <td><input type="number" class="qty-input" min="1" value="1"></td>
-            <td><input type="text" class="readonly unit-price" value="0.00" readonly></td>
-            <td><input type="text" class="readonly price-excl-tax" value="0.00" readonly></td>
-            <td><input type="number" class="tax-rate-input" step="0.01" min="0" value="0"></td>
-            <td><input type="text" class="readonly total-tax" value="0.00" readonly></td>
-            <td><input type="text" class="readonly price-incl-tax" value="0.00" readonly></td>
-            <td><input type="text" class="readonly shipping-fees" value="0.00" readonly></td>
-            <td><input type="text" class="readonly total-price" value="0.00" readonly></td>
-            <td>
-              <button class="remove-item-btn" onclick="soRemoveItemRow(this)">
-                <i class="fas fa-trash"></i>
-              </button>
-            </td>
-          `;
-          
-          tbody.appendChild(row);
-          
-          // Initialize Select2 for item name
-          $(row).find('.item-name-select').select2({
-            placeholder: 'Select Item',
-            allowClear: true,
-            dropdownParent: $('#soNewSOModal')
-          }).on('change', function() {
-            soItemChanged(this);
-          });
-          
-          // Add event listeners for calculations
-          $(row).find('.qty-input, .tax-rate-input').on('input', function() {
-            soCalculateRowTotals(row);
-          });
-          
-          soDetailCounter++;
-        } else {
-          alert('Error generating Detail ID: ' + result.message);
-        }
-      } catch (error) {
-        console.error('Error generating Detail ID:', error);
-        alert('Failed to generate Detail ID');
-      } finally {
-        hideProcessing();
-      }
+    // FOR SALES MODULE - Replace the entire soAddItemRow function
+async function soAddItemRow() {
+  const soID = document.getElementById('soSOID').value;
+  const soDate = document.getElementById('soSODate').value;
+  const customerID = document.getElementById('soCustomerID').value;
+  const customerName = $('#soCustomerName').val();
+  const county = document.getElementById('soCounty').value;
+  const town = document.getElementById('soTown').value;
+  const invoiceNum = document.getElementById('soInvoiceNum').value;
+  
+  if (!soID || !soDate || !customerName) {
+    alert('Please fill SO ID, Date, and Customer Name first');
+    return;
+  }
+  
+  // ✅ CRITICAL FIX: Generate FRESH Detail ID on EACH call
+  showProcessing();
+  
+  try {
+    // Force fresh API call with cache-busting timestamp
+    const timestamp = new Date().getTime();
+    const response = await fetch(`/api/sales/generate-detail-id/?t=${timestamp}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': getCSRFToken(),
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      },
+      credentials: 'same-origin',
+      cache: 'no-store'  // Prevent caching
+    });
+    
+    const result = await response.json();
+    
+    if (!result.success) {
+      alert('Error generating Detail ID: ' + result.message);
+      hideProcessing();
+      return;
     }
+    
+    const detailID = result.detail_id;
+    
+    // ✅ VERIFICATION: Log the Detail ID to console
+    console.log(`🆕 Generated NEW Detail ID: ${detailID} at ${new Date().toLocaleTimeString()}`);
+    
+    const tbody = document.getElementById('soItemsTableBody');
+    const row = document.createElement('tr');
+    row.setAttribute('data-detail-id', detailID);
+    
+    // Create item name dropdown options
+    let itemOptions = '<option value="">Select Item</option>';
+    soInventoryItems.forEach(item => {
+      itemOptions += `<option value="${item.name}" data-item-id="${item.id}" data-type="${item.type}" data-category="${item.category}" data-subcategory="${item.subcategory}" data-sale-price="${item.sale_price}">${item.name}</option>`;
+    });
+    
+    row.innerHTML = `
+      <td><input type="text" class="readonly" value="${soDate}" readonly></td>
+      <td><input type="text" class="readonly" value="${soID}" readonly></td>
+      <td><input type="text" class="readonly" value="${detailID}" readonly></td>
+      <td><input type="text" class="readonly" value="${customerID}" readonly></td>
+      <td><input type="text" class="readonly" value="${customerName}" readonly></td>
+      <td><input type="text" class="readonly" value="${county}" readonly></td>
+      <td><input type="text" class="readonly" value="${town}" readonly></td>
+      <td><input type="text" class="readonly" value="${invoiceNum}" readonly></td>
+      <td><input type="text" class="readonly item-id" value="" readonly></td>
+      <td><input type="text" class="readonly item-type" value="" readonly></td>
+      <td><input type="text" class="readonly item-category" value="" readonly></td>
+      <td><input type="text" class="readonly item-subcategory" value="" readonly></td>
+      <td><select class="item-name-select" style="min-width: 200px;">${itemOptions}</select></td>
+      <td><input type="number" class="qty-input" min="1" value="1"></td>
+      <td><input type="text" class="readonly unit-price" value="0.00" readonly></td>
+      <td><input type="text" class="readonly price-excl-tax" value="0.00" readonly></td>
+      <td><input type="number" class="tax-rate-input" step="0.01" min="0" value="0"></td>
+      <td><input type="text" class="readonly total-tax" value="0.00" readonly></td>
+      <td><input type="text" class="readonly price-incl-tax" value="0.00" readonly></td>
+      <td><input type="text" class="readonly shipping-fees" value="0.00" readonly></td>
+      <td><input type="text" class="readonly total-price" value="0.00" readonly></td>
+      <td>
+        <button class="remove-item-btn" onclick="soRemoveItemRow(this)">
+          <i class="fas fa-trash"></i>
+        </button>
+      </td>
+    `;
+    
+    tbody.appendChild(row);
+    
+    // Initialize Select2 for item name
+    $(row).find('.item-name-select').select2({
+      placeholder: 'Select Item',
+      allowClear: true,
+      dropdownParent: $('#soNewSOModal')
+    }).on('change', function() {
+      soItemChanged(this);
+    });
+    
+    // Add event listeners for calculations
+    $(row).find('.qty-input, .tax-rate-input').on('input', function() {
+      soCalculateRowTotals(row);
+    });
+    
+    soDetailCounter++;
+    hideProcessing();
+    
+  } catch (error) {
+    console.error('Error generating Detail ID:', error);
+    alert('Failed to generate Detail ID: ' + error.message);
+    hideProcessing();
+  }
+}
+
+
+// ============================================================
+// VERIFICATION HELPER - Add this function to test
+// ============================================================
+async function testDetailIDGeneration() {
+  console.log("\n🧪 TESTING DETAIL ID GENERATION\n");
+  
+  for (let i = 1; i <= 5; i++) {
+    const timestamp = new Date().getTime();
+    
+    try {
+      // Test Sales
+      const salesResponse = await fetch(`/api/sales/generate-detail-id/?t=${timestamp}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': getCSRFToken()
+        },
+        credentials: 'same-origin',
+        cache: 'no-store'
+      });
+      
+      const salesResult = await salesResponse.json();
+      console.log(`Test ${i} - Sales Detail ID: ${salesResult.detail_id}`);
+      
+      // Test Purchases
+      const purchasesResponse = await fetch(`/api/purchases/generate-detail-id/?t=${timestamp + 1}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': getCSRFToken()
+        },
+        credentials: 'same-origin',
+        cache: 'no-store'
+      });
+      
+      const purchasesResult = await purchasesResponse.json();
+      console.log(`Test ${i} - Purchases Detail ID: ${purchasesResult.detail_id}\n`);
+      
+    } catch (error) {
+      console.error(`Test ${i} failed:`, error);
+    }
+  }
+  
+  console.log("✅ Test Complete\n");
+}
+
+// To run the test, open browser console and type: testDetailIDGeneration()
 
     // Item changed event
     function soItemChanged(selectElement) {

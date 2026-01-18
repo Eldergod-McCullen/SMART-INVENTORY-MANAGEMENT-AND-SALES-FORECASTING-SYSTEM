@@ -1623,25 +1623,43 @@ def api_generate_po_id(request):
 @csrf_exempt
 @login_required(login_url='/login/')
 def api_generate_detail_id(request):
-    """Generate unique Detail ID in format D00001 - globally incremental"""
+    """
+    Generate unique Detail ID in format D00001 - globally incremental across BOTH purchases AND sales
+    
+    CRITICAL: This generates a NEW unique ID on EVERY call
+    This is shared between Purchases and Sales modules
+    """
     try:
-        # Get the maximum detail_id from ALL purchase details
-        max_detail = PurchaseDetail.objects.aggregate(Max('detail_id'))['detail_id__max']
+        # IMPORTANT: Always fetch fresh from database on each call
+        max_purchase_detail = PurchaseDetail.objects.aggregate(Max('detail_id'))['detail_id__max']
+        max_sales_detail = SalesDetail.objects.aggregate(Max('detail_id'))['detail_id__max']
         
-        if max_detail:
-            # Extract numeric part (remove 'D' prefix) and increment
-            num_part = int(max_detail[1:]) + 1
+        # Compare both and get the highest
+        max_details = [max_purchase_detail, max_sales_detail]
+        max_details = [d for d in max_details if d is not None]  # Remove None values
+        
+        if max_details:
+            # Extract numeric parts and get the maximum
+            max_nums = [int(d[1:]) for d in max_details]
+            num_part = max(max_nums) + 1
         else:
-            # First detail ever
+            # First detail ever in the entire system
             num_part = 1
         
         # Format as D00001
         new_detail_id = f"D{num_part:05d}"
         
-        # Safety check: ensure it doesn't exist (should never happen, but good practice)
-        while PurchaseDetail.objects.filter(detail_id=new_detail_id).exists():
+        # Safety check: ensure it doesn't exist in EITHER table
+        attempts = 0
+        while (PurchaseDetail.objects.filter(detail_id=new_detail_id).exists() or 
+               SalesDetail.objects.filter(detail_id=new_detail_id).exists()):
             num_part += 1
             new_detail_id = f"D{num_part:05d}"
+            attempts += 1
+            if attempts > 1000:  # Prevent infinite loop
+                return JsonResponse({'success': False, 'message': 'Could not generate unique Detail ID'}, status=500)
+        
+        print(f"✅ GENERATED NEW DETAIL ID (PURCHASES): {new_detail_id}")  # Debug log
         
         return JsonResponse({'success': True, 'detail_id': new_detail_id})
     
@@ -2112,7 +2130,7 @@ def api_add_receipt_status(request):
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
 
-# ================================================== SHIPPING STATUS APIs (REUSED FROM THE PURCHASES MODULE AS IT IS THE SAME THING) =======================================================================================
+# ================================================== SHIPPING STATUS APIs (Reused from Purchases) =======================================================================================
 
 @csrf_exempt
 @login_required(login_url='/login/')
@@ -2163,9 +2181,11 @@ def api_generate_sales_detail_id(request):
     """
     Generate unique Detail ID in format D00001 - globally incremental across BOTH purchases and sales
     This ensures Detail IDs are unique across the entire system
+    
+    CRITICAL: This generates a NEW unique ID on EVERY call
     """
     try:
-        # Get the maximum detail_id from BOTH PurchaseDetail AND SalesDetail
+        # IMPORTANT: Always fetch fresh from database on each call
         max_purchase_detail = PurchaseDetail.objects.aggregate(Max('detail_id'))['detail_id__max']
         max_sales_detail = SalesDetail.objects.aggregate(Max('detail_id'))['detail_id__max']
         
@@ -2185,10 +2205,16 @@ def api_generate_sales_detail_id(request):
         new_detail_id = f"D{num_part:05d}"
         
         # Safety check: ensure it doesn't exist in EITHER table
+        attempts = 0
         while (PurchaseDetail.objects.filter(detail_id=new_detail_id).exists() or 
                SalesDetail.objects.filter(detail_id=new_detail_id).exists()):
             num_part += 1
             new_detail_id = f"D{num_part:05d}"
+            attempts += 1
+            if attempts > 1000:  # Prevent infinite loop
+                return JsonResponse({'success': False, 'message': 'Could not generate unique Detail ID'}, status=500)
+        
+        print(f"✅ GENERATED NEW DETAIL ID: {new_detail_id}")  # Debug log
         
         return JsonResponse({'success': True, 'detail_id': new_detail_id})
     
