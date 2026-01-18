@@ -1,14 +1,14 @@
 from django.shortcuts import render, redirect
 from django.http import JsonResponse
-from django.http import HttpRequest                                     # IMPORTS FOR HTTP REQUESTS AND RESPONSES
+from django.http import HttpRequest                                          # IMPORTS FOR HTTP REQUESTS AND RESPONSES
 from django.http import HttpResponse
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
-from django.contrib import messages                                     # IMPORTS FOR DISPLAYING MESSAGES TO THE USER
+from django.contrib import messages                                          # IMPORTS FOR DISPLAYING MESSAGES TO THE USER
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.hashers import make_password
 from django.contrib.auth import authenticate, login, logout
-from django.db.models import Q, Sum, Max, F                                          # IMPORTS FOR COMPLEX QUERIES
-import json                                                             # REMEMBER TO REVIEW THIS GUY AT THE ENDPOINTS
+from django.db.models import Q, Sum, Max, F                                  # IMPORTS FOR COMPLEX QUERIES
+import json                                                                  # REMEMBER TO REVIEW THIS GUY AT THE ENDPOINTS
 from django.db import transaction
 from decimal import Decimal
 from datetime import datetime
@@ -1808,7 +1808,7 @@ def parse_date(date_str):
 @csrf_exempt
 @login_required(login_url='/login/')
 def api_add_purchase_order(request):
-    """Add new purchase order with details"""
+    """Add new purchase order with automatic status calculation"""
     if request.method != 'POST':
         return JsonResponse({'success': False, 'message': 'Invalid request method'}, status=405)
     
@@ -1869,7 +1869,7 @@ def api_add_purchase_order(request):
             # Calculate total amount
             total_amount = sum(Decimal(str(item['total_purchase_price'])) for item in items)
             
-            # Create Purchase Order
+            # Create Purchase Order with initial amount_paid = 0
             purchase_order = PurchaseOrder.objects.create(
                 po_id=po_id,
                 date=po_date,
@@ -1880,8 +1880,8 @@ def api_add_purchase_order(request):
                 town=town,
                 total_amount=total_amount,
                 amount_paid=Decimal('0.00'),
-                payment_status=None,
-                shipping_status=None
+                payment_status=None,  # Will be set by update_purchase_order_statuses
+                shipping_status=None  # Will be set by update_purchase_order_statuses
             )
             
             # Create Purchase Details and update inventory
@@ -1918,15 +1918,19 @@ def api_add_purchase_order(request):
                 
                 # Update inventory quantities
                 inventory_item.quantity_purchased += item_data['quantity_purchased']
-                inventory_item.save()  # This will trigger reorder check
+                inventory_item.save()
             
             # Update supplier total purchases
             supplier.total_purchases += total_amount
             supplier.save()
+            
+            # *** AUTOMATICALLY SET PAYMENT AND SHIPPING STATUS ***
+            status_info = update_purchase_order_statuses(purchase_order)
         
         return JsonResponse({
             'success': True, 
-            'message': 'Purchase Order created successfully'
+            'message': 'Purchase Order created successfully',
+            'status_info': status_info
         })
     
     except json.JSONDecodeError:
@@ -2085,6 +2089,117 @@ def api_delete_purchase_detail(request):
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
     
     
+# ======= UPDATING THE SHIPPING AND PAYMENT STATUSES FOR THE APPLICATION ================================================
+
+def calculate_payment_status(total_amount, amount_paid):
+    """
+    Calculate payment status based on payment percentage
+    
+    Args:
+        total_amount (Decimal): Total amount of the purchase order
+        amount_paid (Decimal): Amount already paid
+    
+    Returns:
+        str: Payment status ('PENDING', 'PARTIAL PAYMENT', 'COMPLETED')
+    """
+    total_amount = Decimal(str(total_amount))
+    amount_paid = Decimal(str(amount_paid))
+    
+    # If no payment made
+    if amount_paid == Decimal('0.00'):
+        return 'PENDING'
+    
+    # If fully paid
+    elif amount_paid >= total_amount:
+        return 'COMPLETED'
+    
+    # If partially paid
+    else:
+        return 'PARTIAL PAYMENT'
+
+
+def calculate_shipping_status(total_amount, amount_paid):
+    """
+    Calculate shipping status based on payment percentage
+    
+    Payment Percentage -> Shipping Status:
+    - 0% -> PENDING
+    - 1%-49% -> PROCESSING
+    - 50%-74% -> DISPATCHED
+    - 75%-99% -> IN TRANSIT
+    - 100% -> DELIVERED
+    
+    Args:
+        total_amount (Decimal): Total amount of the purchase order
+        amount_paid (Decimal): Amount already paid
+    
+    Returns:
+        str: Shipping status
+    """
+    total_amount = Decimal(str(total_amount))
+    amount_paid = Decimal(str(amount_paid))
+    
+    # If no payment made
+    if amount_paid == Decimal('0.00'):
+        return 'PENDING'
+    
+    # Calculate payment percentage
+    payment_percentage = (amount_paid / total_amount) * 100
+    
+    # Determine shipping status based on percentage
+    if payment_percentage >= 100:
+        return 'DELIVERED'
+    elif payment_percentage >= 75:
+        return 'IN TRANSIT'
+    elif payment_percentage >= 50:
+        return 'DISPATCHED'
+    elif payment_percentage >= 1:
+        return 'PROCESSING'
+    else:
+        return 'PENDING'
+
+
+def update_purchase_order_statuses(purchase_order):
+    """
+    Update both payment and shipping status for a purchase order
+    
+    Args:
+        purchase_order: PurchaseOrder instance
+    
+    Returns:
+        dict: Updated status information
+    """
+    # Get or create status objects
+    payment_status_name = calculate_payment_status(
+        purchase_order.total_amount, 
+        purchase_order.amount_paid
+    )
+    
+    shipping_status_name = calculate_shipping_status(
+        purchase_order.total_amount, 
+        purchase_order.amount_paid
+    )
+    
+    # Get or create PaymentStatus and ShippingStatus objects
+    payment_status, _ = PaymentStatus.objects.get_or_create(
+        payment_status=payment_status_name
+    )
+    
+    shipping_status, _ = ShippingStatus.objects.get_or_create(
+        shipping_status=shipping_status_name
+    )
+    
+    # Update the purchase order
+    purchase_order.payment_status = payment_status
+    purchase_order.shipping_status = shipping_status
+    purchase_order.save()
+    
+    return {
+        'payment_status': payment_status_name,
+        'shipping_status': shipping_status_name,
+        'payment_percentage': float((purchase_order.amount_paid / purchase_order.total_amount) * 100),
+        'balance_remaining': float(purchase_order.total_amount - purchase_order.amount_paid)
+    }   
 # ============================================ SALES MODULE VIEWS ======================================================================================
 
 @login_required(login_url='/login/')
@@ -2609,5 +2724,134 @@ def api_delete_sales_detail(request):
     
     except json.JSONDecodeError:
         return JsonResponse({'success': False, 'message': 'Invalid JSON data'}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+    
+    
+# ============================== NEW ENDPOINT FOOR THE PAYMENTS MODULE ===============================================================================
+@csrf_exempt
+@login_required(login_url='/login/')
+def api_record_payment(request):
+    """
+    Record a payment and automatically update PO statuses
+    This endpoint will be called from the Payments module
+    """
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Invalid request method'}, status=405)
+    
+    try:
+        data = json.loads(request.body)
+        
+        po_id = data.get('po_id', '').strip()
+        payment_amount = Decimal(str(data.get('payment_amount', 0)))
+        payment_mode = data.get('payment_mode', '').strip()
+        transaction_id = data.get('transaction_id', '').strip()
+        payment_date_str = data.get('payment_date', '').strip()
+        
+        # Validation
+        if not all([po_id, payment_amount, payment_mode, transaction_id]):
+            return JsonResponse({
+                'success': False, 
+                'message': 'All payment fields are required'
+            }, status=400)
+        
+        if payment_amount <= 0:
+            return JsonResponse({
+                'success': False, 
+                'message': 'Payment amount must be greater than zero'
+            }, status=400)
+        
+        # Get purchase order
+        try:
+            purchase_order = PurchaseOrder.objects.get(po_id=po_id)
+        except PurchaseOrder.DoesNotExist:
+            return JsonResponse({
+                'success': False, 
+                'message': 'Purchase order not found'
+            }, status=404)
+        
+        # Check if payment exceeds balance
+        balance = purchase_order.total_amount - purchase_order.amount_paid
+        if payment_amount > balance:
+            return JsonResponse({
+                'success': False, 
+                'message': f'Payment amount ({payment_amount}) exceeds remaining balance ({balance})'
+            }, status=400)
+        
+        # Parse payment date
+        payment_date = parse_date(payment_date_str)
+        if not payment_date:
+            return JsonResponse({
+                'success': False, 
+                'message': 'Invalid date format. Use DD/MM/YYYY'
+            }, status=400)
+        
+        with transaction.atomic():
+            # Get payment mode object
+            pmt_mode, _ = PaymentMode.objects.get_or_create(payment_mode=payment_mode)
+            
+            # Create payment record
+            Payment.objects.create(
+                transaction_id=transaction_id,
+                date=payment_date,
+                supplier_id=purchase_order.supplier_id,
+                supplier_name=purchase_order.supplier_name,
+                county=purchase_order.county,
+                town=purchase_order.town,
+                po_id=purchase_order,
+                bill_number=purchase_order.bill_number,
+                payment_mode=pmt_mode,
+                amount_paid=payment_amount
+            )
+            
+            # Update purchase order amount_paid
+            purchase_order.amount_paid += payment_amount
+            purchase_order.save()
+            
+            # Update supplier total_payments
+            supplier = purchase_order.supplier_id
+            supplier.total_payments += payment_amount
+            supplier.save()
+            
+            # *** AUTOMATICALLY UPDATE PAYMENT AND SHIPPING STATUS ***
+            status_info = update_purchase_order_statuses(purchase_order)
+        
+        return JsonResponse({
+            'success': True, 
+            'message': 'Payment recorded successfully',
+            'status_info': status_info,
+            'new_balance': float(purchase_order.total_amount - purchase_order.amount_paid)
+        })
+    
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'message': 'Invalid JSON data'}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
+# ============================================
+# ENDPOINT TO MANUALLY RECALCULATE ALL STATUSES
+# ============================================
+
+@csrf_exempt
+@login_required(login_url='/login/')
+def api_recalculate_all_po_statuses(request):
+    """
+    Recalculate statuses for all purchase orders
+    Useful for one-time migration or fixing data inconsistencies
+    """
+    try:
+        purchase_orders = PurchaseOrder.objects.all()
+        updated_count = 0
+        
+        for po in purchase_orders:
+            update_purchase_order_statuses(po)
+            updated_count += 1
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Successfully updated statuses for {updated_count} purchase orders'
+        })
+    
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)}, status=500)

@@ -1,13 +1,12 @@
 from django.test import TestCase
 from .models import PurchaseDetail, SalesDetail
 from django.db.models import Max
+from django.core.management.base import BaseCommand                              # A DJANGO MANAGEMENT COMMAND FOR THE PAYMENT AND SHIPPING STATUSES
+from .models import PaymentStatus, ShippingStatus
 
 # Create your tests here.
 
-# ========== DIAGNOSTIC SCRIPT FOR DETAIL ID GENERATION ==========
-
-
-
+# ========================= DIAGNOSTIC SCRIPT FOR DETAIL ID GENERATION =================================================================================
 def test_detail_id_generation():
     """
     Test the Detail ID generation logic
@@ -126,3 +125,23 @@ def fix_duplicate_detail_ids():
         detail.save()
     
     print(f"\n✅ Renumbered {len(all_details)} detail records")
+    
+    
+    # Create a Django management command: create_initial_statuses.py
+class Command(BaseCommand):
+    help = 'Create initial payment and shipping statuses'
+
+    def handle(self, *args, **kwargs):
+        # Payment Statuses
+        payment_statuses = ['PENDING', 'PARTIAL PAYMENT', 'COMPLETED']
+        for status in payment_statuses:
+            PaymentStatus.objects.get_or_create(payment_status=status)
+            self.stdout.write(f'Created payment status: {status}')
+        
+        # Shipping Statuses
+        shipping_statuses = ['PENDING', 'PROCESSING', 'DISPATCHED', 'IN TRANSIT', 'DELIVERED']
+        for status in shipping_statuses:
+            ShippingStatus.objects.get_or_create(shipping_status=status)
+            self.stdout.write(f'Created shipping status: {status}')
+        
+        self.stdout.write(self.style.SUCCESS('Successfully created all statuses!'))

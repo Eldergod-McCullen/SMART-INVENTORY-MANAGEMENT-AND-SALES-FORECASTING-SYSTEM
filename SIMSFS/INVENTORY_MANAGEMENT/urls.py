@@ -140,4 +140,9 @@ path('api/customers/delete/', views.api_delete_customer, name='api_delete_custom
     path('api/sales/add/', views.api_add_sales_order, name='api_add_sales_order'),
     path('api/sales/update/', views.api_update_sales_order, name='api_update_sales_order'),
     path('api/sales/delete-detail/', views.api_delete_sales_detail, name='api_delete_sales_detail'),
+    
+    
+    # ========================== PAYMENT MODULE URLs ===============================================================================================================
+    path('api/purchases/record-payment/', views.api_record_payment, name='api_record_payment'),
+    path('api/purchases/recalculate-statuses/', views.api_recalculate_all_po_statuses, name='api_recalculate_statuses'),
 ]

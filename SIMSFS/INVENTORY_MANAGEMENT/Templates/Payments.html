@@ -1,5 +1,4 @@
 {% load static %}
-
 <!DOCTYPE html>
 <html lang="en">
 
@@ -7,136 +6,647 @@
   <base target="_top">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  {% csrf_token %}
+  <meta name="csrf-token" content="{{ csrf_token }}">
 
-  <title>{% block title %} PAYMENTS {% endblock %}</title>  
-
+  <title>{% block title %}PAYMENTS{% endblock %}</title>
+  
   <!-- Google Fonts -->
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Poppins:400,600|Roboto:400,500|Montserrat:400,500" >
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600&family=Poppins:wght@400;500;600&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+  
   <!-- Font Awesome -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
-
-  <!--link rel="stylesheet" href="{% static 'Payments.css' %}"-->
-
-  <!-- jQuery & Select2 -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
-  <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-  <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Select2 -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" rel="stylesheet" />
+  
+  <!-- Flatpickr (Date Picker) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 
   <style>
-body{
-  margin:0;
-  font-family:Poppins,sans-serif;
-  background:#f4f6f8;
-  color:#333; }
-    h1 { margin:0; font-weight:600; font-size:1.8rem; }
-    h2 { margin:0; font-weight:400; color:#555; }
-    .container { padding:20px; }
-    .flex { display:flex; align-items:center; }
-
-.flex-space{ 
-    display:flex; 
-    align-items:center; 
-    justify-content:space-between; 
-}
-
-#div1{
-    margin-top:15px;
-}
-
-    button, .btn {
-      background:#008b8b; color:#fff; border:none; padding:8px 14px;
-      margin:0 5px; border-radius:4px; cursor:pointer;
-      font-family:Roboto,sans-serif; font-size:0.9rem;
+    :root {
+      --primary: #1abc9c;
+      --primary-light: #d1f2eb;
+      --primary-dark: #16a085;
+      --secondary: #3498db;
+      --dark: #2c3e50;
+      --light-dark: #34495e;
+      --gray: #7f8c8d;
+      --light-gray: #ecf0f1;
+      --white: #ffffff;
+      --error: #e74c3c;
+      --warning: #f39c12;
+      --success: #2ecc71;
     }
-    button:hover { background:#006f6f; }
-    .btn-clear { background:#ccc; color:#333; }
-    input, select {
-      padding:6px 10px; border-radius:4px; border:1px solid #ccc; font-size:0.9rem;
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
     }
-    table {
-      width:100%; border-collapse:collapse; margin-top:15px;
-      table-layout:auto; white-space:nowrap;
+    
+    body {
+      font-family: 'Roboto', sans-serif;
+      background-color: #f8f9fa;
+      color: var(--light-dark);
     }
-    th, td {
-      padding:8px; border:1px solid #e2e2e2; font-size:0.9rem;
+    
+    .payment-container {
+      max-width: 1600px;
+      margin: 0 auto;
+      background-color: var(--white);
+      border-radius: 8px;
+      box-shadow: 0 2px 15px rgba(0, 0, 0, 0.08);
+      padding: 25px;
     }
-    th {
-      background:#e8f7f7; position:sticky; top:0; z-index:2;
+    
+    .header-section {
+      margin-bottom: 30px;
+      padding-bottom: 15px;
+      border-bottom: 1px solid var(--light-gray);
     }
-    .modal-overlay {
-      position:fixed; top:0; left:0; right:0; bottom:0;
-      background:rgba(0,0,0,0.4); display:none;
-      align-items:center; justify-content:center; z-index:9999;
+    
+    .header-section h1 {
+      font-family: 'Montserrat', sans-serif;
+      font-weight: 600;
+      color: var(--dark);
+      margin-bottom: 8px;
     }
+    
+    .header-section p {
+      color: var(--gray);
+      font-size: 1.05rem;
+    }
+    
+    .action-bar {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 25px;
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+    
+    .btn-group {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    
+    .btn {
+      padding: 10px 15px;
+      border: none;
+      border-radius: 4px;
+      font-family: 'Poppins', sans-serif;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.3s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.95rem;
+    }
+    
+    .btn-primary {
+      background-color: var(--primary);
+      color: var(--white);
+    }
+    
+    .btn-primary:hover {
+      background-color: var(--primary-dark);
+    }
+    
+    .btn-secondary {
+      background-color: var(--secondary);
+      color: var(--white);
+    }
+    
+    .btn-secondary:hover {
+      background-color: #2980b9;
+    }
+    
+    .btn-outline {
+      background-color: transparent;
+      border: 1px solid #bdc3c7;
+      color: var(--light-dark);
+    }
+    
+    .btn-outline:hover {
+      background-color: var(--light-gray);
+    }
+    
+    .search-group {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    
+    .search-select {
+      padding: 9px;
+      border: 1px solid #bdc3c7;
+      border-radius: 4px;
+      background-color: var(--white);
+      min-width: 160px;
+    }
+    
+    .search-input {
+      padding: 10px;
+      border: 1px solid #bdc3c7;
+      border-radius: 4px;
+      width: 250px;
+    }
+    
+    .payment-table {
+      width: 100%;
+      border-collapse: collapse;
+      background-color: var(--white);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      margin-bottom: 20px;
+    }
+    
+    .payment-table th {
+      background-color: var(--dark);
+      color: var(--white);
+      padding: 14px 16px;
+      text-align: left;
+      font-family: 'Poppins', sans-serif;
+      font-weight: 500;
+      font-size: 0.95rem;
+    }
+    
+    .payment-table td {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--light-gray);
+      color: var(--light-dark);
+      font-size: 0.92rem;
+    }
+    
+    .payment-table tr:hover {
+      background-color: rgba(26, 188, 156, 0.05);
+    }
+    
+    .action-cell {
+      display: flex;
+      gap: 8px;
+    }
+    
+    .action-btn {
+      padding: 6px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .edit-btn {
+      background-color: #3498db;
+      color: white;
+      border: none;
+    }
+    
+    .update-btn {
+      background-color: var(--success);
+      color: white;
+      border: none;
+    }
+    
+    .cancel-btn {
+      background-color: var(--gray);
+      color: white;
+      border: none;
+    }
+    
+    .delete-btn {
+      background-color: var(--error);
+      color: white;
+      border: none;
+    }
+    
+    .editable {
+      background-color: #fffde7;
+      border: 1px solid #ffd54f;
+      padding: 5px 8px;
+      border-radius: 3px;
+      width: 100%;
+    }
+    
     .modal {
-      background:#fff; border-radius:6px; width:90vw;
-      max-height:90vh; overflow:auto; padding:20px;
-      box-shadow:0 4px 12px rgba(0,0,0,0.2);
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0,0,0,0.5);
+      overflow: auto;
     }
-    .modal-header { margin-bottom:15px; }
-    .modal-footer { text-align:right; margin-top:15px; }
-    #ptProcessing {
-      position:fixed; top:0; left:0; right:0; bottom:0;
-      background:rgba(255,255,255,0.7); display:none;
-      align-items:center; justify-content:center; z-index:10000;
-      font-size:1.2rem; color:#008b8b;
+    
+    .modal-content {
+      background-color: var(--white);
+      margin: 3% auto;
+      padding: 30px;
+      border-radius: 8px;
+      width: 600px;
+      max-width: 90%;
+      box-shadow: 0 5px 25px rgba(0,0,0,0.2);
+    }
+    
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 25px;
+      padding-bottom: 15px;
+      border-bottom: 1px solid var(--light-gray);
+    }
+    
+    .modal-header h2 {
+      font-family: 'Montserrat', sans-serif;
+      color: var(--dark);
+      font-size: 1.6rem;
+      margin: 0;
+    }
+    
+    .close-btn {
+      font-size: 1.8rem;
+      cursor: pointer;
+      color: var(--gray);
+      transition: color 0.3s;
+    }
+    
+    .close-btn:hover {
+      color: var(--dark);
+    }
+    
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+    
+    .form-group {
+      margin-bottom: 22px;
+    }
+    
+    .form-group.full-width {
+      grid-column: 1 / -1;
+    }
+    
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 500;
+      color: var(--dark);
+      font-size: 0.95rem;
+    }
+    
+    .form-control {
+      width: 100%;
+      padding: 11px;
+      border: 1px solid #bdc3c7;
+      border-radius: 4px;
+      font-family: 'Roboto', sans-serif;
+      font-size: 0.95rem;
+    }
+    
+    .form-control:focus {
+      border-color: var(--primary);
+      outline: none;
+      box-shadow: 0 0 0 2px rgba(26, 188, 156, 0.2);
+    }
+    
+    .form-control:disabled,
+    .form-control[readonly] {
+      background-color: #f5f5f5;
+      cursor: not-allowed;
+    }
+    
+    .required:after {
+      content: " *";
+      color: var(--error);
+    }
+    
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 25px;
+      padding-top: 15px;
+      border-top: 1px solid var(--light-gray);
+    }
+    
+    .processing-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(255,255,255,0.85);
+      z-index: 2000;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+    }
+    
+    .spinner {
+      border: 5px solid #f3f3f3;
+      border-top: 5px solid var(--primary);
+      border-radius: 50%;
+      width: 60px;
+      height: 60px;
+      animation: spin 1s linear infinite;
+      margin-bottom: 20px;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    .select2-container {
+      width: 100% !important;
+    }
+    
+    .id-generate {
+      display: flex;
+      gap: 10px;
+    }
+    
+    .id-field {
+      flex: 1;
+    }
+    
+    .pagination {
+      display: flex;
+      justify-content: center;
+      margin-top: 25px;
+      gap: 6px;
+    }
+    
+    .page-btn {
+      padding: 8px 14px;
+      background-color: var(--white);
+      border: 1px solid #bdc3c7;
+      border-radius: 4px;
+      cursor: pointer;
+      font-family: 'Roboto', sans-serif;
+      transition: all 0.3s;
+    }
+    
+    .page-btn:hover:not(.active) {
+      background-color: var(--light-gray);
+    }
+    
+    .page-btn.active {
+      background-color: var(--primary);
+      color: var(--white);
+      border-color: var(--primary);
+    }
+    
+    .no-data-container {
+      display: none;
+      text-align: center;
+      padding: 50px 20px;
+      background: var(--white);
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      margin-top: 20px;
+    }
+    
+    .no-data-icon {
+      font-size: 3.5rem;
+      color: #bdc3c7;
+      margin-bottom: 20px;
+    }
+    
+    .no-data-title {
+      color: var(--gray);
+      margin-bottom: 10px;
+      font-family: 'Montserrat', sans-serif;
+    }
+
+    .balance-info {
+      background-color: var(--primary-light);
+      padding: 15px;
+      border-radius: 6px;
+      margin-bottom: 20px;
+      border-left: 4px solid var(--primary);
+    }
+
+    .balance-info p {
+      margin: 5px 0;
+      color: var(--dark);
+      font-size: 0.95rem;
+    }
+
+    .balance-info strong {
+      color: var(--primary-dark);
+    }
+
+    @media (max-width: 768px) {
+      .form-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .modal-content {
+        width: 95%;
+        margin: 5% auto;
+      }
     }
   </style>
-
 </head>
 
-
 <body>
-  <div class="container">
-    <!-- Header -->
-    <div class="flex-space">
-      <div>
-        <h1>Payments Module</h1>
-        <h2>Create Payments Against Purchase Orders</h2>
-      </div>
-      <button id="ptBtnNew"><i class="fa fa-plus"></i> New Payment</button>
+  <div class="payment-container">
+    <!-- Header Section -->
+    <div class="header-section">
+      <h1>MANAGE PAYMENTS TO SUPPLIERS</h1>
+      <p>Record and track all payments made against purchase orders</p>
     </div>
-
-    <!-- Search bar -->
-    <div class="flex-space" id="div1">
-      <div></div>
-      <div class="flex">
-        <select id="ptSearchCrit" title="SearchCriteria">
-          <option>All</option>
-          <option>PO ID</option>
-          <option>Supplier Name</option>
-          <option>Bill Num</option>
-          <option>PMT Mode</option>
+    
+    <!-- Action Bar -->
+    <div class="action-bar">
+      <div class="btn-group">
+        <button class="btn btn-primary" id="btnNewPayment">
+          <i class="fas fa-money-bill-wave"></i> New Payment
+        </button>
+        <button class="btn btn-secondary" id="btnAddPaymentMode">
+          <i class="fas fa-credit-card"></i> Add Payment Mode
+        </button>
+      </div>
+      
+      <div class="search-group">
+        <select id="searchCriteria" class="search-select" title="Search criteria">
+          <option value="all">All</option>
+          <option value="Transaction ID">Transaction ID</option>
+          <option value="Supplier Name">Supplier Name</option>
+          <option value="PO ID">PO ID</option>
+          <option value="Bill Number">Bill Number</option>
+          <option value="Payment Mode">Payment Mode</option>
         </select>
-        <input type="text" id="ptSearchInput" placeholder="Search...">
-        <button id="ptBtnSearch">Search</button>
-        <button class="btn-clear" id="ptBtnClear">Clear</button>
+        <input type="text" id="searchInput" class="search-input" placeholder="Search...">
+        <button class="btn btn-outline" id="btnSearch">
+          <i class="fas fa-search"></i> Search
+        </button>
+        <button class="btn btn-outline" id="btnClear">
+          <i class="fas fa-times"></i> Clear
+        </button>
       </div>
     </div>
-
-    <!-- Payments list -->
-    <table id="ptList">
-      <thead>
-        <tr>
-          <th>Trx Date</th><th>Trx ID</th><th>Supplier ID</th><th>Supplier Name</th>
-          <th>State</th><th>City</th><th>PO ID</th><th>Bill Num</th>
-          <th>PMT Mode</th><th>Amount Paid</th><th>Actions</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-  </div>
-
-  <!-- Processing overlay -->
-  <div id="ptProcessing"><i class="fa fa-spinner fa-pulse"></i> Processing...</div>
-
-  <!-- Modal -->
-  <div id="ptModalOverlay" class="modal-overlay">
-    <div class="modal" id="ptModal">
-      <div class="modal-header"><h2 id="ptModalTitle"></h2></div>
-      <div class="modal-body" id="ptModalBody"></div>
-      <div class="modal-footer" id="ptModalFooter"></div>
+    
+    <!-- Payment Table -->
+    <div id="tableContainer">
+      <table class="payment-table">
+        <thead>
+          <tr>
+            <th>Transaction ID</th>
+            <th>Date</th>
+            <th>Supplier ID</th>
+            <th>Supplier Name</th>
+            <th>County</th>
+            <th>Town</th>
+            <th>PO ID</th>
+            <th>Bill Number</th>
+            <th>Payment Mode</th>
+            <th>Amount Paid</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody">
+          <!-- Data will be populated by JavaScript -->
+        </tbody>
+      </table>
+      
+      <!-- Pagination -->
+      <div class="pagination" id="pagination">
+        <!-- Pagination buttons will be added here -->
+      </div>
     </div>
+    
+    <!-- No Data Message -->
+    <div id="noData" class="no-data-container">
+      <i class="fas fa-inbox no-data-icon"></i>
+      <h3 class="no-data-title">No payments found</h3>
+      <p>Click "New Payment" to record a payment</p>
+    </div>
+  </div>
+  
+  <!-- Payment Mode Modal -->
+  <div id="paymentModeModal" class="modal">
+    <div class="modal-content" style="width: 450px;">
+      <div class="modal-header">
+        <h2>Add Payment Mode</h2>
+        <span class="close-btn" id="closePaymentModeModal">&times;</span>
+      </div>
+      <div class="form-group">
+        <label class="required">Payment Mode</label>
+        <input type="text" id="newPaymentMode" class="form-control" placeholder="e.g., Cash, Bank Transfer, Cheque" required>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" id="btnClosePaymentModeModal">Close</button>
+        <button class="btn btn-primary" id="btnSavePaymentMode">Save</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- New Payment Modal -->
+  <div id="paymentModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="modalTitle">Record New Payment</h2>
+        <span class="close-btn" id="closePaymentModal">&times;</span>
+      </div>
+      
+      <div class="form-grid">
+        <!-- Transaction ID -->
+        <div class="form-group">
+          <label class="required">Transaction ID</label>
+          <div class="id-generate">
+            <input type="text" id="transactionId" class="form-control id-field" readonly>
+            <button class="btn btn-secondary" id="btnGenerateId">Generate</button>
+          </div>
+        </div>
+        
+        <!-- Payment Date -->
+        <div class="form-group">
+          <label class="required">Payment Date</label>
+          <input type="text" id="paymentDate" class="form-control date-picker" placeholder="DD/MM/YYYY">
+        </div>
+      </div>
+      
+      <!-- Supplier Information -->
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="required">Supplier Name</label>
+          <select id="supplierName" class="form-control" style="width: 100%"></select>
+        </div>
+        
+        <div class="form-group">
+          <label>Supplier ID</label>
+          <input type="text" id="supplierId" class="form-control" readonly>
+        </div>
+      </div>
+      
+      <div class="form-grid">
+        <div class="form-group">
+          <label>County</label>
+          <input type="text" id="county" class="form-control" readonly>
+        </div>
+        
+        <div class="form-group">
+          <label>Town</label>
+          <input type="text" id="town" class="form-control" readonly>
+        </div>
+      </div>
+      
+      <!-- Purchase Order Information -->
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="required">PO ID</label>
+          <select id="poId" class="form-control" style="width: 100%"></select>
+        </div>
+        
+        <div class="form-group">
+          <label>Bill Number</label>
+          <input type="text" id="billNumber" class="form-control" readonly>
+        </div>
+      </div>
+      
+      <!-- PO Balance Info -->
+      <div class="balance-info" id="balanceInfo" style="display: none;">
+        <p><strong>PO Total Amount:</strong> <span id="poTotalAmount">0.00</span></p>
+        <p><strong>Amount Already Paid:</strong> <span id="poAmountPaid">0.00</span></p>
+        <p><strong>Outstanding Balance:</strong> <span id="poBalance" style="font-size: 1.1rem; font-weight: 600;">0.00</span></p>
+      </div>
+      
+      <!-- Payment Details -->
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="required">Payment Mode</label>
+          <select id="paymentMode" class="form-control" style="width: 100%"></select>
+        </div>
+        
+        <div class="form-group">
+          <label class="required">Amount Paid</label>
+          <input type="number" id="amountPaid" class="form-control" step="0.01" min="0" placeholder="0.00">
+        </div>
+      </div>
+      
+      <div class="modal-footer">
+        <button class="btn btn-outline" id="btnClosePaymentModal">Close</button>
+        <button class="btn btn-primary" id="btnSavePayment">Save Payment</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Processing Overlay -->
+  <div id="processingOverlay" class="processing-overlay">
+    <div class="spinner"></div>
+    <p>Processing...</p>
   </div>
 
 <!--script src="{% static 'Purchases.js' %}"></!--script-->
@@ -416,6 +926,330 @@ function ptInitSelect2() {
         ptRefresh(); ptHideProcessing();
       }).ptDeletePayment(id);
     }
+
+    async function ptSavePayment() {
+    const paymentData = {
+        transaction_id: $('#ptTrxID').val(),
+        payment_date: $('#ptTrxDate').val(),
+        po_id: $('#ptPOID').val(),
+        supplier_id: $('#ptSupplierID').val(),
+        supplier_name: $('#ptSupplierName').val(),
+        county: $('#ptState').val(),
+        town: $('#ptCity').val(),
+        bill_number: $('#ptBillNum').val(),
+        payment_mode: $('#ptPMTMode').val(),
+        payment_amount: parseFloat($('#ptAmount').val())
+    };
+    
+    // Validation
+    if (!paymentData.transaction_id) {
+        alert('Please generate a Transaction ID');
+        return;
+    }
+    if (!paymentData.payment_date) {
+        alert('Please select payment date');
+        return;
+    }
+    if (!paymentData.po_id) {
+        alert('Please select a Purchase Order');
+        return;
+    }
+    if (!paymentData.payment_mode) {
+        alert('Please select payment mode');
+        return;
+    }
+    if (isNaN(paymentData.payment_amount) || paymentData.payment_amount <= 0) {
+        alert('Please enter a valid payment amount');
+        return;
+    }
+    
+    // Check if payment exceeds PO balance
+    const poBalance = parseFloat($('#ptPOBalance').val() || 0);
+    if (paymentData.payment_amount > poBalance) {
+        alert(`Payment amount (${paymentData.payment_amount.toFixed(2)}) exceeds PO Balance (${poBalance.toFixed(2)})`);
+        return;
+    }
+    
+    showProcessing();
+    
+    try {
+        const response = await fetch('/api/purchases/record-payment/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCSRFToken()
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify(paymentData)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            // Show success message with status information
+            const statusInfo = result.status_info;
+            const message = `
+Payment Recorded Successfully!
+
+Payment Status: ${statusInfo.payment_status}
+Shipping Status: ${statusInfo.shipping_status}
+Payment Progress: ${statusInfo.payment_percentage.toFixed(2)}%
+New Balance: ${result.new_balance.toFixed(2)}
+            `;
+            
+            alert(message);
+            
+            // Close modal and refresh data
+            ptCloseModal();
+            ptRefreshList();
+        } else {
+            alert('Error: ' + result.message);
+        }
+    } catch (error) {
+        console.error('Error recording payment:', error);
+        alert('Failed to record payment. Please try again.');
+    } finally {
+        hideProcessing();
+    }
+}
+
+
+/**
+ * Display payment and shipping status in PO selection
+ */
+function ptOnPO() {
+    const poID = this.value;
+    const order = (ptPO || []).find(o => o['PO ID'] === poID) || {};
+    
+    $('#ptBillNum').val(order['Bill Num'] || '');
+    $('#ptPOBalance').val(order['PO Balance'] || '');
+    
+    // Display current statuses
+    const paymentStatus = order['Payment Status'] || 'PENDING';
+    const shippingStatus = order['Shipping Status'] || 'PENDING';
+    
+    // Calculate payment percentage
+    const totalAmount = parseFloat(order['Total Amount'] || 0);
+    const amountPaid = parseFloat(order['Amount Paid'] || 0);
+    const paymentPercentage = totalAmount > 0 ? (amountPaid / totalAmount * 100) : 0;
+    
+    // Display status information
+    displayStatusInfo(paymentStatus, shippingStatus, paymentPercentage);
+    
+    $('#ptPOID').select2('close');
+}
+
+
+/**
+ * Display status information to user
+ */
+function displayStatusInfo(paymentStatus, shippingStatus, paymentPercentage) {
+    // Create or update status display element
+    let statusDisplay = document.getElementById('ptStatusDisplay');
+    
+    if (!statusDisplay) {
+        statusDisplay = document.createElement('div');
+        statusDisplay.id = 'ptStatusDisplay';
+        statusDisplay.style.cssText = `
+            margin-top: 15px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            border-left: 4px solid #1abc9c;
+        `;
+        
+        // Insert after PO Balance field
+        const poBalanceField = document.getElementById('ptPOBalance');
+        if (poBalanceField && poBalanceField.parentNode) {
+            poBalanceField.parentNode.insertAdjacentElement('afterend', statusDisplay);
+        }
+    }
+    
+    // Get status color based on payment status
+    const getStatusColor = (status) => {
+        switch(status) {
+            case 'PENDING': return '#f39c12';
+            case 'PARTIAL PAYMENT': return '#3498db';
+            case 'COMPLETED': return '#2ecc71';
+            case 'PROCESSING': return '#9b59b6';
+            case 'DISPATCHED': return '#3498db';
+            case 'IN TRANSIT': return '#1abc9c';
+            case 'DELIVERED': return '#27ae60';
+            default: return '#95a5a6';
+        }
+    };
+    
+    statusDisplay.innerHTML = `
+        <div style="margin-bottom: 10px;">
+            <strong>Current Status:</strong>
+        </div>
+        <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+            <div style="flex: 1; min-width: 150px;">
+                <div style="font-size: 0.85rem; color: #7f8c8d; margin-bottom: 5px;">Payment Status</div>
+                <div style="
+                    padding: 6px 12px;
+                    background: ${getStatusColor(paymentStatus)};
+                    color: white;
+                    border-radius: 4px;
+                    font-weight: 600;
+                    text-align: center;
+                ">${paymentStatus}</div>
+            </div>
+            <div style="flex: 1; min-width: 150px;">
+                <div style="font-size: 0.85rem; color: #7f8c8d; margin-bottom: 5px;">Shipping Status</div>
+                <div style="
+                    padding: 6px 12px;
+                    background: ${getStatusColor(shippingStatus)};
+                    color: white;
+                    border-radius: 4px;
+                    font-weight: 600;
+                    text-align: center;
+                ">${shippingStatus}</div>
+            </div>
+        </div>
+        <div style="margin-top: 10px;">
+            <div style="font-size: 0.85rem; color: #7f8c8d; margin-bottom: 5px;">Payment Progress</div>
+            <div style="
+                width: 100%;
+                height: 20px;
+                background: #ecf0f1;
+                border-radius: 10px;
+                overflow: hidden;
+            ">
+                <div style="
+                    width: ${paymentPercentage}%;
+                    height: 100%;
+                    background: linear-gradient(90deg, #1abc9c, #16a085);
+                    transition: width 0.3s ease;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    color: white;
+                    font-size: 0.75rem;
+                    font-weight: 600;
+                ">${paymentPercentage.toFixed(1)}%</div>
+            </div>
+        </div>
+    `;
+}
+
+
+/**
+ * Status explanation helper
+ */
+function showStatusExplanation() {
+    const explanation = `
+PAYMENT STATUS RULES:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+• PENDING - No payment made (0%)
+• PARTIAL PAYMENT - Some payment made (1%-99%)
+• COMPLETED - Fully paid (100%)
+
+SHIPPING STATUS RULES:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+• PENDING - No payment (0%)
+• PROCESSING - Payment 1%-49%
+• DISPATCHED - Payment 50%-74%
+• IN TRANSIT - Payment 75%-99%
+• DELIVERED - Fully paid (100%)
+
+Statuses update automatically when you record a payment!
+    `;
+    
+    alert(explanation);
+}
+
+
+// ============================================
+// HELPER: Format currency
+// ============================================
+function formatCurrency(amount) {
+    return parseFloat(amount).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+
+
+// ============================================
+// ENHANCED PAYMENT FORM WITH STATUS DISPLAY
+// ============================================
+function ptFormBody() {
+    return `
+    <div class="flex-space">
+        <div style="flex:1;margin-right:10px;">
+            <label>Trx Date</label><br>
+            <input type="date" id="ptTrxDate"><br><br>
+            
+            <label>Trx ID</label><br>
+            <input type="text" id="ptTrxID" readonly style="width:70%">
+            <button class="btn" onclick="ptGenTrxID()">Generate</button><br><br>
+            
+            <label>Supplier Name</label><br>
+            <select id="ptSupplierName" style="width:100%"></select><br><br>
+            
+            <label>Supplier ID</label><br>
+            <input type="text" id="ptSupplierID" readonly><br><br>
+            
+            <label>State</label><br>
+            <input type="text" id="ptState" readonly><br><br>
+            
+            <label>City</label><br>
+            <input type="text" id="ptCity" readonly><br><br>
+        </div>
+        
+        <div style="flex:1;margin-left:10px;">
+            <label>PO ID</label><br>
+            <select id="ptPOID" style="width:100%"></select><br><br>
+            
+            <label>Bill Num</label><br>
+            <select id="ptBillNum" style="width:100%"></select><br><br>
+            
+            <label>PO Balance</label><br>
+            <input type="text" id="ptPOBalance" readonly><br><br>
+            
+            <label>PMT Mode</label><br>
+            <select id="ptPMTMode" style="width:100%"></select><br><br>
+            
+            <label>Amount Paid</label><br>
+            <input type="number" id="ptAmount" step="0.01"><br>
+            
+            <!-- Status will be displayed here dynamically -->
+        </div>
+    </div>
+    
+    <div style="margin-top: 15px; text-align: center;">
+        <button class="btn btn-outline" onclick="showStatusExplanation()" style="font-size: 0.85rem;">
+            <i class="fa fa-info-circle"></i> Status Rules Explanation
+        </button>
+    </div>
+    `;
+}
+
+
+// ============================================
+// CSRF Token Helper
+// ============================================
+function getCSRFToken() {
+    const cookies = document.cookie.split(';');
+    for (let cookie of cookies) {
+        const [name, value] = cookie.trim().split('=');
+        if (name === 'csrftoken') return value;
+    }
+    return null;
+}
+
+
+// ============================================
+// Processing Overlay
+// ============================================
+function showProcessing() {
+    document.getElementById('ptProcessing').style.display = 'flex';
+}
+
+function hideProcessing() {
+    document.getElementById('ptProcessing').style.display = 'none';
+}
+
+
+console.log('✅ Payments Module with Auto-Status Updates loaded successfully');
 </script>
 
 </body>
