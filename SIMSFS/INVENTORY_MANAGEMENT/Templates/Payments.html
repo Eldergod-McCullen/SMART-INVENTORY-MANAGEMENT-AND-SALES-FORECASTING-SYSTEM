@@ -649,608 +649,764 @@
     <p>Processing...</p>
   </div>
 
-<!--script src="{% static 'Purchases.js' %}"></!--script-->
-
-<script>
-  console.log('Payments.js loaded');
-  // Global state arrays
-let ptPayments = [], ptSuppliers = [], ptPO = [], ptDims = [];
-
-// Show/hide processing overlay
-function ptShowProcessing(){ document.getElementById('ptProcessing').style.display='flex'; }
-function ptHideProcessing(){ document.getElementById('ptProcessing').style.display='none'; }
-
-// Load and render payments list
-function ptRefresh() {
-    ptShowProcessing();
-    google.script.run
-    .withSuccessHandler(ptRenderList)
-    .withFailureHandler(ptHideProcessing)
-    .ptGetAllPayments();
-}
-
-function ptInitSelect2() {
-    $('#ptSupplierName')
-        .select2({placeholder:'Select Supplier', dropdownParent:$('#ptModal')})
-        .on('change', ptOnSupplier);
-
-    $('#ptPOID')
-      .select2({ placeholder:'Select PO', dropdownParent:$('#ptModal') })
-      .on('change', ptOnPO);
-
-    $('#ptBillNum')
-      .select2({ placeholder:'Bill Num', dropdownParent:$('#ptModal') });
-
-    $('#ptPMTMode')
-      .select2({ placeholder:'Payment Mode', dropdownParent:$('#ptModal') });
-  }
-
-
-    function ptRenderList(rows) {
-      ptHideProcessing();
-      ptPayments = rows || [];
-      const tbody = document.querySelector('#ptList tbody');
-      tbody.innerHTML = '';
-      (rows||[]).forEach(r => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td>${r['Trx Date']}</td>
-          <td>${r['Trx ID']}</td>
-          <td>${r['Supplier ID']}</td>
-          <td>${r['Supplier Name']}</td>
-          <td>${r['State']}</td>
-          <td>${r['City']}</td>
-          <td>${r['PO ID']}</td>
-          <td>${r['Bill Num']}</td>
-          <td>${r['PMT Mode']}</td>
-          <td>${parseFloat(r['Amount Paid']).toFixed(2)}</td>
-          <td>
-            <button class="btn" onclick="ptOpenEdit('${r['Trx ID']}')">Edit</button>
-            <button class="btn-clear" onclick="ptDelete('${r['Trx ID']}')">Delete</button>
-          </td>`;
-        tbody.appendChild(tr);
-      });
-    }
-
-    // Search & clear
-    function ptSearch() {
-      const crit = document.getElementById('ptSearchCrit').value;
-      const val  = document.getElementById('ptSearchInput').value.toLowerCase();
-      if (crit==='All' || !val) return ptRenderList(ptPayments);
-      const filtered = ptPayments.filter(r => (''+r[crit]).toLowerCase().includes(val));
-      if (!filtered.length) alert('No matching data found');
-      ptRenderList(filtered);
-    }
-    function ptClear() {
-      document.getElementById('ptSearchInput').value='';
-      document.getElementById('ptSearchCrit').value='All';
-      ptRenderList(ptPayments);
-    }
-
-    // On load: fetch lookups & bind buttons
-    document.addEventListener('DOMContentLoaded', () => {
-      ptRefresh();
-      google.script.run.withSuccessHandler(a=>ptSuppliers=a||[]).ptGetSuppliers();
-      google.script.run.withSuccessHandler(a=>ptPO=a||[]).ptGetPO();
-      google.script.run
-      .withSuccessHandler(data => {
-        console.log('CLIENT ptPO data:', data);
-        ptPO = data || [];
-      })
-      .ptGetPO();
-      google.script.run.withSuccessHandler(a=>ptDims=a||[]).ptGetDimensions();
-      document.getElementById('ptBtnNew').onclick    = ptOpenNew;
-      document.getElementById('ptBtnSearch').onclick = ptSearch;
-      document.getElementById('ptBtnClear').onclick  = ptClear;
-    });
-
-    // Modal helpers
-   function ptShowModal(title, body, footer) {
-    $('#ptModalTitle').text(title);
-    $('#ptModalBody').html(body);
-    $('#ptModalFooter').html(footer);
-    $('#ptModalOverlay').css('display','flex');
-    ptInitSelect2();
-  }
-    function ptCloseModal(){
-      document.getElementById('ptModalOverlay').style.display='none';
-    }
-
-
-
-    // Form HTML builders
-    function ptFormBody() {
-      return `
-      <div class="flex-space">
-        <div style="flex:1;margin-right:10px;">
-          <label>Trx Date</label><br><input type="date" id="ptTrxDate"><br><br>
-          <label>Trx ID</label><br>
-          <input type="text" id="ptTrxID" readonly style="width:70%">
-          <button class="btn" onclick="ptGenTrxID()">Generate</button><br><br>
-          <label>Supplier Name</label><br><select id="ptSupplierName" style="width:100%"></select><br><br>
-          <label>Supplier ID</label><br><input type="text" id="ptSupplierID" readonly><br><br>
-          <label>State</label><br><input type="text" id="ptState" readonly><br><br>
-          <label>City</label><br><input type="text" id="ptCity" readonly><br><br>
-        </div>
-        <div style="flex:1;margin-left:10px;">
-          <label>PO ID</label><br><select id="ptPOID" style="width:100%"></select><br><br>
-          <label>Bill Num</label><br><select id="ptBillNum" style="width:100%"></select><br><br>
-          <label>PO Balance</label><br><input type="text" id="ptPOBalance" readonly><br><br>
-          <label>PMT Mode</label><br><select id="ptPMTMode" style="width:100%"></select><br><br>
-          <label>Amount Paid</label><br><input type="number" id="ptAmount" step="0.01"><br>
-        </div>
-      </div>`;
-    }
-    function ptFormFooter(label, handler) {
-      return `
-        <button class="btn" onclick="${handler}">${label}</button>
-        <button class="btn-clear" onclick="ptCloseModal()">Close</button>`;
-    }
-
-    // Open New
-    function ptOpenNew(){
-      ptShowModal('New Payment', ptFormBody(), ptFormFooter('Save','ptSave()'));
-      ptPopulateForm(true);
-    }
-    // Open Edit
-    function ptOpenEdit(id){
-      const rec = ptPayments.find(r=>r['Trx ID']===id);
-      if(!rec) return alert('Record not found');
-      ptShowModal('Edit Payment', ptFormBody(), ptFormFooter('Update','ptUpdate()'));
-      ptPopulateForm(false, rec);
-    }
-
-    // Populate form (new vs edit)
-    function ptPopulateForm(isNew, rec={}){
-      $('#ptTrxDate').val(isNew?'':rec['Trx Date']);
-      $('#ptTrxID').val(isNew?'':rec['Trx ID']);
-      $('#ptSupplierID,#ptState,#ptCity,#ptPOID,#ptBillNum,#ptPOBalance,#ptAmount').val('');
-
-      // supplier dropdown
-      const sup = $('#ptSupplierName').empty().append('<option></option>');
-      ptSuppliers.forEach(s=> sup.append(new Option(s['Supplier Name'],s['Supplier Name'])));
-      if(!isNew) setSelect('#ptSupplierName', rec['Supplier Name']);
-
-      // PMT Mode
-      const pm = $('#ptPMTMode').empty().append('<option></option>');
-      [...new Set(ptDims.map(d=>d['PMT Mode']))]
-        .forEach(m=>pm.append(new Option(m,m)));
-      if(!isNew) setSelect('#ptPMTMode', rec['PMT Mode']);
-    }
-
-    // helper to set select2 value
-    function setSelect(sel, val){
-      const $s = $(sel).append(new Option(val,val,true,true));
-      $s.trigger('change');
-    }
-
-    // Generate unique Trx ID
-    function ptGenTrxID(){
-      ptShowProcessing();
-      google.script.run.withSuccessHandler(id=>{
-        $('#ptTrxID').val(id);
-        ptHideProcessing();
-      }).ptGenerateTrxID();
-    }
-
-    // Supplier changed
- function ptOnSupplier() {
-    const name = this.value;
-    const sup  = ptSuppliers.find(s=>s['Supplier Name']===name) || {};
-
-    $('#ptSupplierID').val(sup['Supplier ID']||'');
-    $('#ptState').val(sup['State']||'');
-    $('#ptCity').val(sup['City']||'');
-
-    // Filter by Supplier Name (not ID)
-    const orders = (ptPO||[]).filter(o => o['Supplier Name'] === name);
-
-    // Populate PO ID dropdown
-    const $po = $('#ptPOID').empty().append('<option></option>');
-    orders.forEach(o => $po.append(new Option(o['PO ID'], o['PO ID'])));
-
-    // Populate Bill Num dropdown
-    const $bill = $('#ptBillNum').empty().append('<option></option>');
-    orders.forEach(o => $bill.append(new Option(o['Bill Num'], o['Bill Num'])));
-
-    $('#ptSupplierName').select2('close');
-    // trigger PO change if at least one order
-    if (orders.length) $po.trigger('change');
-  }
-
-  // Handler when PO ID changes
-  function ptOnPO() {
-    const id    = this.value;
-    const order = (ptPO||[]).find(o=>o['PO ID']===id) || {};
-
-    $('#ptBillNum').val(order['Bill Num']||'');
-    $('#ptPOBalance').val(order['PO Balance']||'');
-    $('#ptPOID').select2('close');
-  }
-
-    // Save new payment
-    function ptSave(){
-      const rec = {
-        'Trx Date': $('#ptTrxDate').val(),
-        'Trx ID':   $('#ptTrxID').val(),
-        'Supplier ID':$('#ptSupplierID').val(),
-        'Supplier Name':$('#ptSupplierName').val(),
-        'State':    $('#ptState').val(),
-        'City':     $('#ptCity').val(),
-        'PO ID':    $('#ptPOID').val(),
-        'Bill Num': $('#ptBillNum').val(),
-        'PMT Mode': $('#ptPMTMode').val(),
-        'Amount Paid': parseFloat($('#ptAmount').val())
-      };
-      if (!rec['Trx Date']||!rec['Trx ID']||!rec['Supplier Name']||
-          !rec['PO ID']||!rec['Bill Num']||isNaN(rec['Amount Paid'])) {
-        return alert('Fill all required fields');
-      }
-      if (rec['Amount Paid'] > parseFloat($('#ptPOBalance').val()||0)) {
-        return alert('Amount paid is more than PO Balance');
-      }
-      ptShowProcessing();
-      google.script.run.withSuccessHandler(()=>{
-        alert('New Payment Saved');
-        ptCloseModal(); ptRefresh(); ptHideProcessing();
-      }).ptSaveNewPayment(rec);
-    }
-
-    // Update existing
-    function ptUpdate(){
-      const rec = {
-        'Trx Date': $('#ptTrxDate').val(),
-        'Trx ID':   $('#ptTrxID').val(),
-        'Supplier ID':$('#ptSupplierID').val(),
-        'Supplier Name':$('#ptSupplierName').val(),
-        'State':    $('#ptState').val(),
-        'City':     $('#ptCity').val(),
-        'PO ID':    $('#ptPOID').val(),
-        'Bill Num': $('#ptBillNum').val(),
-        'PMT Mode': $('#ptPMTMode').val(),
-        'Amount Paid': parseFloat($('#ptAmount').val())
-      };
-      ptShowProcessing();
-      google.script.run.withSuccessHandler(()=>{
-        alert('Payment Updated');
-        ptCloseModal(); ptRefresh(); ptHideProcessing();
-      }).ptUpdatePayment(rec);
-    }
-
-    // Delete
-    function ptDelete(id){
-      if(!confirm('Delete this payment?')) return;
-      ptShowProcessing();
-      google.script.run.withSuccessHandler(()=>{
-        alert('Payment deleted');
-        ptRefresh(); ptHideProcessing();
-      }).ptDeletePayment(id);
-    }
-
-    async function ptSavePayment() {
-    const paymentData = {
-        transaction_id: $('#ptTrxID').val(),
-        payment_date: $('#ptTrxDate').val(),
-        po_id: $('#ptPOID').val(),
-        supplier_id: $('#ptSupplierID').val(),
-        supplier_name: $('#ptSupplierName').val(),
-        county: $('#ptState').val(),
-        town: $('#ptCity').val(),
-        bill_number: $('#ptBillNum').val(),
-        payment_mode: $('#ptPMTMode').val(),
-        payment_amount: parseFloat($('#ptAmount').val())
-    };
+  <!-- jQuery and Select2 -->
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
+  
+  <!-- Flatpickr -->
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  
+  <script>
+    console.log('Payments module loaded');
     
-    // Validation
-    if (!paymentData.transaction_id) {
-        alert('Please generate a Transaction ID');
-        return;
+    // Global variables
+    let currentPage = 1;
+    const pageSize = 25;
+    let allPayments = [];
+    let filteredPayments = [];
+    let suppliers = [];
+    let purchaseOrders = [];
+    let paymentModes = [];
+    let isEditMode = false;
+    let currentPaymentId = null;
+    let originalPaymentData = null;
+
+    // Get CSRF token
+    function getCSRFToken() {
+        const metaTag = document.querySelector('meta[name="csrf-token"]');
+        if (metaTag) return metaTag.getAttribute('content');
+        
+        const cookieToken = getCookie('csrftoken');
+        if (cookieToken) return cookieToken;
+        
+        return null;
     }
-    if (!paymentData.payment_date) {
-        alert('Please select payment date');
-        return;
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
     }
-    if (!paymentData.po_id) {
-        alert('Please select a Purchase Order');
-        return;
-    }
-    if (!paymentData.payment_mode) {
-        alert('Please select payment mode');
-        return;
-    }
-    if (isNaN(paymentData.payment_amount) || paymentData.payment_amount <= 0) {
-        alert('Please enter a valid payment amount');
-        return;
-    }
-    
-    // Check if payment exceeds PO balance
-    const poBalance = parseFloat($('#ptPOBalance').val() || 0);
-    if (paymentData.payment_amount > poBalance) {
-        alert(`Payment amount (${paymentData.payment_amount.toFixed(2)}) exceeds PO Balance (${poBalance.toFixed(2)})`);
-        return;
-    }
-    
-    showProcessing();
-    
-    try {
-        const response = await fetch('/api/purchases/record-payment/', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCSRFToken()
-            },
-            credentials: 'same-origin',
-            body: JSON.stringify(paymentData)
+
+    // Initialize page
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('DOM loaded, initializing...');
+        
+        // Initialize date picker
+        flatpickr("#paymentDate", {
+            dateFormat: "d/m/Y",
+            allowInput: true
         });
         
-        const result = await response.json();
+        // Set up event listeners
+        document.getElementById('btnNewPayment').addEventListener('click', openNewPaymentModal);
+        document.getElementById('btnAddPaymentMode').addEventListener('click', openPaymentModeModal);
+        document.getElementById('btnSearch').addEventListener('click', searchPayments);
+        document.getElementById('btnClear').addEventListener('click', clearSearch);
         
-        if (result.success) {
-            // Show success message with status information
-            const statusInfo = result.status_info;
-            const message = `
-Payment Recorded Successfully!
+        // Payment Mode Modal
+        document.getElementById('closePaymentModeModal').addEventListener('click', closePaymentModeModal);
+        document.getElementById('btnClosePaymentModeModal').addEventListener('click', closePaymentModeModal);
+        document.getElementById('btnSavePaymentMode').addEventListener('click', saveNewPaymentMode);
+        
+        // Payment Modal
+        document.getElementById('closePaymentModal').addEventListener('click', closePaymentModal);
+        document.getElementById('btnClosePaymentModal').addEventListener('click', closePaymentModal);
+        document.getElementById('btnGenerateId').addEventListener('click', generateTransactionId);
+        document.getElementById('btnSavePayment').addEventListener('click', savePayment);
+        
+        // Initialize Select2
+        initializeSelect2();
+        
+        // Load data
+        loadSuppliers();
+        loadPurchaseOrders();
+        loadPaymentModes();
+        loadPayments();
+        
+        console.log('Initialization complete');
+    });
 
-Payment Status: ${statusInfo.payment_status}
-Shipping Status: ${statusInfo.shipping_status}
-Payment Progress: ${statusInfo.payment_percentage.toFixed(2)}%
-New Balance: ${result.new_balance.toFixed(2)}
+    function initializeSelect2() {
+        $('#supplierName').select2({
+            placeholder: 'Select Supplier',
+            allowClear: true,
+            dropdownParent: $('#paymentModal')
+        }).on('change', supplierChanged);
+        
+        $('#poId').select2({
+            placeholder: 'Select PO ID',
+            allowClear: true,
+            dropdownParent: $('#paymentModal')
+        }).on('change', poChanged);
+        
+        $('#paymentMode').select2({
+            placeholder: 'Select Payment Mode',
+            allowClear: true,
+            dropdownParent: $('#paymentModal')
+        });
+    }
+
+    // ============= LOAD DATA FUNCTIONS =============
+    
+    async function loadSuppliers() {
+        try {
+            const response = await fetch('/api/suppliers/', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCSRFToken()
+                },
+                credentials: 'same-origin'
+            });
+            
+            const result = await response.json();
+            if (result.success) {
+                suppliers = result.data;
+                populateSupplierDropdown();
+            }
+        } catch (error) {
+            console.error('Error loading suppliers:', error);
+        }
+    }
+
+    async function loadPurchaseOrders() {
+        try {
+            const response = await fetch('/api/purchases/', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCSRFToken()
+                },
+                credentials: 'same-origin'
+            });
+            
+            const result = await response.json();
+            if (result.success) {
+                purchaseOrders = result.data;
+            }
+        } catch (error) {
+            console.error('Error loading purchase orders:', error);
+        }
+    }
+
+    async function loadPaymentModes() {
+        try {
+            const response = await fetch('/api/payments/payment-modes/', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCSRFToken()
+                },
+                credentials: 'same-origin'
+            });
+            
+            const result = await response.json();
+            if (result.success) {
+                paymentModes = result.data;
+                populatePaymentModeDropdown();
+            }
+        } catch (error) {
+            console.error('Error loading payment modes:', error);
+        }
+    }
+
+    async function loadPayments() {
+        showProcessing();
+        try {
+            const response = await fetch('/api/payments/', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCSRFToken()
+                },
+                credentials: 'same-origin'
+            });
+            
+            const result = await response.json();
+            if (result.success) {
+                allPayments = result.data;
+                filteredPayments = [...result.data];
+                renderPaymentTable();
+            } else {
+                alert('Error loading payments: ' + result.message);
+            }
+        } catch (error) {
+            console.error('Error loading payments:', error);
+            alert('Failed to load payments');
+        } finally {
+            hideProcessing();
+        }
+    }
+
+    // ============= POPULATE DROPDOWNS =============
+    
+    function populateSupplierDropdown() {
+        const supplierSelect = $('#supplierName');
+        supplierSelect.empty();
+        supplierSelect.append(new Option('Select Supplier', '', true, true));
+        
+        suppliers.forEach(supplier => {
+            supplierSelect.append(new Option(supplier.name, supplier.name));
+        });
+        
+        supplierSelect.trigger('change');
+    }
+
+    function populatePaymentModeDropdown() {
+        const modeSelect = $('#paymentMode');
+        modeSelect.empty();
+        modeSelect.append(new Option('Select Payment Mode', '', true, true));
+        
+        paymentModes.forEach(mode => {
+            modeSelect.append(new Option(mode, mode));
+        });
+        
+        modeSelect.trigger('change');
+    }
+
+    // ============= SUPPLIER CHANGED EVENT =============
+    
+    function supplierChanged() {
+        const supplierName = $('#supplierName').val();
+        const supplier = suppliers.find(s => s.name === supplierName);
+        
+        if (supplier) {
+            // Auto-populate supplier details
+            $('#supplierId').val(supplier.id);
+            $('#county').val(supplier.state || '');
+            $('#town').val(supplier.city || '');
+            
+            // Filter POs for this supplier
+            const supplierPOs = purchaseOrders.filter(po => po.supplier_name === supplierName);
+            
+            // Populate PO dropdown
+            const poSelect = $('#poId');
+            poSelect.empty();
+            poSelect.append(new Option('Select PO ID', '', true, true));
+            
+            supplierPOs.forEach(po => {
+                poSelect.append(new Option(po.po_id, po.po_id));
+            });
+            
+            poSelect.trigger('change');
+            
+            // Hide balance info until PO is selected
+            document.getElementById('balanceInfo').style.display = 'none';
+        } else {
+            // Clear fields
+            $('#supplierId').val('');
+            $('#county').val('');
+            $('#town').val('');
+            $('#poId').empty().append(new Option('Select PO ID', '', true, true)).trigger('change');
+            document.getElementById('balanceInfo').style.display = 'none';
+        }
+    }
+
+    // ============= PO CHANGED EVENT =============
+    
+    function poChanged() {
+        const poId = $('#poId').val();
+        const po = purchaseOrders.find(p => p.po_id === poId);
+        
+        if (po) {
+            // Auto-populate bill number
+            $('#billNumber').val(po.bill_number);
+            
+            // Calculate and display balance
+            const totalAmount = parseFloat(po.total_amount);
+            const amountPaid = parseFloat(po.amount_paid);
+            const balance = totalAmount - amountPaid;
+            
+            document.getElementById('poTotalAmount').textContent = totalAmount.toFixed(2);
+            document.getElementById('poAmountPaid').textContent = amountPaid.toFixed(2);
+            document.getElementById('poBalance').textContent = balance.toFixed(2);
+            
+            // Show balance info
+            document.getElementById('balanceInfo').style.display = 'block';
+        } else {
+            $('#billNumber').val('');
+            document.getElementById('balanceInfo').style.display = 'none';
+        }
+    }
+
+    // ============= RENDER PAYMENT TABLE =============
+    
+    function renderPaymentTable() {
+        const startIndex = (currentPage - 1) * pageSize;
+        const endIndex = startIndex + pageSize;
+        const pagePayments = filteredPayments.slice(startIndex, endIndex);
+        const tableBody = document.getElementById('tableBody');
+        
+        tableBody.innerHTML = '';
+        
+        if (pagePayments.length === 0) {
+            document.getElementById('tableContainer').style.display = 'none';
+            document.getElementById('noData').style.display = 'block';
+            document.getElementById('pagination').innerHTML = '';
+            return;
+        }
+        
+        document.getElementById('tableContainer').style.display = 'block';
+        document.getElementById('noData').style.display = 'none';
+        
+        pagePayments.forEach((payment) => {
+            const row = document.createElement('tr');
+            row.setAttribute('data-payment-id', payment.transaction_id);
+            
+            row.innerHTML = `
+                <td>${payment.transaction_id}</td>
+                <td>${payment.date}</td>
+                <td>${payment.supplier_id}</td>
+                <td>${payment.supplier_name}</td>
+                <td>${payment.county || ''}</td>
+                <td>${payment.town || ''}</td>
+                <td>${payment.po_id}</td>
+                <td>${payment.bill_number}</td>
+                <td>${payment.payment_mode}</td>
+                <td>${parseFloat(payment.amount_paid).toFixed(2)}</td>
+                <td class="action-cell">
+                    <button class="action-btn edit-btn" onclick="editPayment('${payment.transaction_id}')">
+                        <i class="fas fa-edit"></i> Edit
+                    </button>
+                    <button class="action-btn delete-btn" onclick="deletePayment('${payment.transaction_id}')">
+                        <i class="fas fa-trash"></i> Delete
+                    </button>
+                </td>
             `;
             
-            alert(message);
+            tableBody.appendChild(row);
+        });
+        
+        renderPagination();
+    }
+
+    // ============= PAGINATION =============
+    
+    function renderPagination() {
+        const totalPages = Math.ceil(filteredPayments.length / pageSize);
+        const paginationDiv = document.getElementById('pagination');
+        paginationDiv.innerHTML = '';
+        
+        if (totalPages <= 1) return;
+        
+        const prevBtn = document.createElement('button');
+        prevBtn.className = 'page-btn';
+        prevBtn.innerHTML = '<i class="fas fa-chevron-left"></i>';
+        prevBtn.disabled = currentPage === 1;
+        prevBtn.onclick = () => {
+            if (currentPage > 1) {
+                currentPage--;
+                renderPaymentTable();
+            }
+        };
+        paginationDiv.appendChild(prevBtn);
+        
+        for (let i = 1; i <= totalPages; i++) {
+            const pageBtn = document.createElement('button');
+            pageBtn.className = `page-btn ${i === currentPage ? 'active' : ''}`;
+            pageBtn.textContent = i;
+            pageBtn.onclick = () => {
+                currentPage = i;
+                renderPaymentTable();
+            };
+            paginationDiv.appendChild(pageBtn);
+        }
+        
+        const nextBtn = document.createElement('button');
+        nextBtn.className = 'page-btn';
+        nextBtn.innerHTML = '<i class="fas fa-chevron-right"></i>';
+        nextBtn.disabled = currentPage === totalPages;
+        nextBtn.onclick = () => {
+            if (currentPage < totalPages) {
+                currentPage++;
+                renderPaymentTable();
+            }
+        };
+        paginationDiv.appendChild(nextBtn);
+    }
+
+    // ============= MODAL FUNCTIONS =============
+    
+    function openNewPaymentModal() {
+        isEditMode = false;
+        currentPaymentId = null;
+        originalPaymentData = null;
+        
+        document.getElementById('modalTitle').textContent = 'Record New Payment';
+        document.getElementById('btnSavePayment').textContent = 'Save Payment';
+        
+        // Clear form
+        document.getElementById('transactionId').value = '';
+        document.getElementById('paymentDate').value = '';
+        $('#supplierName').val('').trigger('change');
+        document.getElementById('supplierId').value = '';
+        document.getElementById('county').value = '';
+        document.getElementById('town').value = '';
+        $('#poId').empty().append(new Option('Select PO ID', '', true, true)).trigger('change');
+        document.getElementById('billNumber').value = '';
+        $('#paymentMode').val('').trigger('change');
+        document.getElementById('amountPaid').value = '';
+        document.getElementById('balanceInfo').style.display = 'none';
+        
+        // Enable all fields
+        document.getElementById('transactionId').readOnly = true;
+        document.getElementById('paymentDate').disabled = false;
+        $('#supplierName').prop('disabled', false).trigger('change');
+        $('#poId').prop('disabled', false);
+        $('#paymentMode').prop('disabled', false);
+        document.getElementById('amountPaid').disabled = false;
+        
+        document.getElementById('paymentModal').style.display = 'block';
+    }
+
+    function closePaymentModal() {
+        document.getElementById('paymentModal').style.display = 'none';
+    }
+
+    function openPaymentModeModal() {
+        document.getElementById('newPaymentMode').value = '';
+        document.getElementById('paymentModeModal').style.display = 'block';
+    }
+
+    function closePaymentModeModal() {
+        document.getElementById('paymentModeModal').style.display = 'none';
+    }
+
+    // ============= GENERATE TRANSACTION ID =============
+    
+    async function generateTransactionId() {
+        showProcessing();
+        try {
+            const response = await fetch('/api/payments/generate-transaction-id/', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCSRFToken()
+                },
+                credentials: 'same-origin'
+            });
             
-            // Close modal and refresh data
-            ptCloseModal();
-            ptRefreshList();
+            const result = await response.json();
+            if (result.success) {
+                document.getElementById('transactionId').value = result.transaction_id;
+            } else {
+                alert('Error generating Transaction ID: ' + result.message);
+            }
+        } catch (error) {
+            console.error('Error generating Transaction ID:', error);
+            alert('Failed to generate Transaction ID');
+        } finally {
+            hideProcessing();
+        }
+    }
+
+    // ============= SAVE PAYMENT MODE =============
+    
+    async function saveNewPaymentMode() {
+        const modeName = document.getElementById('newPaymentMode').value.trim();
+        
+        if (!modeName) {
+            alert('Please enter a payment mode');
+            return;
+        }
+        
+        showProcessing();
+        try {
+            const response = await fetch('/api/payments/payment-modes/add/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCSRFToken()
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify({ mode_name: modeName })
+            });
+            
+            const result = await response.json();
+            if (result.success) {
+                alert('Payment Mode Added Successfully');
+                closePaymentModeModal();
+                await loadPaymentModes();
+            } else {
+                alert('Error: ' + result.message);
+            }
+        } catch (error) {
+            console.error('Error saving payment mode:', error);
+            alert('Failed to add payment mode');
+        } finally {
+            hideProcessing();
+        }
+    }
+
+    // ============= SAVE PAYMENT =============
+    
+    async function savePayment() {
+        const paymentData = {
+            transaction_id: document.getElementById('transactionId').value.trim(),
+            payment_date: document.getElementById('paymentDate').value.trim(),
+            supplier_id: document.getElementById('supplierId').value.trim(),
+            supplier_name: $('#supplierName').val(),
+            county: document.getElementById('county').value.trim(),
+            town: document.getElementById('town').value.trim(),
+            po_id: $('#poId').val(),
+            bill_number: document.getElementById('billNumber').value.trim(),
+            payment_mode: $('#paymentMode').val(),
+            amount_paid: parseFloat(document.getElementById('amountPaid').value) || 0
+        };
+        
+        // Validation
+        if (!paymentData.transaction_id) {
+            alert('Please generate a Transaction ID');
+            return;
+        }
+        if (!paymentData.payment_date) {
+            alert('Please select payment date');
+            return;
+        }
+        if (!paymentData.supplier_name) {
+            alert('Please select a supplier');
+            return;
+        }
+        if (!paymentData.po_id) {
+            alert('Please select a Purchase Order');
+            return;
+        }
+        if (!paymentData.payment_mode) {
+            alert('Please select payment mode');
+            return;
+        }
+        if (isNaN(paymentData.amount_paid) || paymentData.amount_paid <= 0) {
+            alert('Please enter a valid payment amount');
+            return;
+        }
+        
+        // Check if payment exceeds PO balance
+        const poBalance = parseFloat(document.getElementById('poBalance').textContent || 0);
+        if (paymentData.amount_paid > poBalance) {
+            alert(`Payment amount (${paymentData.amount_paid.toFixed(2)}) exceeds PO Balance (${poBalance.toFixed(2)})`);
+            return;
+        }
+        
+        showProcessing();
+        
+        try {
+            const url = isEditMode ? '/api/payments/update/' : '/api/payments/add/';
+            
+            // If editing, include original data for reversal
+            if (isEditMode) {
+                paymentData.original_transaction_id = originalPaymentData.transaction_id;
+                paymentData.original_po_id = originalPaymentData.po_id;
+                paymentData.original_amount_paid = originalPaymentData.amount_paid;
+            }
+            
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCSRFToken()
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify(paymentData)
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                const message = isEditMode ? 'Payment Updated Successfully!' : 'Payment Recorded Successfully!';
+                alert(message + '\n\nPayment Status: ' + result.status_info.payment_status + 
+                      '\nShipping Status: ' + result.status_info.shipping_status);
+                
+                closePaymentModal();
+                await loadPayments();
+                await loadPurchaseOrders(); // Refresh PO data
+            } else {
+                alert('Error: ' + result.message);
+            }
+        } catch (error) {
+            console.error('Error saving payment:', error);
+            alert('Failed to save payment. Please try again.');
+        } finally {
+            hideProcessing();
+        }
+    }
+
+    // ============= EDIT PAYMENT =============
+    
+    async function editPayment(transactionId) {
+        const payment = allPayments.find(p => p.transaction_id === transactionId);
+        if (!payment) {
+            alert('Payment not found');
+            return;
+        }
+        
+        isEditMode = true;
+        currentPaymentId = transactionId;
+        originalPaymentData = { ...payment };
+        
+        document.getElementById('modalTitle').textContent = 'Edit Payment';
+        document.getElementById('btnSavePayment').textContent = 'Update Payment';
+        
+        // Populate form with existing data
+        document.getElementById('transactionId').value = payment.transaction_id;
+        document.getElementById('paymentDate').value = payment.date;
+        
+        // Set supplier (this will trigger auto-population)
+        $('#supplierName').val(payment.supplier_name).trigger('change');
+        
+        // Wait for supplier change to populate POs, then set PO
+        setTimeout(() => {
+            $('#poId').val(payment.po_id).trigger('change');
+        }, 100);
+        
+        // Wait for PO change to show balance, then set other fields
+        setTimeout(() => {
+            $('#paymentMode').val(payment.payment_mode).trigger('change');
+            document.getElementById('amountPaid').value = parseFloat(payment.amount_paid).toFixed(2);
+        }, 200);
+        
+        // Transaction ID is readonly
+        document.getElementById('transactionId').readOnly = true;
+        
+        document.getElementById('paymentModal').style.display = 'block';
+    }
+
+    // ============= DELETE PAYMENT =============
+    
+    async function deletePayment(transactionId) {
+        const payment = allPayments.find(p => p.transaction_id === transactionId);
+        if (!payment) {
+            alert('Payment not found');
+            return;
+        }
+        
+        const confirmMessage = `Are you sure you want to delete this payment?\n\n` +
+            `Transaction ID: ${payment.transaction_id}\n` +
+            `Supplier: ${payment.supplier_name}\n` +
+            `PO ID: ${payment.po_id}\n` +
+            `Amount: ${parseFloat(payment.amount_paid).toFixed(2)}\n\n` +
+            `This will update the purchase order balance and statuses.`;
+        
+        if (!confirm(confirmMessage)) {
+            return;
+        }
+        
+        showProcessing();
+        
+        try {
+            const response = await fetch('/api/payments/delete/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCSRFToken()
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify({ 
+                    transaction_id: transactionId,
+                    po_id: payment.po_id,
+                    amount_paid: payment.amount_paid
+                })
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                alert('Payment Deleted Successfully!\n\n' +
+                      'Purchase Order statuses have been updated accordingly.');
+                await loadPayments();
+                await loadPurchaseOrders(); // Refresh PO data
+            } else {
+                alert('Error: ' + result.message);
+            }
+        } catch (error) {
+            console.error('Error deleting payment:', error);
+            alert('Failed to delete payment');
+        } finally {
+            hideProcessing();
+        }
+    }
+
+    // ============= SEARCH FUNCTIONS =============
+    
+    function searchPayments() {
+        const criteria = document.getElementById('searchCriteria').value;
+        const query = document.getElementById('searchInput').value.toLowerCase().trim();
+        
+        if (!query) {
+            filteredPayments = [...allPayments];
         } else {
-            alert('Error: ' + result.message);
+            filteredPayments = allPayments.filter(payment => {
+                if (criteria === 'all') {
+                    return (
+                        payment.transaction_id.toLowerCase().includes(query) ||
+                        payment.supplier_name.toLowerCase().includes(query) ||
+                        payment.po_id.toLowerCase().includes(query) ||
+                        payment.bill_number.toLowerCase().includes(query) ||
+                        payment.payment_mode.toLowerCase().includes(query)
+                    );
+                } else if (criteria === 'Transaction ID') {
+                    return payment.transaction_id.toLowerCase().includes(query);
+                } else if (criteria === 'Supplier Name') {
+                    return payment.supplier_name.toLowerCase().includes(query);
+                } else if (criteria === 'PO ID') {
+                    return payment.po_id.toLowerCase().includes(query);
+                } else if (criteria === 'Bill Number') {
+                    return payment.bill_number.toLowerCase().includes(query);
+                } else if (criteria === 'Payment Mode') {
+                    return payment.payment_mode.toLowerCase().includes(query);
+                }
+                return true;
+            });
         }
-    } catch (error) {
-        console.error('Error recording payment:', error);
-        alert('Failed to record payment. Please try again.');
-    } finally {
-        hideProcessing();
-    }
-}
-
-
-/**
- * Display payment and shipping status in PO selection
- */
-function ptOnPO() {
-    const poID = this.value;
-    const order = (ptPO || []).find(o => o['PO ID'] === poID) || {};
-    
-    $('#ptBillNum').val(order['Bill Num'] || '');
-    $('#ptPOBalance').val(order['PO Balance'] || '');
-    
-    // Display current statuses
-    const paymentStatus = order['Payment Status'] || 'PENDING';
-    const shippingStatus = order['Shipping Status'] || 'PENDING';
-    
-    // Calculate payment percentage
-    const totalAmount = parseFloat(order['Total Amount'] || 0);
-    const amountPaid = parseFloat(order['Amount Paid'] || 0);
-    const paymentPercentage = totalAmount > 0 ? (amountPaid / totalAmount * 100) : 0;
-    
-    // Display status information
-    displayStatusInfo(paymentStatus, shippingStatus, paymentPercentage);
-    
-    $('#ptPOID').select2('close');
-}
-
-
-/**
- * Display status information to user
- */
-function displayStatusInfo(paymentStatus, shippingStatus, paymentPercentage) {
-    // Create or update status display element
-    let statusDisplay = document.getElementById('ptStatusDisplay');
-    
-    if (!statusDisplay) {
-        statusDisplay = document.createElement('div');
-        statusDisplay.id = 'ptStatusDisplay';
-        statusDisplay.style.cssText = `
-            margin-top: 15px;
-            padding: 15px;
-            background: #f8f9fa;
-            border-radius: 6px;
-            border-left: 4px solid #1abc9c;
-        `;
         
-        // Insert after PO Balance field
-        const poBalanceField = document.getElementById('ptPOBalance');
-        if (poBalanceField && poBalanceField.parentNode) {
-            poBalanceField.parentNode.insertAdjacentElement('afterend', statusDisplay);
-        }
-    }
-    
-    // Get status color based on payment status
-    const getStatusColor = (status) => {
-        switch(status) {
-            case 'PENDING': return '#f39c12';
-            case 'PARTIAL PAYMENT': return '#3498db';
-            case 'COMPLETED': return '#2ecc71';
-            case 'PROCESSING': return '#9b59b6';
-            case 'DISPATCHED': return '#3498db';
-            case 'IN TRANSIT': return '#1abc9c';
-            case 'DELIVERED': return '#27ae60';
-            default: return '#95a5a6';
-        }
-    };
-    
-    statusDisplay.innerHTML = `
-        <div style="margin-bottom: 10px;">
-            <strong>Current Status:</strong>
-        </div>
-        <div style="display: flex; gap: 15px; flex-wrap: wrap;">
-            <div style="flex: 1; min-width: 150px;">
-                <div style="font-size: 0.85rem; color: #7f8c8d; margin-bottom: 5px;">Payment Status</div>
-                <div style="
-                    padding: 6px 12px;
-                    background: ${getStatusColor(paymentStatus)};
-                    color: white;
-                    border-radius: 4px;
-                    font-weight: 600;
-                    text-align: center;
-                ">${paymentStatus}</div>
-            </div>
-            <div style="flex: 1; min-width: 150px;">
-                <div style="font-size: 0.85rem; color: #7f8c8d; margin-bottom: 5px;">Shipping Status</div>
-                <div style="
-                    padding: 6px 12px;
-                    background: ${getStatusColor(shippingStatus)};
-                    color: white;
-                    border-radius: 4px;
-                    font-weight: 600;
-                    text-align: center;
-                ">${shippingStatus}</div>
-            </div>
-        </div>
-        <div style="margin-top: 10px;">
-            <div style="font-size: 0.85rem; color: #7f8c8d; margin-bottom: 5px;">Payment Progress</div>
-            <div style="
-                width: 100%;
-                height: 20px;
-                background: #ecf0f1;
-                border-radius: 10px;
-                overflow: hidden;
-            ">
-                <div style="
-                    width: ${paymentPercentage}%;
-                    height: 100%;
-                    background: linear-gradient(90deg, #1abc9c, #16a085);
-                    transition: width 0.3s ease;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    color: white;
-                    font-size: 0.75rem;
-                    font-weight: 600;
-                ">${paymentPercentage.toFixed(1)}%</div>
-            </div>
-        </div>
-    `;
-}
-
-
-/**
- * Status explanation helper
- */
-function showStatusExplanation() {
-    const explanation = `
-PAYMENT STATUS RULES:
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-• PENDING - No payment made (0%)
-• PARTIAL PAYMENT - Some payment made (1%-99%)
-• COMPLETED - Fully paid (100%)
-
-SHIPPING STATUS RULES:
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-• PENDING - No payment (0%)
-• PROCESSING - Payment 1%-49%
-• DISPATCHED - Payment 50%-74%
-• IN TRANSIT - Payment 75%-99%
-• DELIVERED - Fully paid (100%)
-
-Statuses update automatically when you record a payment!
-    `;
-    
-    alert(explanation);
-}
-
-
-// ============================================
-// HELPER: Format currency
-// ============================================
-function formatCurrency(amount) {
-    return parseFloat(amount).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-}
-
-
-// ============================================
-// ENHANCED PAYMENT FORM WITH STATUS DISPLAY
-// ============================================
-function ptFormBody() {
-    return `
-    <div class="flex-space">
-        <div style="flex:1;margin-right:10px;">
-            <label>Trx Date</label><br>
-            <input type="date" id="ptTrxDate"><br><br>
-            
-            <label>Trx ID</label><br>
-            <input type="text" id="ptTrxID" readonly style="width:70%">
-            <button class="btn" onclick="ptGenTrxID()">Generate</button><br><br>
-            
-            <label>Supplier Name</label><br>
-            <select id="ptSupplierName" style="width:100%"></select><br><br>
-            
-            <label>Supplier ID</label><br>
-            <input type="text" id="ptSupplierID" readonly><br><br>
-            
-            <label>State</label><br>
-            <input type="text" id="ptState" readonly><br><br>
-            
-            <label>City</label><br>
-            <input type="text" id="ptCity" readonly><br><br>
-        </div>
+        currentPage = 1;
+        renderPaymentTable();
         
-        <div style="flex:1;margin-left:10px;">
-            <label>PO ID</label><br>
-            <select id="ptPOID" style="width:100%"></select><br><br>
-            
-            <label>Bill Num</label><br>
-            <select id="ptBillNum" style="width:100%"></select><br><br>
-            
-            <label>PO Balance</label><br>
-            <input type="text" id="ptPOBalance" readonly><br><br>
-            
-            <label>PMT Mode</label><br>
-            <select id="ptPMTMode" style="width:100%"></select><br><br>
-            
-            <label>Amount Paid</label><br>
-            <input type="number" id="ptAmount" step="0.01"><br>
-            
-            <!-- Status will be displayed here dynamically -->
-        </div>
-    </div>
-    
-    <div style="margin-top: 15px; text-align: center;">
-        <button class="btn btn-outline" onclick="showStatusExplanation()" style="font-size: 0.85rem;">
-            <i class="fa fa-info-circle"></i> Status Rules Explanation
-        </button>
-    </div>
-    `;
-}
-
-
-// ============================================
-// CSRF Token Helper
-// ============================================
-function getCSRFToken() {
-    const cookies = document.cookie.split(';');
-    for (let cookie of cookies) {
-        const [name, value] = cookie.trim().split('=');
-        if (name === 'csrftoken') return value;
+        if (filteredPayments.length === 0) {
+            alert('No matching data found');
+        }
     }
-    return null;
-}
 
+    function clearSearch() {
+        document.getElementById('searchInput').value = '';
+        document.getElementById('searchCriteria').value = 'all';
+        filteredPayments = [...allPayments];
+        currentPage = 1;
+        renderPaymentTable();
+    }
 
-// ============================================
-// Processing Overlay
-// ============================================
-function showProcessing() {
-    document.getElementById('ptProcessing').style.display = 'flex';
-}
+    // ============= UTILITY FUNCTIONS =============
+    
+    function showProcessing() {
+        document.getElementById('processingOverlay').style.display = 'flex';
+    }
 
-function hideProcessing() {
-    document.getElementById('ptProcessing').style.display = 'none';
-}
+    function hideProcessing() {
+        document.getElementById('processingOverlay').style.display = 'none';
+    }
 
+    // Close modal when clicking outside
+    window.onclick = function(event) {
+        const paymentModal = document.getElementById('paymentModal');
+        const paymentModeModal = document.getElementById('paymentModeModal');
+        
+        if (event.target === paymentModal) {
+            closePaymentModal();
+        }
+        if (event.target === paymentModeModal) {
+            closePaymentModeModal();
+        }
+    }
+  </script>
 
-console.log('✅ Payments Module with Auto-Status Updates loaded successfully');
-</script>
-
-</body>
+  </body>
 </html>

@@ -2855,3 +2855,493 @@ def api_recalculate_all_po_statuses(request):
     
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
+# ============================================
+# PAYMENTS MODULE VIEWS
+# ============================================
+
+@login_required(login_url='/login/')
+def payments_content(request):
+    """Load Payments content page"""
+    return render(request, 'Payments.html')
+
+
+# ============================================
+# PAYMENT MODE APIs
+# ============================================
+
+@csrf_exempt
+@login_required(login_url='/login/')
+def api_get_payment_modes(request):
+    """Get all payment modes"""
+    try:
+        modes = list(PaymentMode.objects.values_list('payment_mode', flat=True).order_by('payment_mode'))
+        return JsonResponse({'success': True, 'data': modes})
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+@login_required(login_url='/login/')
+def api_add_payment_mode(request):
+    """Add new payment mode"""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Invalid request method'}, status=405)
+    
+    try:
+        data = json.loads(request.body)
+        mode_name = data.get('mode_name', '').strip()
+        
+        if not mode_name:
+            return JsonResponse({'success': False, 'message': 'Payment mode name is required'}, status=400)
+        
+        if PaymentMode.objects.filter(payment_mode__iexact=mode_name).exists():
+            return JsonResponse({'success': False, 'message': 'Payment mode already exists'}, status=400)
+        
+        PaymentMode.objects.create(payment_mode=mode_name)
+        
+        return JsonResponse({'success': True, 'message': 'Payment mode added successfully'})
+    
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'message': 'Invalid JSON data'}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
+# ============================================
+# GENERATE TRANSACTION ID
+# ============================================
+
+@csrf_exempt
+@login_required(login_url='/login/')
+def api_generate_transaction_id(request):
+    """Generate unique Transaction ID in format TRANSPAY00001"""
+    try:
+        max_payment = Payment.objects.aggregate(Max('transaction_id'))['transaction_id__max']
+        
+        if max_payment:
+            # Extract numeric part from TRANSPAY00001
+            num_part = int(max_payment[8:]) + 1
+        else:
+            num_part = 1
+        
+        new_id = f"TRANSPAY{num_part:05d}"
+        
+        # Safety check
+        while Payment.objects.filter(transaction_id=new_id).exists():
+            num_part += 1
+            new_id = f"TRANSPAY{num_part:05d}"
+        
+        return JsonResponse({'success': True, 'transaction_id': new_id})
+    
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
+# ============================================
+# GET ALL PAYMENTS
+# ============================================
+
+@csrf_exempt
+@login_required(login_url='/login/')
+def api_get_payments(request):
+    """Get all payments with full details"""
+    try:
+        payments = Payment.objects.select_related(
+            'supplier_id', 'county', 'town', 'po_id', 'payment_mode'
+        ).all().order_by('-date')
+        
+        payments_list = []
+        for payment in payments:
+            # Format date as DD/MM/YYYY
+            date_str = payment.date.strftime('%d/%m/%Y') if payment.date else ''
+            
+            payments_list.append({
+                'transaction_id': payment.transaction_id,
+                'date': date_str,
+                'supplier_id': payment.supplier_id.supplier_id if payment.supplier_id else '',
+                'supplier_name': payment.supplier_name,
+                'county': payment.county.county if payment.county else '',
+                'town': payment.town.town if payment.town else '',
+                'po_id': payment.po_id.po_id if payment.po_id else '',
+                'bill_number': payment.bill_number,
+                'payment_mode': payment.payment_mode.payment_mode if payment.payment_mode else '',
+                'amount_paid': float(payment.amount_paid)
+            })
+        
+        return JsonResponse({'success': True, 'data': payments_list})
+    
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
+# ============================================
+# HELPER: Calculate and Update PO Statuses
+# ============================================
+
+def update_purchase_order_statuses(purchase_order):
+    """
+    Update both payment and shipping status for a purchase order
+    
+    Payment Status Rules:
+    - 0% paid -> PENDING
+    - 1-99% paid -> PARTIAL PAYMENT
+    - 100% paid -> COMPLETED
+    
+    Shipping Status Rules:
+    - 0% paid -> PENDING
+    - 1-49% paid -> PROCESSING
+    - 50-74% paid -> DISPATCHED
+    - 75-99% paid -> IN TRANSIT
+    - 100% paid -> DELIVERED
+    """
+    total_amount = Decimal(str(purchase_order.total_amount))
+    amount_paid = Decimal(str(purchase_order.amount_paid))
+    
+    # Calculate payment percentage
+    if total_amount > 0:
+        payment_percentage = (amount_paid / total_amount) * 100
+    else:
+        payment_percentage = 0
+    
+    # Determine Payment Status
+    if amount_paid == Decimal('0.00'):
+        payment_status_name = 'PENDING'
+    elif amount_paid >= total_amount:
+        payment_status_name = 'COMPLETED'
+    else:
+        payment_status_name = 'PARTIAL PAYMENT'
+    
+    # Determine Shipping Status
+    if payment_percentage == 0:
+        shipping_status_name = 'PENDING'
+    elif payment_percentage >= 100:
+        shipping_status_name = 'DELIVERED'
+    elif payment_percentage >= 75:
+        shipping_status_name = 'IN TRANSIT'
+    elif payment_percentage >= 50:
+        shipping_status_name = 'DISPATCHED'
+    else:
+        shipping_status_name = 'PROCESSING'
+    
+    # Get or create status objects
+    payment_status, _ = PaymentStatus.objects.get_or_create(
+        payment_status=payment_status_name
+    )
+    shipping_status, _ = ShippingStatus.objects.get_or_create(
+        shipping_status=shipping_status_name
+    )
+    
+    # Update purchase order
+    purchase_order.payment_status = payment_status
+    purchase_order.shipping_status = shipping_status
+    purchase_order.save()
+    
+    return {
+        'payment_status': payment_status_name,
+        'shipping_status': shipping_status_name,
+        'payment_percentage': float(payment_percentage),
+        'balance_remaining': float(total_amount - amount_paid)
+    }
+
+
+# ============================================
+# PARSE DATE HELPER
+# ============================================
+
+def parse_date(date_str):
+    """Parse date from DD/MM/YYYY format"""
+    try:
+        return datetime.strptime(date_str, '%d/%m/%Y').date()
+    except:
+        return None
+
+
+# ============================================
+# ADD NEW PAYMENT
+# ============================================
+
+@csrf_exempt
+@login_required(login_url='/login/')
+def api_add_payment(request):
+    """
+    Add new payment and automatically update PO statuses
+    """
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Invalid request method'}, status=405)
+    
+    try:
+        data = json.loads(request.body)
+        
+        # Extract payment data
+        transaction_id = data.get('transaction_id', '').strip()
+        payment_date_str = data.get('payment_date', '').strip()
+        supplier_id = data.get('supplier_id', '').strip()
+        supplier_name = data.get('supplier_name', '').strip()
+        county_name = data.get('county', '').strip()
+        town_name = data.get('town', '').strip()
+        po_id = data.get('po_id', '').strip()
+        bill_number = data.get('bill_number', '').strip()
+        payment_mode_name = data.get('payment_mode', '').strip()
+        amount_paid = Decimal(str(data.get('amount_paid', 0)))
+        
+        # Validation
+        if not all([transaction_id, payment_date_str, supplier_name, po_id, payment_mode_name]):
+            return JsonResponse({
+                'success': False, 
+                'message': 'All required fields must be filled'
+            }, status=400)
+        
+        if amount_paid <= 0:
+            return JsonResponse({
+                'success': False, 
+                'message': 'Payment amount must be greater than zero'
+            }, status=400)
+        
+        # Check if transaction ID already exists
+        if Payment.objects.filter(transaction_id=transaction_id).exists():
+            return JsonResponse({
+                'success': False, 
+                'message': 'Transaction ID already exists'
+            }, status=400)
+        
+        # Parse payment date
+        payment_date = parse_date(payment_date_str)
+        if not payment_date:
+            return JsonResponse({
+                'success': False, 
+                'message': 'Invalid date format. Use DD/MM/YYYY'
+            }, status=400)
+        
+        # Get foreign key objects
+        try:
+            supplier = Supplier.objects.get(supplier_id=supplier_id)
+            purchase_order = PurchaseOrder.objects.get(po_id=po_id)
+            payment_mode, _ = PaymentMode.objects.get_or_create(payment_mode=payment_mode_name)
+            county = County.objects.get(county=county_name) if county_name else None
+            town = Town.objects.get(town=town_name) if town_name else None
+        except (Supplier.DoesNotExist, PurchaseOrder.DoesNotExist) as e:
+            return JsonResponse({
+                'success': False, 
+                'message': f'Invalid reference: {str(e)}'
+            }, status=400)
+        
+        # Check if payment exceeds PO balance
+        balance = purchase_order.total_amount - purchase_order.amount_paid
+        if amount_paid > balance:
+            return JsonResponse({
+                'success': False, 
+                'message': f'Payment amount ({amount_paid}) exceeds remaining balance ({balance})'
+            }, status=400)
+        
+        # Start transaction
+        with transaction.atomic():
+            # Create payment record
+            Payment.objects.create(
+                transaction_id=transaction_id,
+                date=payment_date,
+                supplier_id=supplier,
+                supplier_name=supplier_name,
+                county=county,
+                town=town,
+                po_id=purchase_order,
+                bill_number=bill_number,
+                payment_mode=payment_mode,
+                amount_paid=amount_paid
+            )
+            
+            # Update purchase order amount_paid
+            purchase_order.amount_paid += amount_paid
+            purchase_order.save()
+            
+            # Update supplier total_payments
+            supplier.total_payments += amount_paid
+            supplier.save()
+            
+            # Update PO statuses
+            status_info = update_purchase_order_statuses(purchase_order)
+        
+        return JsonResponse({
+            'success': True, 
+            'message': 'Payment recorded successfully',
+            'status_info': status_info
+        })
+    
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'message': 'Invalid JSON data'}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
+# ============================================
+# UPDATE PAYMENT
+# ============================================
+
+@csrf_exempt
+@login_required(login_url='/login/')
+def api_update_payment(request):
+    """
+    Update existing payment
+    - Reverse original payment from old PO
+    - Apply new payment to new PO (if changed)
+    - Update both PO statuses
+    """
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Invalid request method'}, status=405)
+    
+    try:
+        data = json.loads(request.body)
+        
+        # Extract data
+        transaction_id = data.get('transaction_id', '').strip()
+        original_transaction_id = data.get('original_transaction_id', '').strip()
+        original_po_id = data.get('original_po_id', '').strip()
+        original_amount_paid = Decimal(str(data.get('original_amount_paid', 0)))
+        
+        payment_date_str = data.get('payment_date', '').strip()
+        supplier_id = data.get('supplier_id', '').strip()
+        supplier_name = data.get('supplier_name', '').strip()
+        county_name = data.get('county', '').strip()
+        town_name = data.get('town', '').strip()
+        po_id = data.get('po_id', '').strip()
+        bill_number = data.get('bill_number', '').strip()
+        payment_mode_name = data.get('payment_mode', '').strip()
+        amount_paid = Decimal(str(data.get('amount_paid', 0)))
+        
+        # Get existing payment
+        try:
+            payment = Payment.objects.get(transaction_id=original_transaction_id)
+        except Payment.DoesNotExist:
+            return JsonResponse({'success': False, 'message': 'Payment not found'}, status=404)
+        
+        # Parse date
+        payment_date = parse_date(payment_date_str)
+        if not payment_date:
+            return JsonResponse({
+                'success': False, 
+                'message': 'Invalid date format. Use DD/MM/YYYY'
+            }, status=400)
+        
+        # Get foreign key objects
+        try:
+            supplier = Supplier.objects.get(supplier_id=supplier_id)
+            new_purchase_order = PurchaseOrder.objects.get(po_id=po_id)
+            old_purchase_order = PurchaseOrder.objects.get(po_id=original_po_id)
+            payment_mode, _ = PaymentMode.objects.get_or_create(payment_mode=payment_mode_name)
+            county = County.objects.get(county=county_name) if county_name else None
+            town = Town.objects.get(town=town_name) if town_name else None
+        except (Supplier.DoesNotExist, PurchaseOrder.DoesNotExist) as e:
+            return JsonResponse({
+                'success': False, 
+                'message': f'Invalid reference: {str(e)}'
+            }, status=400)
+        
+        with transaction.atomic():
+            # Reverse original payment from old PO
+            old_purchase_order.amount_paid -= original_amount_paid
+            old_purchase_order.save()
+            
+            # Reverse from supplier if supplier changed
+            if payment.supplier_id.supplier_id != supplier_id:
+                old_supplier = payment.supplier_id
+                old_supplier.total_payments -= original_amount_paid
+                old_supplier.save()
+            
+            # Apply new payment to new PO
+            new_purchase_order.amount_paid += amount_paid
+            new_purchase_order.save()
+            
+            # Update supplier total_payments
+            if payment.supplier_id.supplier_id != supplier_id:
+                supplier.total_payments += amount_paid
+                supplier.save()
+            else:
+                # Same supplier, adjust by difference
+                supplier.total_payments += (amount_paid - original_amount_paid)
+                supplier.save()
+            
+            # Update payment record
+            payment.transaction_id = transaction_id
+            payment.date = payment_date
+            payment.supplier_id = supplier
+            payment.supplier_name = supplier_name
+            payment.county = county
+            payment.town = town
+            payment.po_id = new_purchase_order
+            payment.bill_number = bill_number
+            payment.payment_mode = payment_mode
+            payment.amount_paid = amount_paid
+            payment.save()
+            
+            # Update statuses for both POs
+            old_status_info = update_purchase_order_statuses(old_purchase_order)
+            new_status_info = update_purchase_order_statuses(new_purchase_order)
+        
+        return JsonResponse({
+            'success': True, 
+            'message': 'Payment updated successfully',
+            'status_info': new_status_info
+        })
+    
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'message': 'Invalid JSON data'}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
+# ============================================
+# DELETE PAYMENT
+# ============================================
+
+@csrf_exempt
+@login_required(login_url='/login/')
+def api_delete_payment(request):
+    """
+    Delete payment
+    - Reverse payment from PO
+    - Reverse from supplier
+    - Update PO statuses
+    """
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Invalid request method'}, status=405)
+    
+    try:
+        data = json.loads(request.body)
+        transaction_id = data.get('transaction_id', '').strip()
+        
+        if not transaction_id:
+            return JsonResponse({'success': False, 'message': 'Transaction ID is required'}, status=400)
+        
+        try:
+            payment = Payment.objects.get(transaction_id=transaction_id)
+        except Payment.DoesNotExist:
+            return JsonResponse({'success': False, 'message': 'Payment not found'}, status=404)
+        
+        with transaction.atomic():
+            # Reverse payment from PO
+            purchase_order = payment.po_id
+            purchase_order.amount_paid -= payment.amount_paid
+            purchase_order.save()
+            
+            # Reverse from supplier
+            supplier = payment.supplier_id
+            supplier.total_payments -= payment.amount_paid
+            supplier.save()
+            
+            # Update PO statuses
+            status_info = update_purchase_order_statuses(purchase_order)
+            
+            # Delete payment
+            payment.delete()
+        
+        return JsonResponse({
+            'success': True, 
+            'message': 'Payment deleted successfully',
+            'status_info': status_info
+        })
+    
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'message': 'Invalid JSON data'}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)

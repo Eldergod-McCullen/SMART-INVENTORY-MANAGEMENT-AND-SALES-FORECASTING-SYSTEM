@@ -145,4 +145,21 @@ path('api/customers/delete/', views.api_delete_customer, name='api_delete_custom
     # ========================== PAYMENT MODULE URLs ===============================================================================================================
     path('api/purchases/record-payment/', views.api_record_payment, name='api_record_payment'),
     path('api/purchases/recalculate-statuses/', views.api_recalculate_all_po_statuses, name='api_recalculate_statuses'),
+    
+    
+    # Content page
+path('content/payments/', views.payments_content, name='payments'),
+
+# Payment Mode APIs
+path('api/payments/payment-modes/', views.api_get_payment_modes, name='api_get_payment_modes'),
+path('api/payments/payment-modes/add/', views.api_add_payment_mode, name='api_add_payment_mode'),
+
+# Transaction ID Generation
+path('api/payments/generate-transaction-id/', views.api_generate_transaction_id, name='api_generate_transaction_id'),
+
+# Payment CRUD APIs
+path('api/payments/', views.api_get_payments, name='api_get_payments'),
+path('api/payments/add/', views.api_add_payment, name='api_add_payment'),
+path('api/payments/update/', views.api_update_payment, name='api_update_payment'),
+path('api/payments/delete/', views.api_delete_payment, name='api_delete_payment'),
 ]
