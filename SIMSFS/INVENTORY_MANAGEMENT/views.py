@@ -12,6 +12,7 @@ import json                                                                  # R
 from django.db import transaction
 from decimal import Decimal
 from datetime import datetime
+import time
 
 from .models import ItemType,ItemCategory,ItemSubcategory,PaymentMode,County,Town,PaymentStatus,ReceiptStatus,ShippingStatus,UserRole
 from .models import Inventory,InventoryItem
@@ -1587,8 +1588,10 @@ def api_add_shipping_status(request):
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
 
+
 # =================================== PURCHASE ORDER APIs ===================================================================================================
 
+# ================================ GENERATING PURCHASE ORDER ID =============================================================================================
 @csrf_exempt
 @login_required(login_url='/login/')
 def api_generate_po_id(request):
@@ -1620,6 +1623,7 @@ def api_generate_po_id(request):
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
 
+# ========================== GENERATING DETAIL ID FOR THE PURCHASE DETAILS ============================================================================================
 @csrf_exempt
 @login_required(login_url='/login/')
 def api_generate_detail_id(request):
@@ -1659,13 +1663,14 @@ def api_generate_detail_id(request):
             if attempts > 1000:  # Prevent infinite loop
                 return JsonResponse({'success': False, 'message': 'Could not generate unique Detail ID'}, status=500)
         
-        print(f"✅ GENERATED NEW DETAIL ID (PURCHASES): {new_detail_id}")  # Debug log
+        print(f"✅ GENERATED NEW DETAIL ID (PURCHASES): {new_detail_id} at {time.strftime('%H:%M:%S')}")  # Debug log
         
         return JsonResponse({'success': True, 'detail_id': new_detail_id})
     
     except Exception as e:
+        print(f"❌ ERROR generating Detail ID: {str(e)}")
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
-    
+
     """    LOGIC BEHIND THE DETAIL ID GENERATION
         # OLD (WRONG - was filtering by PO):
           max_detail = PurchaseDetail.objects.filter(po_id=current_po).aggregate(Max('detail_id'))
@@ -1674,16 +1679,21 @@ def api_generate_detail_id(request):
           max_detail = PurchaseDetail.objects.aggregate(Max('detail_id'))['detail_id__max']
     """
     
-# ======================== API FOR GENERATING A NEW DETAIL ID FOR EVERY PURCHASE ORDER ITEM ===================================================================
+# ================= GET THE NEXT DETAIL NUMBER-FOR NUMBER CONTEXTUALIZATION, NOT THE ACTUAL DETAIL ID ==============================================================
 @csrf_exempt
 @login_required(login_url='/login/')
 def api_get_next_detail_number(request):
     """Get the next available detail number (not full ID, just the number)"""
     try:
-        max_detail = PurchaseDetail.objects.aggregate(Max('detail_id'))['detail_id__max']
+        max_purchase_detail = PurchaseDetail.objects.aggregate(Max('detail_id'))['detail_id__max']
+        max_sales_detail = SalesDetail.objects.aggregate(Max('detail_id'))['detail_id__max']
         
-        if max_detail:
-            next_number = int(max_detail[1:]) + 1
+        max_details = [max_purchase_detail, max_sales_detail]
+        max_details = [d for d in max_details if d is not None]
+        
+        if max_details:
+            max_nums = [int(d[1:]) for d in max_details]
+            next_number = max(max_nums) + 1
         else:
             next_number = 1
         
@@ -2089,7 +2099,7 @@ def api_delete_purchase_detail(request):
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
     
     
-# ======= UPDATING THE SHIPPING AND PAYMENT STATUSES FOR THE APPLICATION ================================================
+# ======= UPDATING THE SHIPPING AND PAYMENT STATUSES FOR THE APPLICATION ========================================================================================
 
 def calculate_payment_status(total_amount, amount_paid):
     """
@@ -2245,7 +2255,7 @@ def api_add_receipt_status(request):
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
 
-# ================================================== SHIPPING STATUS APIs (Reused from Purchases) =======================================================================================
+# ======================== SHIPPING STATUS APIs (BASICALLY REUSED FROM THE PURCHASES MODULE) =======================================================================================
 
 @csrf_exempt
 @login_required(login_url='/login/')
@@ -2290,14 +2300,13 @@ def api_generate_so_id(request):
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
 
+# ======================= GENERATING THE SALES DETAIL ID =====================================================================================================================
 @csrf_exempt
 @login_required(login_url='/login/')
 def api_generate_sales_detail_id(request):
     """
-    Generate unique Detail ID in format D00001 - globally incremental across BOTH purchases and sales
+    Generate unique Detail ID for Sales - uses same logic as purchases
     This ensures Detail IDs are unique across the entire system
-    
-    CRITICAL: This generates a NEW unique ID on EVERY call
     """
     try:
         # IMPORTANT: Always fetch fresh from database on each call
@@ -2329,12 +2338,14 @@ def api_generate_sales_detail_id(request):
             if attempts > 1000:  # Prevent infinite loop
                 return JsonResponse({'success': False, 'message': 'Could not generate unique Detail ID'}, status=500)
         
-        print(f"✅ GENERATED NEW DETAIL ID: {new_detail_id}")  # Debug log
+        print(f"✅ GENERATED NEW DETAIL ID (SALES): {new_detail_id} at {time.strftime('%H:%M:%S')}")  # Debug log
         
         return JsonResponse({'success': True, 'detail_id': new_detail_id})
     
     except Exception as e:
+        print(f"❌ ERROR generating Detail ID: {str(e)}")
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
 
 @csrf_exempt
 @login_required(login_url='/login/')
@@ -3343,5 +3354,45 @@ def api_delete_payment(request):
     
     except json.JSONDecodeError:
         return JsonResponse({'success': False, 'message': 'Invalid JSON data'}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+    
+# =========================== TESTING THE DETAIL ID GENERATION ==================================================================================================
+@csrf_exempt
+@login_required(login_url='/login/')
+def api_test_detail_id_generation(request):
+    """
+    Test endpoint to generate 10 sequential Detail IDs
+    Call this to verify the generation is working correctly
+    
+    Usage: GET /api/purchases/test-detail-id-generation/
+    """
+    try:
+        results = []
+        
+        for i in range(10):
+            # Call the actual generation function
+            response = api_generate_detail_id(request)
+            data = response.content.decode('utf-8')
+            
+            import json
+            result = json.loads(data)
+            
+            if result.get('success'):
+                results.append({
+                    'attempt': i + 1,
+                    'detail_id': result.get('detail_id'),
+                    'timestamp': time.strftime('%H:%M:%S.%f')[:-3]
+                })
+            
+            # Small delay to ensure sequential generation
+            time.sleep(0.1)
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Generated 10 sequential Detail IDs',
+            'results': results
+        })
+    
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)}, status=500)

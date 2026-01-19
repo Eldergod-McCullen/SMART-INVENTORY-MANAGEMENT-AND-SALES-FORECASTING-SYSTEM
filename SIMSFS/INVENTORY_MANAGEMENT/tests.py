@@ -3,6 +3,11 @@ from .models import PurchaseDetail, SalesDetail
 from django.db.models import Max
 from django.core.management.base import BaseCommand                              # A DJANGO MANAGEMENT COMMAND FOR THE PAYMENT AND SHIPPING STATUSES
 from .models import PaymentStatus, ShippingStatus
+from .urls import *
+from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
+from django.contrib.auth.decorators import login_required
+from django.http import JsonResponse
+import time
 
 # Create your tests here.
 
@@ -145,3 +150,131 @@ class Command(BaseCommand):
             self.stdout.write(f'Created shipping status: {status}')
         
         self.stdout.write(self.style.SUCCESS('Successfully created all statuses!'))
+        
+        
+        
+# ======================== CHECKING FOR DUPLICATE DETAIL IDS ============================================================================================================
+def check_for_duplicate_detail_ids():
+    """
+    Run this in Django shell to check for duplicate Detail IDs
+    
+    Usage:
+        python manage.py shell
+        >>> from SIMSFS.INVENTORY_MANAGEMENT.views import check_for_duplicate_detail_ids
+        >>> check_for_duplicate_detail_ids()
+    """
+    from django.db.models import Count
+    
+    print("\n" + "="*60)
+    print("CHECKING FOR DUPLICATE DETAIL IDs")
+    print("="*60)
+    
+    # Check PurchaseDetail for duplicates
+    purchase_duplicates = PurchaseDetail.objects.values('detail_id').annotate(
+        count=Count('detail_id')
+    ).filter(count__gt=1)
+    
+    if purchase_duplicates:
+        print("\n❌ FOUND DUPLICATES IN PURCHASE DETAILS:")
+        for dup in purchase_duplicates:
+            print(f"   Detail ID: {dup['detail_id']} - Count: {dup['count']}")
+            
+            # Show which POs have this duplicate
+            records = PurchaseDetail.objects.filter(detail_id=dup['detail_id'])
+            for record in records:
+                print(f"      PO: {record.po_id.po_id}, Item: {record.item_name}")
+    else:
+        print("\n✅ NO duplicates found in Purchase Details")
+    
+    # Check SalesDetail for duplicates
+    sales_duplicates = SalesDetail.objects.values('detail_id').annotate(
+        count=Count('detail_id')
+    ).filter(count__gt=1)
+    
+    if sales_duplicates:
+        print("\n❌ FOUND DUPLICATES IN SALES DETAILS:")
+        for dup in sales_duplicates:
+            print(f"   Detail ID: {dup['detail_id']} - Count: {dup['count']}")
+            
+            # Show which SOs have this duplicate
+            records = SalesDetail.objects.filter(detail_id=dup['detail_id'])
+            for record in records:
+                print(f"      SO: {record.so_id.so_id}, Item: {record.item_name}")
+    else:
+        print("\n✅ NO duplicates found in Sales Details")
+    
+    # Check cross-table duplicates
+    all_purchase_ids = set(PurchaseDetail.objects.values_list('detail_id', flat=True))
+    all_sales_ids = set(SalesDetail.objects.values_list('detail_id', flat=True))
+    
+    cross_duplicates = all_purchase_ids & all_sales_ids
+    
+    if cross_duplicates:
+        print("\n❌ FOUND CROSS-TABLE DUPLICATES:")
+        for detail_id in cross_duplicates:
+            print(f"   Detail ID: {detail_id} exists in BOTH Purchase and Sales")
+    else:
+        print("\n✅ NO cross-table duplicates found")
+    
+    print("\n" + "="*60)
+    print(f"Total Purchase Details: {PurchaseDetail.objects.count()}")
+    print(f"Total Sales Details: {SalesDetail.objects.count()}")
+    print(f"Unique Purchase IDs: {len(all_purchase_ids)}")
+    print(f"Unique Sales IDs: {len(all_sales_ids)}")
+    print("="*60 + "\n")
+    
+# =============================== FIXING DUPLICATE DETAIL IDS =========================================================================================================
+def fix_duplicate_detail_ids():
+    """
+    Fix duplicate Detail IDs by renumbering all details sequentially
+    
+    ⚠️ WARNING: This will change Detail IDs! Backup your database first!
+    
+    Usage:
+        python manage.py shell
+        >>> from SIMSFS.INVENTORY_MANAGEMENT.views import fix_duplicate_detail_ids
+        >>> fix_duplicate_detail_ids()
+    """
+    from django.db import transaction
+    
+    print("\n" + "="*60)
+    print("⚠️  WARNING: FIXING DUPLICATE DETAIL IDs")
+    print("="*60)
+    
+    confirm = input("\nThis will renumber ALL Detail IDs. Continue? (type 'YES'): ")
+    
+    if confirm != 'YES':
+        print("❌ Cancelled.")
+        return
+    
+    try:
+        with transaction.atomic():
+            # Collect all details from both tables, sorted by date
+            all_details = []
+            
+            for detail in PurchaseDetail.objects.all().order_by('date', 'detail_id'):
+                all_details.append(('purchase', detail))
+            
+            for detail in SalesDetail.objects.all().order_by('date', 'detail_id'):
+                all_details.append(('sales', detail))
+            
+            # Sort by date
+            all_details.sort(key=lambda x: x[1].date)
+            
+            # Renumber starting from D00001
+            for idx, (table_type, detail) in enumerate(all_details, start=1):
+                new_id = f"D{idx:05d}"
+                old_id = detail.detail_id
+                
+                if old_id != new_id:
+                    print(f"Renumbering {table_type} {old_id} → {new_id}")
+                    detail.detail_id = new_id
+                    detail.save()
+            
+            print(f"\n✅ Successfully renumbered {len(all_details)} detail records")
+    
+    except Exception as e:
+        print(f"\n❌ ERROR: {str(e)}")
+        print("Transaction rolled back - no changes made")
+
+

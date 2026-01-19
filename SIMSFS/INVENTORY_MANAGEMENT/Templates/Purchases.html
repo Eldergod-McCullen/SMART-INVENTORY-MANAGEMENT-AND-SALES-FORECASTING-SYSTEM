@@ -708,6 +708,7 @@
     let poIsEditMode = false;
     let poCurrentPOID = null;
     let poDetailCounter = 1;
+
     let poNextDetailNumber = null;          // Global variable to track the detail counter
 
     // CSRF Token
@@ -728,6 +729,7 @@
       loadPMTStatuses();
       loadShippingStatuses();
       loadPurchaseOrders();
+      loadNextDetailNumber(); 
       initializeDatePicker();
     });
 
@@ -1043,7 +1045,7 @@
       }
     }
 
-    // Load the next available detail number on page load
+// Load the next available detail number on page load
 async function loadNextDetailNumber() {
   try {
     const response = await fetch('/api/purchases/get-next-detail-number/', {
@@ -1064,18 +1066,6 @@ async function loadNextDetailNumber() {
     poNextDetailNumber = 1;
   }
 }
-
-// Update DOMContentLoaded to load the next detail number
-document.addEventListener('DOMContentLoaded', function() {
-  console.log('DOM loaded, initializing purchases...');
-  loadSuppliers();
-  loadInventoryItems();
-  loadPMTStatuses();
-  loadShippingStatuses();
-  loadPurchaseOrders();
-  loadNextDetailNumber(); // ← Add this line
-  initializeDatePicker();
-});
 
 // FOR PURCHASES MODULE - Replace the entire poAddItemRow function
 async function poAddItemRow() {
@@ -1199,22 +1189,8 @@ async function testDetailIDGeneration() {
     const timestamp = new Date().getTime();
     
     try {
-      // Test Sales
-      const salesResponse = await fetch(`/api/sales/generate-detail-id/?t=${timestamp}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRFToken': getCSRFToken()
-        },
-        credentials: 'same-origin',
-        cache: 'no-store'
-      });
-      
-      const salesResult = await salesResponse.json();
-      console.log(`Test ${i} - Sales Detail ID: ${salesResult.detail_id}`);
-      
       // Test Purchases
-      const purchasesResponse = await fetch(`/api/purchases/generate-detail-id/?t=${timestamp + 1}`, {
+      const purchasesResponse = await fetch(`/api/purchases/generate-detail-id/?t=${timestamp}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -1225,7 +1201,10 @@ async function testDetailIDGeneration() {
       });
       
       const purchasesResult = await purchasesResponse.json();
-      console.log(`Test ${i} - Purchases Detail ID: ${purchasesResult.detail_id}\n`);
+      console.log(`Test ${i} (Purchases): ${purchasesResult.detail_id} - Success: ${purchasesResult.success}`);
+      
+      // Wait 100ms between calls to see sequential generation
+      await new Promise(resolve => setTimeout(resolve, 100));
       
     } catch (error) {
       console.error(`Test ${i} failed:`, error);
@@ -1236,7 +1215,6 @@ async function testDetailIDGeneration() {
 }
 
 // To run the test, open browser console and type: testDetailIDGeneration()
-
 
 // Update poOpenNewPOModal to reset counter when opening new PO
 function poOpenNewPOModal() {
