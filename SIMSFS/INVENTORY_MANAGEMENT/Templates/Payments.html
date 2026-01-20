@@ -20,7 +20,7 @@
   <!-- Select2 -->
   <link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" rel="stylesheet" />
   
-  <!-- Flatpickr (Date Picker) -->
+  <!-- Flatpickr -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 
   <style>
@@ -197,38 +197,16 @@
       display: flex;
       align-items: center;
       justify-content: center;
+      border: none;
+      color: white;
     }
     
     .edit-btn {
       background-color: #3498db;
-      color: white;
-      border: none;
-    }
-    
-    .update-btn {
-      background-color: var(--success);
-      color: white;
-      border: none;
-    }
-    
-    .cancel-btn {
-      background-color: var(--gray);
-      color: white;
-      border: none;
     }
     
     .delete-btn {
       background-color: var(--error);
-      color: white;
-      border: none;
-    }
-    
-    .editable {
-      background-color: #fffde7;
-      border: 1px solid #ffd54f;
-      padding: 5px 8px;
-      border-radius: 3px;
-      width: 100%;
     }
     
     .modal {
@@ -248,7 +226,7 @@
       margin: 3% auto;
       padding: 30px;
       border-radius: 8px;
-      width: 600px;
+      width: 700px;
       max-width: 90%;
       box-shadow: 0 5px 25px rgba(0,0,0,0.2);
     }
@@ -280,15 +258,15 @@
       color: var(--dark);
     }
     
-    .form-grid {
+    .form-row {
       display: grid;
-      grid-template-columns: repeat(2, 1fr);
+      grid-template-columns: 1fr 1fr;
       gap: 20px;
       margin-bottom: 20px;
     }
     
     .form-group {
-      margin-bottom: 22px;
+      margin-bottom: 20px;
     }
     
     .form-group.full-width {
@@ -448,7 +426,7 @@
     }
 
     @media (max-width: 768px) {
-      .form-grid {
+      .form-row {
         grid-template-columns: 1fr;
       }
       
@@ -561,8 +539,8 @@
         <span class="close-btn" id="closePaymentModal">&times;</span>
       </div>
       
-      <div class="form-grid">
-        <!-- Transaction ID -->
+      <!-- Transaction ID and Date Row -->
+      <div class="form-row">
         <div class="form-group">
           <label class="required">Transaction ID</label>
           <div class="id-generate">
@@ -571,43 +549,30 @@
           </div>
         </div>
         
-        <!-- Payment Date -->
         <div class="form-group">
           <label class="required">Payment Date</label>
           <input type="text" id="paymentDate" class="form-control date-picker" placeholder="DD/MM/YYYY">
         </div>
       </div>
       
-      <!-- Supplier Information -->
-      <div class="form-grid">
+      <!-- Supplier Name and PO ID Row -->
+      <div class="form-row">
         <div class="form-group">
           <label class="required">Supplier Name</label>
           <select id="supplierName" class="form-control" style="width: 100%"></select>
         </div>
         
         <div class="form-group">
-          <label>Supplier ID</label>
-          <input type="text" id="supplierId" class="form-control" readonly>
-        </div>
-      </div>
-      
-      <div class="form-grid">
-        <div class="form-group">
-          <label>County</label>
-          <input type="text" id="county" class="form-control" readonly>
-        </div>
-        
-        <div class="form-group">
-          <label>Town</label>
-          <input type="text" id="town" class="form-control" readonly>
-        </div>
-      </div>
-      
-      <!-- Purchase Order Information -->
-      <div class="form-grid">
-        <div class="form-group">
           <label class="required">PO ID</label>
           <select id="poId" class="form-control" style="width: 100%"></select>
+        </div>
+      </div>
+      
+      <!-- Supplier ID and Bill Number Row -->
+      <div class="form-row">
+        <div class="form-group">
+          <label>Supplier ID</label>
+          <input type="text" id="supplierId" class="form-control" readonly>
         </div>
         
         <div class="form-group">
@@ -616,24 +581,37 @@
         </div>
       </div>
       
-      <!-- PO Balance Info -->
-      <div class="balance-info" id="balanceInfo" style="display: none;">
-        <p><strong>PO Total Amount:</strong> <span id="poTotalAmount">0.00</span></p>
-        <p><strong>Amount Already Paid:</strong> <span id="poAmountPaid">0.00</span></p>
-        <p><strong>Outstanding Balance:</strong> <span id="poBalance" style="font-size: 1.1rem; font-weight: 600;">0.00</span></p>
-      </div>
-      
-      <!-- Payment Details -->
-      <div class="form-grid">
+      <!-- County and Payment Mode Row -->
+      <div class="form-row">
+        <div class="form-group">
+          <label>County</label>
+          <input type="text" id="county" class="form-control" readonly>
+        </div>
+        
         <div class="form-group">
           <label class="required">Payment Mode</label>
           <select id="paymentMode" class="form-control" style="width: 100%"></select>
+        </div>
+      </div>
+      
+      <!-- Town and Amount Paid Row -->
+      <div class="form-row">
+        <div class="form-group">
+          <label>Town</label>
+          <input type="text" id="town" class="form-control" readonly>
         </div>
         
         <div class="form-group">
           <label class="required">Amount Paid</label>
           <input type="number" id="amountPaid" class="form-control" step="0.01" min="0" placeholder="0.00">
         </div>
+      </div>
+      
+      <!-- PO Balance Info -->
+      <div class="balance-info" id="balanceInfo" style="display: none;">
+        <p><strong>PO Total Amount:</strong> <span id="poTotalAmount">0.00</span></p>
+        <p><strong>Amount Already Paid:</strong> <span id="poAmountPaid">0.00</span></p>
+        <p><strong>Outstanding Balance:</strong> <span id="poBalance" style="font-size: 1.1rem; font-weight: 600;">0.00</span></p>
       </div>
       
       <div class="modal-footer">
@@ -669,7 +647,6 @@
     let paymentModes = [];
     let isEditMode = false;
     let currentPaymentId = null;
-    let originalPaymentData = null;
 
     // Get CSRF token
     function getCSRFToken() {
@@ -878,6 +855,18 @@
     
     function supplierChanged() {
         const supplierName = $('#supplierName').val();
+        
+        if (!supplierName) {
+            // Clear all fields
+            $('#supplierId').val('');
+            $('#county').val('');
+            $('#town').val('');
+            $('#poId').empty().append(new Option('Select PO ID', '', true, true)).trigger('change');
+            document.getElementById('balanceInfo').style.display = 'none';
+            return;
+        }
+        
+        // Find supplier in suppliers array
         const supplier = suppliers.find(s => s.name === supplierName);
         
         if (supplier) {
@@ -886,28 +875,29 @@
             $('#county').val(supplier.state || '');
             $('#town').val(supplier.city || '');
             
-            // Filter POs for this supplier
-            const supplierPOs = purchaseOrders.filter(po => po.supplier_name === supplierName);
+            // Filter POs for this supplier - only show POs with outstanding balance
+            const supplierPOs = purchaseOrders.filter(po => 
+                po.supplier_name === supplierName && 
+                parseFloat(po.balance_left) > 0
+            );
             
             // Populate PO dropdown
             const poSelect = $('#poId');
             poSelect.empty();
             poSelect.append(new Option('Select PO ID', '', true, true));
             
-            supplierPOs.forEach(po => {
-                poSelect.append(new Option(po.po_id, po.po_id));
-            });
+            if (supplierPOs.length === 0) {
+                poSelect.append(new Option('No outstanding POs', '', false, false));
+            } else {
+                supplierPOs.forEach(po => {
+                    const balance = parseFloat(po.balance_left).toFixed(2);
+                    poSelect.append(new Option(`${po.po_id} (Balance: ${balance})`, po.po_id));
+                });
+            }
             
             poSelect.trigger('change');
             
             // Hide balance info until PO is selected
-            document.getElementById('balanceInfo').style.display = 'none';
-        } else {
-            // Clear fields
-            $('#supplierId').val('');
-            $('#county').val('');
-            $('#town').val('');
-            $('#poId').empty().append(new Option('Select PO ID', '', true, true)).trigger('change');
             document.getElementById('balanceInfo').style.display = 'none';
         }
     }

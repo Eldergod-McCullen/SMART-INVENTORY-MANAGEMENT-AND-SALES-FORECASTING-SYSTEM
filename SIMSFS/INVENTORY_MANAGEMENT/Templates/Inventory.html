@@ -177,7 +177,7 @@
     box-shadow: 0 1px 3px rgba(0,0,0,0.08);
     margin-bottom: 20px;
     table-layout: fixed;
-    min-width: 1400px; /* Ensure table has minimum width */
+    min-width: 1420px; /* Ensure table has minimum width */
 }
 
 /* Column widths - optimized for visibility */
@@ -189,20 +189,21 @@
 
 .inventory-table th:nth-child(2),  /* Item Type */
 .inventory-table td:nth-child(2) {
-    width: 120px;
-    min-width: 120px;
+    width: 135px;
+    min-width: 135px;
 }
 
 .inventory-table th:nth-child(3),  /* Item Category */
 .inventory-table td:nth-child(3) {
-    width: 130px;
-    min-width: 130px;
+    width: 190px;
+    min-width: 190px;
+    word-wrap: normal;
 }
 
 .inventory-table th:nth-child(4),  /* Item Subcategory */
 .inventory-table td:nth-child(4) {
-    width: 140px;
-    min-width: 140px;
+    width: 160px;
+    min-width: 160px;
 }
 
 .inventory-table th:nth-child(5),  /* Item Name */
@@ -214,7 +215,7 @@
 .inventory-table th:nth-child(6),  /* QTY Purchased */
 .inventory-table td:nth-child(6) {
     width: 100px;
-    min-width: 100px;
+    min-width: 70px;
     text-align: right;
 }
 
@@ -635,32 +636,14 @@
 </head>
 
 <body>
-  <div class="inventory-container">
+    <div class="inventory-container">
       
     <!-- HEADER SECTION -->
     <div class="header-section">
       <h1>MONITOR AND MANAGE YOUR INVENTORY LEVELS</h1>
     </div>
     
-    <!-- ACTION BAR 
-    <div class="action-bar">
-      <div class="btn-group">
-        <button class="btn btn-primary" onclick="openNewItemModal()">
-          <i class="fas fa-box"></i> Add Inventory Item
-        </button>
-        <button class="btn btn-secondary" onclick="openNewTypeModal()">
-          <i class="fas fa-tag"></i> Add Item Type
-        </button>
-        <button class="btn btn-secondary" onclick="openNewCategoryModal()">
-          <i class="fas fa-layer-group"></i> Add Item Category
-        </button>
-        <button class="btn btn-secondary" onclick="openNewSubcategoryModal()">
-          <i class="fas fa-shapes"></i> Add Item Subcategory
-        </button>
-      </div>
-      -->
-
-      <div class="search-group">
+    <div class="search-group">
     <select id="searchCriteria" class="search-select" title="Search criteria filter">
         <option value="all">All</option>
         <option value="Item Type">Item Type</option>

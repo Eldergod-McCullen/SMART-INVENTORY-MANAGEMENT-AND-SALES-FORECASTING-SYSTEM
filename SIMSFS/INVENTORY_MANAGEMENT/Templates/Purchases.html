@@ -1223,7 +1223,7 @@ function poOpenNewPOModal() {
   document.getElementById('poItemsTableBody').innerHTML = '';
   
   // Reset detail counter for new PO
-  loadNextDetailNumber(); // ← Reload to get latest number
+  loadNextPurchaseDetailNumber(); // ← Reload to get latest number
   
   document.getElementById('poNewPOModal').style.display = 'block';
 }
