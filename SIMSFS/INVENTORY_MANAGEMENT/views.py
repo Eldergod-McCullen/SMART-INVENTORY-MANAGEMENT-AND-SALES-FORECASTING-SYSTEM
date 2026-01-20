@@ -1628,72 +1628,61 @@ def api_generate_po_id(request):
 @login_required(login_url='/login/')
 def api_generate_detail_id(request):
     """
-    Generate unique Detail ID in format D00001 - globally incremental across BOTH purchases AND sales
-    
-    CRITICAL: This generates a NEW unique ID on EVERY call
-    This is shared between Purchases and Sales modules
+    Generate unique Detail ID for PURCHASES in format PD00001
+    Each call generates a FRESH unique ID
     """
     try:
-        # IMPORTANT: Always fetch fresh from database on each call
+        # Always fetch fresh from database
         max_purchase_detail = PurchaseDetail.objects.aggregate(Max('detail_id'))['detail_id__max']
-        max_sales_detail = SalesDetail.objects.aggregate(Max('detail_id'))['detail_id__max']
         
-        # Compare both and get the highest
-        max_details = [max_purchase_detail, max_sales_detail]
-        max_details = [d for d in max_details if d is not None]  # Remove None values
-        
-        if max_details:
-            # Extract numeric parts and get the maximum
-            max_nums = [int(d[1:]) for d in max_details]
-            num_part = max(max_nums) + 1
+        if max_purchase_detail:
+            # Extract numeric part (skip 'PD' prefix)
+            num_part = int(max_purchase_detail[2:]) + 1
         else:
-            # First detail ever in the entire system
+            # First purchase detail ever
             num_part = 1
         
-        # Format as D00001
-        new_detail_id = f"D{num_part:05d}"
+        # Format as PD00001
+        new_detail_id = f"PD{num_part:05d}"
         
-        # Safety check: ensure it doesn't exist in EITHER table
+        # Safety check: ensure it doesn't exist
         attempts = 0
-        while (PurchaseDetail.objects.filter(detail_id=new_detail_id).exists() or 
-               SalesDetail.objects.filter(detail_id=new_detail_id).exists()):
+        while PurchaseDetail.objects.filter(detail_id=new_detail_id).exists():
             num_part += 1
-            new_detail_id = f"D{num_part:05d}"
+            new_detail_id = f"PD{num_part:05d}"
             attempts += 1
-            if attempts > 1000:  # Prevent infinite loop
+            if attempts > 1000:
                 return JsonResponse({'success': False, 'message': 'Could not generate unique Detail ID'}, status=500)
         
-        print(f"✅ GENERATED NEW DETAIL ID (PURCHASES): {new_detail_id} at {time.strftime('%H:%M:%S')}")  # Debug log
+        print(f"✅ GENERATED PURCHASE DETAIL ID: {new_detail_id} at {time.strftime('%H:%M:%S')}")
         
         return JsonResponse({'success': True, 'detail_id': new_detail_id})
     
     except Exception as e:
         print(f"❌ ERROR generating Detail ID: {str(e)}")
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
-
-    """    LOGIC BEHIND THE DETAIL ID GENERATION
-        # OLD (WRONG - was filtering by PO):
-          max_detail = PurchaseDetail.objects.filter(po_id=current_po).aggregate(Max('detail_id'))
-
-        # NEW (CORRECT - checks ALL details globally):
-          max_detail = PurchaseDetail.objects.aggregate(Max('detail_id'))['detail_id__max']
-    """
     
 # ================= GET THE NEXT DETAIL NUMBER-FOR NUMBER CONTEXTUALIZATION, NOT THE ACTUAL DETAIL ID ==============================================================
 @csrf_exempt
 @login_required(login_url='/login/')
 def api_get_next_detail_number(request):
-    """Get the next available detail number (not full ID, just the number)"""
+    """
+    Get the next available detail number for BOTH Purchases and Sales
+    This returns just the number, not the full ID
+    """
     try:
         max_purchase_detail = PurchaseDetail.objects.aggregate(Max('detail_id'))['detail_id__max']
         max_sales_detail = SalesDetail.objects.aggregate(Max('detail_id'))['detail_id__max']
         
-        max_details = [max_purchase_detail, max_sales_detail]
-        max_details = [d for d in max_details if d is not None]
+        # Compare both and get the highest
+        max_details = []
+        if max_purchase_detail:
+            max_details.append(int(max_purchase_detail[2:]))  # Skip 'PD' prefix
+        if max_sales_detail:
+            max_details.append(int(max_sales_detail[2:]))  # Skip 'SD' prefix
         
         if max_details:
-            max_nums = [int(d[1:]) for d in max_details]
-            next_number = max(max_nums) + 1
+            next_number = max(max_details) + 1
         else:
             next_number = 1
         
@@ -1948,10 +1937,13 @@ def api_add_purchase_order(request):
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
 
+# ========================== UPDATING THE PURCHASE ORDER WHENEVER ANY MODIFICATION IS MADE ===========================================================================
 @csrf_exempt
 @login_required(login_url='/login/')
 def api_update_purchase_order(request):
-    """Update existing purchase order"""
+    """
+    Update existing purchase order with proper Detail ID handling
+    """
     if request.method != 'POST':
         return JsonResponse({'success': False, 'message': 'Invalid request method'}, status=405)
     
@@ -1971,10 +1963,9 @@ def api_update_purchase_order(request):
             return JsonResponse({'success': False, 'message': 'Purchase order not found'}, status=404)
         
         with transaction.atomic():
-            # Get existing details to calculate old quantities
+            # Get existing details
             existing_details = {d.detail_id: d for d in PurchaseDetail.objects.filter(po_id=purchase_order)}
             
-            # Process each item
             new_total = Decimal('0.00')
             processed_details = set()
             
@@ -1986,13 +1977,16 @@ def api_update_purchase_order(request):
                 total_price = Decimal(str(item_data['total_purchase_price']))
                 new_total += total_price
                 
+                # Get inventory item
+                inventory_item = Inventory.objects.get(item_id=item_data['item_id'])
+                
                 if detail_id in existing_details:
-                    # Update existing detail
+                    # ✅ UPDATE EXISTING DETAIL
                     detail = existing_details[detail_id]
                     old_qty = detail.quantity_purchased
                     qty_diff = new_qty - old_qty
                     
-                    # Update detail
+                    # Update detail fields
                     detail.quantity_purchased = new_qty
                     detail.unit_cost = Decimal(str(item_data['unit_cost']))
                     detail.tax_rate = Decimal(str(item_data['tax_rate']))
@@ -2001,32 +1995,64 @@ def api_update_purchase_order(request):
                     detail.item_subcategory = item_data['item_subcategory']
                     detail.item_name = item_data['item_name']
                     
-                    # Update item_id if changed
-                    new_item = Inventory.objects.get(item_id=item_data['item_id'])
-                    if detail.item_id != new_item:
-                        # Reverse old item quantity
+                    # Handle item change
+                    if detail.item_id.item_id != item_data['item_id']:
+                        # Reverse old item
                         detail.item_id.quantity_purchased -= old_qty
                         detail.item_id.save()
                         
                         # Add to new item
-                        new_item.quantity_purchased += new_qty
-                        new_item.save()
+                        inventory_item.quantity_purchased += new_qty
+                        inventory_item.save()
                         
-                        detail.item_id = new_item
+                        detail.item_id = inventory_item
                     else:
                         # Same item, adjust quantity
-                        detail.item_id.quantity_purchased += qty_diff
-                        detail.item_id.save()
+                        inventory_item.quantity_purchased += qty_diff
+                        inventory_item.save()
                     
                     detail.save()
+                    print(f"✅ UPDATED Detail: {detail_id}")
+                    
+                else:
+                    # ✅ CREATE NEW DETAIL (this was missing proper creation)
+                    detail_date = parse_date(item_data.get('date', ''))
+                    if not detail_date:
+                        detail_date = purchase_order.date
+                    
+                    PurchaseDetail.objects.create(
+                        detail_id=detail_id,
+                        po_id=purchase_order,
+                        date=detail_date,
+                        supplier_id=purchase_order.supplier_id,
+                        supplier_name=purchase_order.supplier_name,
+                        county=purchase_order.county,
+                        town=purchase_order.town,
+                        bill_number=purchase_order.bill_number,
+                        item_id=inventory_item,
+                        item_type=item_data['item_type'],
+                        item_category=item_data['item_category'],
+                        item_subcategory=item_data['item_subcategory'],
+                        item_name=item_data['item_name'],
+                        quantity_purchased=new_qty,
+                        unit_cost=Decimal(str(item_data['unit_cost'])),
+                        tax_rate=Decimal(str(item_data['tax_rate']))
+                    )
+                    
+                    # Update inventory
+                    inventory_item.quantity_purchased += new_qty
+                    inventory_item.save()
+                    
+                    print(f"✅ CREATED NEW Detail: {detail_id}")
             
-            # Handle deleted items (items in DB but not in update)
+            # ✅ DELETE REMOVED DETAILS
             for detail_id, detail in existing_details.items():
                 if detail_id not in processed_details:
-                    # This item was deleted - reverse inventory
+                    # Reverse inventory
                     detail.item_id.quantity_purchased -= detail.quantity_purchased
                     detail.item_id.save()
                     detail.delete()
+                    print(f"✅ DELETED Detail: {detail_id}")
             
             # Update PO total
             old_total = purchase_order.total_amount
@@ -2035,20 +2061,26 @@ def api_update_purchase_order(request):
             purchase_order.total_amount = new_total
             purchase_order.save()
             
-            # Update supplier total purchases
+            # Update supplier total
             supplier = purchase_order.supplier_id
             supplier.total_purchases += total_diff
             supplier.save()
+            
+            # Update statuses
+            status_info = update_purchase_order_statuses(purchase_order)
         
         return JsonResponse({
             'success': True, 
-            'message': 'Purchase Order updated successfully'
+            'message': 'Purchase Order updated successfully',
+            'status_info': status_info
         })
     
     except json.JSONDecodeError:
         return JsonResponse({'success': False, 'message': 'Invalid JSON data'}, status=400)
     except Exception as e:
+        print(f"❌ UPDATE ERROR: {str(e)}")
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
+    
 
 @csrf_exempt
 @login_required(login_url='/login/')
@@ -2099,7 +2131,7 @@ def api_delete_purchase_detail(request):
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
     
     
-# ======= UPDATING THE SHIPPING AND PAYMENT STATUSES FOR THE APPLICATION ========================================================================================
+# ==================== UPDATING THE SHIPPING AND PAYMENT STATUSES FOR THE APPLICATION ========================================================================================
 
 def calculate_payment_status(total_amount, amount_paid):
     """
@@ -2305,40 +2337,33 @@ def api_generate_so_id(request):
 @login_required(login_url='/login/')
 def api_generate_sales_detail_id(request):
     """
-    Generate unique Detail ID for Sales - uses same logic as purchases
-    This ensures Detail IDs are unique across the entire system
+    Generate unique Detail ID for SALES in format SD00001
+    Each call generates a FRESH unique ID
     """
     try:
-        # IMPORTANT: Always fetch fresh from database on each call
-        max_purchase_detail = PurchaseDetail.objects.aggregate(Max('detail_id'))['detail_id__max']
+        # Always fetch fresh from database
         max_sales_detail = SalesDetail.objects.aggregate(Max('detail_id'))['detail_id__max']
         
-        # Compare both and get the highest
-        max_details = [max_purchase_detail, max_sales_detail]
-        max_details = [d for d in max_details if d is not None]  # Remove None values
-        
-        if max_details:
-            # Extract numeric parts and get the maximum
-            max_nums = [int(d[1:]) for d in max_details]
-            num_part = max(max_nums) + 1
+        if max_sales_detail:
+            # Extract numeric part (skip 'SD' prefix)
+            num_part = int(max_sales_detail[2:]) + 1
         else:
-            # First detail ever in the entire system
+            # First sales detail ever
             num_part = 1
         
-        # Format as D00001
-        new_detail_id = f"D{num_part:05d}"
+        # Format as SD00001
+        new_detail_id = f"SD{num_part:05d}"
         
-        # Safety check: ensure it doesn't exist in EITHER table
+        # Safety check: ensure it doesn't exist
         attempts = 0
-        while (PurchaseDetail.objects.filter(detail_id=new_detail_id).exists() or 
-               SalesDetail.objects.filter(detail_id=new_detail_id).exists()):
+        while SalesDetail.objects.filter(detail_id=new_detail_id).exists():
             num_part += 1
-            new_detail_id = f"D{num_part:05d}"
+            new_detail_id = f"SD{num_part:05d}"
             attempts += 1
-            if attempts > 1000:  # Prevent infinite loop
+            if attempts > 1000:
                 return JsonResponse({'success': False, 'message': 'Could not generate unique Detail ID'}, status=500)
         
-        print(f"✅ GENERATED NEW DETAIL ID (SALES): {new_detail_id} at {time.strftime('%H:%M:%S')}")  # Debug log
+        print(f"✅ GENERATED SALES DETAIL ID: {new_detail_id} at {time.strftime('%H:%M:%S')}")
         
         return JsonResponse({'success': True, 'detail_id': new_detail_id})
     
@@ -2739,7 +2764,7 @@ def api_delete_sales_detail(request):
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
     
     
-# ============================== NEW ENDPOINT FOOR THE PAYMENTS MODULE ===============================================================================
+# ============================== NEW API ENDPOINT FOR THE PAYMENTS MODULE ===============================================================================
 @csrf_exempt
 @login_required(login_url='/login/')
 def api_record_payment(request):
@@ -2824,7 +2849,7 @@ def api_record_payment(request):
             supplier.total_payments += payment_amount
             supplier.save()
             
-            # *** AUTOMATICALLY UPDATE PAYMENT AND SHIPPING STATUS ***
+            # AUTOMATICALLY UPDATE PAYMENT AND SHIPPING STATUS
             status_info = update_purchase_order_statuses(purchase_order)
         
         return JsonResponse({

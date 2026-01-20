@@ -709,6 +709,8 @@
     let soCurrentSOID = null;
     let soDetailCounter = 1;
 
+    let soNextDetailNumber = null;           // GLOBAL VARIABLE TO TRACK THE NEXT DETAIL NUMBER IN THE CURRENT SESSION
+
     // CSRF Token
     function getCSRFToken() {
       const cookies = document.cookie.split(';');
@@ -728,6 +730,7 @@
       loadShippingStatuses();
       loadSalesOrders();
       initializeDatePicker();
+      loadNextSalesDetailNumber()
     });
 
     // Initialize Flatpickr date picker
@@ -894,6 +897,29 @@
       }
     }
 
+    // Load the next detail number when page loads
+async function loadNextSalesDetailNumber() {
+  try {
+    const response = await fetch('/api/sales/get-next-detail-number/', {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': getCSRFToken()
+      },
+      credentials: 'same-origin'
+    });
+    
+    const result = await response.json();
+    if (result.success) {
+      soNextDetailNumber = result.next_number;
+      console.log(`📊 Loaded next Sales Detail number: ${soNextDetailNumber}`);
+    }
+  } catch (error) {
+    console.error('Error loading next detail number:', error);
+    soNextDetailNumber = 1;
+  }
+}
+
     // Render SO table
     function renderSOTable() {
       const startIndex = (soCurrentPage - 1) * soPageSize;
@@ -1042,7 +1068,7 @@
       }
     }
 
-    // FOR SALES MODULE - Replace the entire soAddItemRow function
+// ✅ FOR SALES MODULE - Fixed soAddItemRow function
 async function soAddItemRow() {
   const soID = document.getElementById('soSOID').value;
   const soDate = document.getElementById('soSODate').value;
@@ -1057,43 +1083,39 @@ async function soAddItemRow() {
     return;
   }
   
-  // ✅ CRITICAL FIX: Generate FRESH Detail ID on EACH call
-  showProcessing();
-  
-  try {
-    // Force fresh API call with cache-busting timestamp
-    const timestamp = new Date().getTime();
-    const response = await fetch(`/api/sales/generate-detail-id/?t=${timestamp}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRFToken': getCSRFToken(),
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0'
-      },
-      credentials: 'same-origin',
-      cache: 'no-store'  // Prevent caching
-    });
-    
-    const result = await response.json();
-    
-    if (!result.success) {
-      alert('Error generating Detail ID: ' + result.message);
-      hideProcessing();
-      return;
+  // 🎯 CHECK: Get all existing Detail IDs in the current table FIRST
+  const existingDetailIDs = new Set();
+  $('#soItemsTableBody tr').each(function() {
+    const detailID = $(this).attr('data-detail-id');
+    if (detailID) {
+      existingDetailIDs.add(detailID);
+      // Extract number and update our counter if needed
+      const num = parseInt(detailID.substring(2));
+      if (num >= soNextDetailNumber) {
+        soNextDetailNumber = num + 1;
+      }
     }
-    
-    const detailID = result.detail_id;
-    
-    // ✅ VERIFICATION: Log the Detail ID to console
-    console.log(`🆕 Generated NEW Detail ID: ${detailID} at ${new Date().toLocaleTimeString()}`);
-    
-    const tbody = document.getElementById('soItemsTableBody');
+  });
+  
+  // 🎯 GENERATE THE NEXT DETAIL ID
+  let detailID = `SD${soNextDetailNumber.toString().padStart(5, '0')}`;
+  
+  // 🎯 ENSURE IT'S UNIQUE (safety check)
+  while (existingDetailIDs.has(detailID)) {
+    soNextDetailNumber++;
+    detailID = `SD${soNextDetailNumber.toString().padStart(5, '0')}`;
+  }
+  
+  // 🎯 INCREMENT FOR NEXT CALL
+  soNextDetailNumber++;
+  
+  console.log(`🆕 Generated SALES Detail ID: ${detailID} at ${new Date().toLocaleTimeString()}`);
+  
+  const tbody = document.getElementById('soItemsTableBody');
     const row = document.createElement('tr');
     row.setAttribute('data-detail-id', detailID);
     
-    // Create item name dropdown options
+    // Create item name dropdown
     let itemOptions = '<option value="">Select Item</option>';
     soInventoryItems.forEach(item => {
       itemOptions += `<option value="${item.name}" data-item-id="${item.id}" data-type="${item.type}" data-category="${item.category}" data-subcategory="${item.subcategory}" data-sale-price="${item.sale_price}">${item.name}</option>`;
@@ -1130,7 +1152,7 @@ async function soAddItemRow() {
     
     tbody.appendChild(row);
     
-    // Initialize Select2 for item name
+    // Initialize Select2
     $(row).find('.item-name-select').select2({
       placeholder: 'Select Item',
       allowClear: true,
@@ -1139,21 +1161,11 @@ async function soAddItemRow() {
       soItemChanged(this);
     });
     
-    // Add event listeners for calculations
+    // Add calculation listeners
     $(row).find('.qty-input, .tax-rate-input').on('input', function() {
       soCalculateRowTotals(row);
     });
-    
-    soDetailCounter++;
-    hideProcessing();
-    
-  } catch (error) {
-    console.error('Error generating Detail ID:', error);
-    alert('Failed to generate Detail ID: ' + error.message);
-    hideProcessing();
-  }
 }
-
 
 // ============================================================
 // VERIFICATION HELPER - Add this function to test

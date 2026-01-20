@@ -709,7 +709,7 @@
     let poCurrentPOID = null;
     let poDetailCounter = 1;
 
-    let poNextDetailNumber = null;          // Global variable to track the detail counter
+    let poNextDetailNumber = null;          // GLOBAL VARIABLE TO TRACK THE NEXT DETAIL NUMBER IN CURRENT SESSION
 
     // CSRF Token
     function getCSRFToken() {
@@ -729,7 +729,7 @@
       loadPMTStatuses();
       loadShippingStatuses();
       loadPurchaseOrders();
-      loadNextDetailNumber(); 
+      loadNextPurchaseDetailNumber(); 
       initializeDatePicker();
     });
 
@@ -1045,8 +1045,8 @@
       }
     }
 
-// Load the next available detail number on page load
-async function loadNextDetailNumber() {
+// LOAD THE NEXT PURCHASE DETAIL NUMBER WHEN THE PAGE LOADS
+async function loadNextPurchaseDetailNumber() {
   try {
     const response = await fetch('/api/purchases/get-next-detail-number/', {
       method: 'GET',
@@ -1060,6 +1060,7 @@ async function loadNextDetailNumber() {
     const result = await response.json();
     if (result.success) {
       poNextDetailNumber = result.next_number;
+      console.log(`📊 Loaded next Purchase Detail number: ${poNextDetailNumber}`);
     }
   } catch (error) {
     console.error('Error loading next detail number:', error);
@@ -1067,7 +1068,7 @@ async function loadNextDetailNumber() {
   }
 }
 
-// FOR PURCHASES MODULE - Replace the entire poAddItemRow function
+// FOR PURCHASES MODULE - Fixed poAddItemRow function
 async function poAddItemRow() {
   const poID = document.getElementById('poPOID').value;
   const poDate = document.getElementById('poPODate').value;
@@ -1082,39 +1083,35 @@ async function poAddItemRow() {
     return;
   }
   
-  // ✅ CRITICAL FIX: Generate FRESH Detail ID on EACH call
-  showProcessing();
-  
-  try {
-    // Force fresh API call with cache-busting timestamp
-    const timestamp = new Date().getTime();
-    const response = await fetch(`/api/purchases/generate-detail-id/?t=${timestamp}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRFToken': getCSRFToken(),
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0'
-      },
-      credentials: 'same-origin',
-      cache: 'no-store'  // Prevent caching
-    });
-    
-    const result = await response.json();
-    
-    if (!result.success) {
-      alert('Error generating Detail ID: ' + result.message);
-      hideProcessing();
-      return;
+  // 🎯 CHECK: Get all existing Detail IDs in the current table FIRST
+  const existingDetailIDs = new Set();
+  $('#poItemsTableBody tr').each(function() {
+    const detailID = $(this).attr('data-detail-id');
+    if (detailID) {
+      existingDetailIDs.add(detailID);
+      // Extract number and update our counter if needed
+      const num = parseInt(detailID.substring(2));
+      if (num >= poNextDetailNumber) {
+        poNextDetailNumber = num + 1;
+      }
     }
-    
-    const detailID = result.detail_id;
-    
-    // ✅ VERIFICATION: Log the Detail ID to console
-    console.log(`🆕 Generated NEW Detail ID: ${detailID} at ${new Date().toLocaleTimeString()}`);
-    
-    const tbody = document.getElementById('poItemsTableBody');
+  });
+  
+  // 🎯 GENERATE THE NEXT DETAIL ID
+  let detailID = `PD${poNextDetailNumber.toString().padStart(5, '0')}`;
+  
+  // 🎯 ENSURE IT'S UNIQUE (safety check)
+  while (existingDetailIDs.has(detailID)) {
+    poNextDetailNumber++;
+    detailID = `PD${poNextDetailNumber.toString().padStart(5, '0')}`;
+  }
+  
+  // 🎯 INCREMENT FOR NEXT CALL
+  poNextDetailNumber++;
+  
+  console.log(`🆕 Generated PURCHASE Detail ID: ${detailID} at ${new Date().toLocaleTimeString()}`);
+  
+  const tbody = document.getElementById('poItemsTableBody');
     const row = document.createElement('tr');
     row.setAttribute('data-detail-id', detailID);
     
@@ -1155,7 +1152,7 @@ async function poAddItemRow() {
     
     tbody.appendChild(row);
     
-    // Initialize Select2 for item name
+    // Initialize Select2
     $(row).find('.item-name-select').select2({
       placeholder: 'Select Item',
       allowClear: true,
@@ -1164,19 +1161,10 @@ async function poAddItemRow() {
       poItemChanged(this);
     });
 
-    // Add event listeners for calculations
+    // Add calculation listeners
     $(row).find('.qty-input, .tax-rate-input').on('input', function() {
       poCalculateRowTotals(row);
     });
-    
-    poDetailCounter++;
-    hideProcessing();
-    
-  } catch (error) {
-    console.error('Error generating Detail ID:', error);
-    alert('Failed to generate Detail ID: ' + error.message);
-    hideProcessing();
-  }
 }
 
 // ============================================================

@@ -298,7 +298,7 @@ class SalesOrder(models.Model):
 
 
 class PurchaseDetail(models.Model):
-    detail_id = models.CharField(max_length=6, unique=True, primary_key=True)
+    detail_id = models.CharField(max_length=7, unique=True, primary_key=True)
     po_id = models.ForeignKey(PurchaseOrder, on_delete=models.CASCADE, db_column='PO_ID')  # Changed
     date = models.DateField()
     
@@ -349,7 +349,7 @@ class PurchaseDetail(models.Model):
 
 
 class SalesDetail(models.Model):
-    detail_id = models.CharField(max_length=6, unique=True, primary_key=True)
+    detail_id = models.CharField(max_length=7, unique=True, primary_key=True)
     so_id = models.ForeignKey(SalesOrder, on_delete=models.CASCADE, db_column='SO_ID')  # Changed
     date = models.DateField()
     
