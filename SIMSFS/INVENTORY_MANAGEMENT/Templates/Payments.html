@@ -199,6 +199,15 @@
       justify-content: center;
       border: none;
       color: white;
+      white-space: nowrap;
+    }
+    
+    .copy-delete-btn {
+      background-color: var(--warning);
+    }
+    
+    .copy-delete-btn:hover {
+      background-color: #e67e22;
     }
     
     .edit-btn {
@@ -226,9 +235,11 @@
       margin: 3% auto;
       padding: 30px;
       border-radius: 8px;
-      width: 700px;
+      width: 750px;
       max-width: 90%;
       box-shadow: 0 5px 25px rgba(0,0,0,0.2);
+      max-height: 90vh;
+      overflow-y: auto;
     }
     
     .modal-header {
@@ -261,7 +272,7 @@
     .form-row {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 20px;
+      gap: 40px;
       margin-bottom: 20px;
     }
     
@@ -347,6 +358,11 @@
     
     .select2-container {
       width: 100% !important;
+      z-index: 9999 !important;
+    }
+    
+    .select2-dropdown {
+      z-index: 10000 !important;
     }
     
     .id-generate {
@@ -647,6 +663,7 @@
     let paymentModes = [];
     let isEditMode = false;
     let currentPaymentId = null;
+    let originalPaymentData = null; // Store original data for copy & delete
 
     // Get CSRF token
     function getCSRFToken() {
@@ -717,19 +734,22 @@
         $('#supplierName').select2({
             placeholder: 'Select Supplier',
             allowClear: true,
-            dropdownParent: $('#paymentModal')
+            dropdownParent: $('#paymentModal'),
+            width: '100%'
         }).on('change', supplierChanged);
         
         $('#poId').select2({
             placeholder: 'Select PO ID',
             allowClear: true,
-            dropdownParent: $('#paymentModal')
+            dropdownParent: $('#paymentModal'),
+            width: '100%'
         }).on('change', poChanged);
         
         $('#paymentMode').select2({
             placeholder: 'Select Payment Mode',
             allowClear: true,
-            dropdownParent: $('#paymentModal')
+            dropdownParent: $('#paymentModal'),
+            width: '100%'
         });
     }
 
