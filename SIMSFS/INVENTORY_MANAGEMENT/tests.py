@@ -150,9 +150,7 @@ class Command(BaseCommand):
             self.stdout.write(f'Created shipping status: {status}')
         
         self.stdout.write(self.style.SUCCESS('Successfully created all statuses!'))
-        
-        
-        
+ 
 # ======================== CHECKING FOR DUPLICATE DETAIL IDS ============================================================================================================
 def check_for_duplicate_detail_ids():
     """

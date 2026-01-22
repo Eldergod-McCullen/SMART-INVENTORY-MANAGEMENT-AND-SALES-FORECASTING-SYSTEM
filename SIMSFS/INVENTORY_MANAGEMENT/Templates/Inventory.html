@@ -827,7 +827,7 @@ function renderItemTable() {
         // Add color coding for low stock
         if (item.reorderRequired === 'YES') {
             row.classList.add('reorder-needed');
-        } else if (item.remainingQty < item.reorderLevel * 1.5) {
+        } else if (item.remainingQty < item.reorderLevel + 2) {              // THIS IS FOR MODIFYING WHEN TO ALERT THE RE-ORDER REQUIRED 
             row.classList.add('low-stock');
         }
         

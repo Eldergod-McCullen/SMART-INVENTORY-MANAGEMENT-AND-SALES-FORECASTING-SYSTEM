@@ -2371,6 +2371,29 @@ def api_generate_sales_detail_id(request):
         print(f"❌ ERROR generating Detail ID: {str(e)}")
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
 
+@csrf_exempt
+@login_required(login_url='/login/')
+def api_get_next_sales_detail_number(request):  
+    """
+    Get the next available detail number for Sales
+    Returns just the number, not the full ID
+    """
+    try:
+        max_sales_detail = SalesDetail.objects.aggregate(Max('detail_id'))['detail_id__max']
+        
+        if max_sales_detail:
+            # Extract number from SD00007 -> 7, then add 1
+            next_number = int(max_sales_detail[2:]) + 1
+        else:
+            next_number = 1
+        
+        print(f"📊 Next Sales Detail Number: {next_number}")
+        return JsonResponse({'success': True, 'next_number': next_number})
+    
+    except Exception as e:
+        print(f"❌ Error getting next detail number: {str(e)}")
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
 
 @csrf_exempt
 @login_required(login_url='/login/')
@@ -2477,6 +2500,7 @@ def api_get_so_details(request, so_id):
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
 
+# =========================== ADDING A NEW SALES ORDER ======================================================================================================================================
 @csrf_exempt
 @login_required(login_url='/login/')
 def api_add_sales_order(request):
@@ -2552,8 +2576,8 @@ def api_add_sales_order(request):
                 town=town,
                 total_amount=total_amount,
                 amount_received=Decimal('0.00'),
-                receipt_status=None,
-                shipping_status=None
+                receipt_status=None,  # Will be set by update_sales_order_statuses
+                shipping_status=None  # Will be set by update_sales_order_statuses
             )
             
             # Create Sales Details and update inventory
@@ -2602,10 +2626,14 @@ def api_add_sales_order(request):
             # Update customer total sales
             customer.total_sales += total_amount
             customer.save()
+            
+            # AUTOMATICALLY SET RECEIPT AND SHIPPING STATUS 
+            status_info = update_sales_order_statuses(sales_order)
         
         return JsonResponse({
             'success': True, 
-            'message': 'Sales Order created successfully'
+            'message': 'Sales Order created successfully',
+            'status_info': status_info
         })
     
     except json.JSONDecodeError:
@@ -2613,6 +2641,120 @@ def api_add_sales_order(request):
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
 
+# ============================ CALCULATING THE RECEIPT STATUS IN THE SALES ORDER ===============================================================================
+@csrf_exempt
+@login_required(login_url='/login/')
+def calculate_receipt_status(total_amount, amount_received):
+    """
+    Calculate receipt status based on payment percentage
+    
+    Args:
+        total_amount (Decimal): Total amount of the sales order
+        amount_received (Decimal): Amount already received
+    
+    Returns:
+        str: Receipt status ('PENDING', 'PARTIAL PAYMENT', 'COMPLETED')
+    """
+    total_amount = Decimal(str(total_amount))
+    amount_received = Decimal(str(amount_received))
+    
+    # If no payment received
+    if amount_received == Decimal('0.00'):
+        return 'PENDING'
+    
+    # If fully paid
+    elif amount_received >= total_amount:
+        return 'COMPLETED'
+    
+    # If partially paid
+    else:
+        return 'PARTIAL PAYMENT'
+    
+# ============================ CALCULATING THE SHIPPING STATUS IN THE SALES ORDER ================================================================================
+def calculate_sales_shipping_status(total_amount, amount_received):
+    """
+    Calculate shipping status based on payment percentage
+    
+    Payment Percentage -> Shipping Status:
+    - 0% -> PENDING
+    - 1%-49% -> PROCESSING
+    - 50%-74% -> DISPATCHED
+    - 75%-99% -> IN TRANSIT
+    - 100% -> DELIVERED
+    
+    Args:
+        total_amount (Decimal): Total amount of the sales order
+        amount_received (Decimal): Amount already received
+    
+    Returns:
+        str: Shipping status
+    """
+    total_amount = Decimal(str(total_amount))
+    amount_received = Decimal(str(amount_received))
+    
+    # If no payment received
+    if amount_received == Decimal('0.00'):
+        return 'PENDING'
+    
+    # Calculate payment percentage
+    payment_percentage = (amount_received / total_amount) * 100
+    
+    # Determine shipping status based on percentage
+    if payment_percentage >= 100:
+        return 'DELIVERED'
+    elif payment_percentage >= 75:
+        return 'IN TRANSIT'
+    elif payment_percentage >= 50:
+        return 'DISPATCHED'
+    elif payment_percentage >= 1:
+        return 'PROCESSING'
+    else:
+        return 'PENDING'
+
+
+def update_sales_order_statuses(sales_order):
+    """
+    Update both receipt and shipping status for a sales order
+    
+    Args:
+        sales_order: SalesOrder instance
+    
+    Returns:
+        dict: Updated status information
+    """
+    # Calculate status names
+    receipt_status_name = calculate_receipt_status(
+        sales_order.total_amount, 
+        sales_order.amount_received
+    )
+    
+    shipping_status_name = calculate_sales_shipping_status(
+        sales_order.total_amount, 
+        sales_order.amount_received
+    )
+    
+    # Get or create ReceiptStatus and ShippingStatus objects
+    receipt_status, _ = ReceiptStatus.objects.get_or_create(
+        receipt_status=receipt_status_name
+    )
+    
+    shipping_status, _ = ShippingStatus.objects.get_or_create(
+        shipping_status=shipping_status_name
+    )
+    
+    # Update the sales order
+    sales_order.receipt_status = receipt_status
+    sales_order.shipping_status = shipping_status
+    sales_order.save()
+    
+    return {
+        'receipt_status': receipt_status_name,
+        'shipping_status': shipping_status_name,
+        'payment_percentage': float((sales_order.amount_received / sales_order.total_amount) * 100) if sales_order.total_amount > 0 else 0,
+        'balance_remaining': float(sales_order.total_amount - sales_order.amount_received)
+    }
+    
+# ================================== UPDATING THE SALES ORDER ==============================================================================================================================    
 @csrf_exempt
 @login_required(login_url='/login/')
 def api_update_sales_order(request):
@@ -2704,10 +2846,14 @@ def api_update_sales_order(request):
             customer = sales_order.customer_id
             customer.total_sales += total_diff
             customer.save()
+            
+            # *** UPDATE STATUSES ***
+            status_info = update_sales_order_statuses(sales_order)
         
         return JsonResponse({
             'success': True, 
-            'message': 'Sales Order updated successfully'
+            'message': 'Sales Order updated successfully',
+            'status_info': status_info
         })
     
     except json.JSONDecodeError:
@@ -2715,6 +2861,7 @@ def api_update_sales_order(request):
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
 
+# ================================== DELETING THE SALES ORDER ======================================================================================================================
 @csrf_exempt
 @login_required(login_url='/login/')
 def api_delete_sales_detail(request):
@@ -3382,6 +3529,28 @@ def api_delete_payment(request):
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
     
+@csrf_exempt
+@login_required(login_url='/login/')
+def api_generate_receipt_transaction_id(request):
+    """Generate unique Transaction ID in format TRANSAL00001"""
+    try:
+        max_receipt = Receipt.objects.aggregate(Max('transaction_id'))['transaction_id__max']
+        
+        if max_receipt:
+            num_part = int(max_receipt[7:]) + 1
+        else:
+            num_part = 1
+        
+        new_id = f"TRANSAL{num_part:05d}"
+        
+        while Receipt.objects.filter(transaction_id=new_id).exists():
+            num_part += 1
+            new_id = f"TRANSAL{num_part:05d}"
+        
+        return JsonResponse({'success': True, 'transaction_id': new_id})
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
 # =========================== TESTING THE DETAIL ID GENERATION ==================================================================================================
 @csrf_exempt
 @login_required(login_url='/login/')
@@ -3419,5 +3588,394 @@ def api_test_detail_id_generation(request):
             'results': results
         })
     
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+    
+@csrf_exempt
+@login_required(login_url='/login/')
+def api_get_receipts(request):
+    """Get all receipts with full details"""
+    try:
+        receipts = Receipt.objects.select_related(
+            'customer_id', 'county', 'town', 'so_id', 'payment_mode'
+        ).all().order_by('-date')
+        
+        receipts_list = []
+        for receipt in receipts:
+            # Format date as DD/MM/YYYY
+            date_str = receipt.date.strftime('%d/%m/%Y') if receipt.date else ''
+            
+            receipts_list.append({
+                'transaction_id': receipt.transaction_id,
+                'date': date_str,
+                'customer_id': receipt.customer_id.customer_id if receipt.customer_id else '',
+                'customer_name': receipt.customer_name,
+                'county': receipt.county.county if receipt.county else '',
+                'town': receipt.town.town if receipt.town else '',
+                'so_id': receipt.so_id.so_id if receipt.so_id else '',
+                'invoice_number': receipt.invoice_number,
+                'payment_mode': receipt.payment_mode.payment_mode if receipt.payment_mode else '',
+                'amount_received': float(receipt.amount_received)
+            })
+        
+        return JsonResponse({'success': True, 'data': receipts_list})
+    
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
+# ============================================
+# HELPER: Calculate and Update SO Statuses
+# ============================================
+
+def update_sales_order_statuses(sales_order):
+    """
+    Update both payment and shipping status for a sales order
+    
+    Receipt Status Rules:
+    - 0% paid -> PENDING
+    - 1-99% paid -> PARTIAL PAYMENT
+    - 100% paid -> COMPLETED
+    
+    Shipping Status Rules:
+    - 0% paid -> PENDING
+    - 1-49% paid -> PROCESSING
+    - 50-74% paid -> DISPATCHED
+    - 75-99% paid -> IN TRANSIT
+    - 100% paid -> DELIVERED
+    """
+    total_amount = Decimal(str(sales_order.total_amount))
+    amount_received = Decimal(str(sales_order.amount_received))
+    
+    # Calculate payment percentage
+    if total_amount > 0:
+        payment_percentage = (amount_received / total_amount) * 100
+    else:
+        payment_percentage = 0
+    
+    # Determine Payment Status
+    if amount_received == Decimal('0.00'):
+        receipt_status_name = 'PENDING'
+    elif amount_received >= total_amount:
+        receipt_status_name = 'COMPLETED'
+    else:
+        receipt_status_name = 'PARTIAL PAYMENT'
+    
+    # Determine Shipping Status
+    if payment_percentage == 0:
+        shipping_status_name = 'PENDING'
+    elif payment_percentage >= 100:
+        shipping_status_name = 'DELIVERED'
+    elif payment_percentage >= 75:
+        shipping_status_name = 'IN TRANSIT'
+    elif payment_percentage >= 50:
+        shipping_status_name = 'DISPATCHED'
+    else:
+        shipping_status_name = 'PROCESSING'
+    
+    # Get or create status objects
+    receipt_status, _ = ReceiptStatus.objects.get_or_create(
+        receipt_status=receipt_status_name
+    )
+    shipping_status, _ = ShippingStatus.objects.get_or_create(
+        shipping_status=shipping_status_name
+    )
+    
+    # Update sales order
+    sales_order.receipt_status = receipt_status
+    sales_order.shipping_status = shipping_status
+    sales_order.save()
+    
+    return {
+        'receipt_status': receipt_status_name,
+        'shipping_status': shipping_status_name,
+        'payment_percentage': float(payment_percentage),
+        'balance_remaining': float(total_amount - amount_received)
+    }
+
+# ============================================
+# ADD NEW RECEIPT
+# ============================================
+
+@csrf_exempt
+@login_required(login_url='/login/')
+def api_add_receipt(request):
+    """
+    Add new receipt and automatically update SO statuses
+    """
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Invalid request method'}, status=405)
+    
+    try:
+        data = json.loads(request.body)
+        
+        # Extract receipt data
+        transaction_id = data.get('transaction_id', '').strip()
+        receipt_date_str = data.get('receipt_date', '').strip()
+        customer_id = data.get('customer_id', '').strip()
+        customer_name = data.get('customer_name', '').strip()
+        county_name = data.get('county', '').strip()
+        town_name = data.get('town', '').strip()
+        so_id = data.get('so_id', '').strip()
+        invoice_number = data.get('invoice_number', '').strip()
+        payment_mode_name = data.get('payment_mode', '').strip()
+        amount_received = Decimal(str(data.get('amount_received', 0)))
+        
+        # Validation
+        if not all([transaction_id, receipt_date_str, customer_name, so_id, payment_mode_name]):
+            return JsonResponse({
+                'success': False, 
+                'message': 'All required fields must be filled'
+            }, status=400)
+        
+        if amount_received <= 0:
+            return JsonResponse({
+                'success': False, 
+                'message': 'Payment amount must be greater than zero'
+            }, status=400)
+        
+        # Check if transaction ID already exists
+        if Receipt.objects.filter(transaction_id=transaction_id).exists():
+            return JsonResponse({
+                'success': False, 
+                'message': 'Transaction ID already exists'
+            }, status=400)
+        
+        # Parse receipt date
+        receipt_date = parse_date(receipt_date_str)
+        if not receipt_date:
+            return JsonResponse({
+                'success': False, 
+                'message': 'Invalid date format. Use DD/MM/YYYY'
+            }, status=400)
+        
+        # Get foreign key objects
+        try:
+            customer = Customer.objects.get(customer_id=customer_id)
+            sales_order = SalesOrder.objects.get(so_id=so_id)
+            payment_mode, _ = PaymentMode.objects.get_or_create(payment_mode=payment_mode_name)
+            county = County.objects.get(county=county_name) if county_name else None
+            town = Town.objects.get(town=town_name) if town_name else None
+        except (Customer.DoesNotExist, SalesOrder.DoesNotExist) as e:
+            return JsonResponse({
+                'success': False, 
+                'message': f'Invalid reference: {str(e)}'
+            }, status=400)
+        
+        # Check if payment exceeds SO balance
+        balance = sales_order.total_amount - sales_order.amount_received
+        if amount_received > balance:
+            return JsonResponse({
+                'success': False, 
+                'message': f'Payment amount ({amount_received}) exceeds remaining balance ({balance})'
+            }, status=400)
+        
+        # Start transaction
+        with transaction.atomic():
+            # Create receipt record
+            Receipt.objects.create(
+                transaction_id=transaction_id,
+                date=receipt_date,
+                customer_id=customer,
+                customer_name=customer_name,
+                county=county,
+                town=town,
+                so_id=sales_order,
+                invoice_number=invoice_number,
+                payment_mode=payment_mode,
+                amount_received=amount_received
+            )
+            
+            # Update sales order amount_received
+            sales_order.amount_received += amount_received
+            sales_order.save()
+            
+            # Update customer total_payments
+            customer.total_payments += amount_received
+            customer.save()
+            
+            # *** UPDATE SO STATUSES ***
+            status_info = update_sales_order_statuses(sales_order)
+        
+        return JsonResponse({
+            'success': True, 
+            'message': 'Receipt recorded successfully',
+            'status_info': status_info
+        })
+    
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'message': 'Invalid JSON data'}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+@csrf_exempt
+@login_required(login_url='/login/')
+def api_delete_receipt(request):
+    """
+    Delete receipt
+    - Reverse receipt from SO
+    - Reverse from customer
+    - Update SO statuses
+    """
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Invalid request method'}, status=405)
+    
+    try:
+        data = json.loads(request.body)
+        transaction_id = data.get('transaction_id', '').strip()
+        
+        if not transaction_id:
+            return JsonResponse({'success': False, 'message': 'Transaction ID is required'}, status=400)
+        
+        try:
+            receipt = Receipt.objects.get(transaction_id=transaction_id)
+        except Receipt.DoesNotExist:
+            return JsonResponse({'success': False, 'message': 'Receipt not found'}, status=404)
+        
+        with transaction.atomic():
+            # Get the sales order
+            sales_order = receipt.so_id
+            
+            # Reverse receipt from SO
+            sales_order.amount_received -= receipt.amount_received
+            sales_order.save()
+            
+            # Reverse from customer
+            customer = receipt.customer_id
+            customer.total_payments -= receipt.amount_received
+            customer.save()
+            
+            # Update SO statuses
+            status_info = update_sales_order_statuses(sales_order)
+            
+            # Delete receipt
+            receipt.delete()
+        
+        return JsonResponse({
+            'success': True, 
+            'message': 'Receipt deleted successfully',
+            'status_info': status_info
+        })
+    
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'message': 'Invalid JSON data'}, status=400)
+    except Exception as e:
+        print(f"❌ Error deleting receipt: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+    
+# ============================================
+# UPDATE RECEIPT
+# ============================================
+
+@csrf_exempt
+@login_required(login_url='/login/')
+def api_update_receipt(request):
+    """
+    Update existing payment
+    - Reverse original payment from old PO
+    - Apply new payment to new PO (if changed)
+    - Update both PO statuses
+    """
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Invalid request method'}, status=405)
+    
+    try:
+        data = json.loads(request.body)
+        
+        # Extract data
+        transaction_id = data.get('transaction_id', '').strip()
+        original_transaction_id = data.get('original_transaction_id', '').strip()
+        original_so_id = data.get('original_so_id', '').strip()
+        original_amount_received = Decimal(str(data.get('original_amount_received ', 0)))
+        
+        receipt_date_str = data.get('receipt_date', '').strip()
+        customer_id = data.get('customer_id', '').strip()
+        customer_name = data.get('customer_name', '').strip()
+        county_name = data.get('county', '').strip()
+        town_name = data.get('town', '').strip()
+        so_id = data.get('so_id', '').strip()
+        invoice_number = data.get('invoice_number', '').strip()
+        payment_mode_name = data.get('payment_mode', '').strip()
+        amount_received = Decimal(str(data.get('amount_received', 0)))
+        
+        # Get existing receipt
+        try:
+            receipt = Receipt.objects.get(transaction_id=original_transaction_id)
+        except Receipt.DoesNotExist:
+            return JsonResponse({'success': False, 'message': 'Receipt not found'}, status=404)
+        
+        # Parse date
+        receipt_date = parse_date(receipt_date_str)
+        if not receipt_date:
+            return JsonResponse({
+                'success': False, 
+                'message': 'Invalid date format. Use DD/MM/YYYY'
+            }, status=400)
+        
+        # Get foreign key objects
+        try:
+            customer = Customer.objects.get(customer_id=customer_id)
+            new_sales_order = SalesOrder.objects.get(so_id=so_id)
+            old_sales_order = SalesOrder.objects.get(so_id=original_so_id)
+            payment_mode, _ = PaymentMode.objects.get_or_create(payment_mode=payment_mode_name)
+            county = County.objects.get(county=county_name) if county_name else None
+            town = Town.objects.get(town=town_name) if town_name else None
+        except (Customer.DoesNotExist, SalesOrder.DoesNotExist) as e:
+            return JsonResponse({
+                'success': False, 
+                'message': f'Invalid reference: {str(e)}'
+            }, status=400)
+        
+        with transaction.atomic():
+            # Reverse original receipt from old SO
+            old_sales_order.amount_received -= original_amount_received
+            old_sales_order.save()
+            
+            # Reverse from customer if supplier changed
+            if receipt.customer_id.customer_id != customer_id:
+                old_customer = receipt.customer_id
+                old_customer.total_payments -= original_amount_received
+                old_customer.save()
+            
+            # Apply new payment to new PO
+            new_sales_order.amount_received += amount_received
+            new_sales_order.save()
+            
+            # Update supplier total_payments
+            if customer.customer_id.customer_id != customer_id:
+                customer.total_payments += amount_received
+                customer.save()
+            else:
+                # Same customer, adjust by difference
+                customer.total_payments += (amount_received - original_amount_received)
+                customer.save()
+            
+            # Update payment record
+            receipt.transaction_id = transaction_id
+            receipt.date = receipt_date
+            receipt.customer_id = customer
+            receipt.customer_name = customer_name
+            receipt.county = county
+            receipt.town = town
+            receipt.so_id = new_sales_order
+            receipt.invoice_number = invoice_number
+            receipt.payment_mode = payment_mode
+            receipt.amount_received = amount_received
+            receipt.save()
+            
+            # Update statuses for both SOs
+            old_status_info = update_sales_order_statuses(old_sales_order)
+            new_status_info = update_sales_order_statuses(new_sales_order)
+        
+        return JsonResponse({
+            'success': True, 
+            'message': 'Payment updated successfully',
+            'status_info': new_status_info
+        })
+    
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'message': 'Invalid JSON data'}, status=400)
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)}, status=500)

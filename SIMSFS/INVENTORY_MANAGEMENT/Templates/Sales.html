@@ -913,6 +913,9 @@ async function loadNextSalesDetailNumber() {
     if (result.success) {
       soNextDetailNumber = result.next_number;
       console.log(`📊 Loaded next Sales Detail number: ${soNextDetailNumber}`);
+    } else {
+      console.error('Failed to load next detail number');
+      soNextDetailNumber = 1;
     }
   } catch (error) {
     console.error('Error loading next detail number:', error);
@@ -1012,25 +1015,27 @@ async function loadNextSalesDetailNumber() {
 
     // Open new SO modal
     function soOpenNewSOModal() {
-      soIsEditMode = false;
-      soCurrentSOID = null;
-      document.getElementById('soModalTitle').textContent = 'Create New Sales Order';
-      document.getElementById('soSaveBtn').textContent = 'Save SO';
-      document.getElementById('soGenerateBtn').style.display = 'inline-block';
-      
-      // Clear form
-      document.getElementById('soSOID').value = '';
-      document.getElementById('soSODate').value = '';
-      $('#soCustomerName').val('').trigger('change');
-      document.getElementById('soCustomerID').value = '';
-      document.getElementById('soCounty').value = '';
-      document.getElementById('soTown').value = '';
-      document.getElementById('soInvoiceNum').value = '';
-      document.getElementById('soItemsTableBody').innerHTML = '';
-      
-      soDetailCounter = 1;
-      document.getElementById('soNewSOModal').style.display = 'block';
-    }
+  soIsEditMode = false;
+  soCurrentSOID = null;
+  document.getElementById('soModalTitle').textContent = 'Create New Sales Order';
+  document.getElementById('soSaveBtn').textContent = 'Save SO';
+  document.getElementById('soGenerateBtn').style.display = 'inline-block';
+  
+  // Clear form
+  document.getElementById('soSOID').value = '';
+  document.getElementById('soSODate').value = '';
+  $('#soCustomerName').val('').trigger('change');
+  document.getElementById('soCustomerID').value = '';
+  document.getElementById('soCounty').value = '';
+  document.getElementById('soTown').value = '';
+  document.getElementById('soInvoiceNum').value = '';
+  document.getElementById('soItemsTableBody').innerHTML = '';
+  
+  // ✅ RELOAD NEXT DETAIL NUMBER FOR NEW SO
+  loadNextSalesDetailNumber();
+  
+  document.getElementById('soNewSOModal').style.display = 'block';
+}
 
     // Close SO modal
     function soCloseNewSOModal() {
@@ -1083,13 +1088,13 @@ async function soAddItemRow() {
     return;
   }
   
-  // 🎯 CHECK: Get all existing Detail IDs in the current table FIRST
+  // ✅ GET ALL EXISTING DETAIL IDs IN THE TABLE
   const existingDetailIDs = new Set();
   $('#soItemsTableBody tr').each(function() {
     const detailID = $(this).attr('data-detail-id');
     if (detailID) {
       existingDetailIDs.add(detailID);
-      // Extract number and update our counter if needed
+      // Update counter if we find a higher number
       const num = parseInt(detailID.substring(2));
       if (num >= soNextDetailNumber) {
         soNextDetailNumber = num + 1;
@@ -1097,74 +1102,72 @@ async function soAddItemRow() {
     }
   });
   
-  // 🎯 GENERATE THE NEXT DETAIL ID
+  // ✅ GENERATE THE NEXT DETAIL ID
   let detailID = `SD${soNextDetailNumber.toString().padStart(5, '0')}`;
   
-  // 🎯 ENSURE IT'S UNIQUE (safety check)
+  // ✅ ENSURE IT'S UNIQUE (safety check)
   while (existingDetailIDs.has(detailID)) {
     soNextDetailNumber++;
     detailID = `SD${soNextDetailNumber.toString().padStart(5, '0')}`;
   }
   
-  // 🎯 INCREMENT FOR NEXT CALL
+  // ✅ INCREMENT FOR NEXT CALL
   soNextDetailNumber++;
   
   console.log(`🆕 Generated SALES Detail ID: ${detailID} at ${new Date().toLocaleTimeString()}`);
   
   const tbody = document.getElementById('soItemsTableBody');
-    const row = document.createElement('tr');
-    row.setAttribute('data-detail-id', detailID);
-    
-    // Create item name dropdown
-    let itemOptions = '<option value="">Select Item</option>';
-    soInventoryItems.forEach(item => {
-      itemOptions += `<option value="${item.name}" data-item-id="${item.id}" data-type="${item.type}" data-category="${item.category}" data-subcategory="${item.subcategory}" data-sale-price="${item.sale_price}">${item.name}</option>`;
-    });
-    
-    row.innerHTML = `
-      <td><input type="text" class="readonly" value="${soDate}" readonly></td>
-      <td><input type="text" class="readonly" value="${soID}" readonly></td>
-      <td><input type="text" class="readonly" value="${detailID}" readonly></td>
-      <td><input type="text" class="readonly" value="${customerID}" readonly></td>
-      <td><input type="text" class="readonly" value="${customerName}" readonly></td>
-      <td><input type="text" class="readonly" value="${county}" readonly></td>
-      <td><input type="text" class="readonly" value="${town}" readonly></td>
-      <td><input type="text" class="readonly" value="${invoiceNum}" readonly></td>
-      <td><input type="text" class="readonly item-id" value="" readonly></td>
-      <td><input type="text" class="readonly item-type" value="" readonly></td>
-      <td><input type="text" class="readonly item-category" value="" readonly></td>
-      <td><input type="text" class="readonly item-subcategory" value="" readonly></td>
-      <td><select class="item-name-select" style="min-width: 200px;">${itemOptions}</select></td>
-      <td><input type="number" class="qty-input" min="1" value="1"></td>
-      <td><input type="text" class="readonly unit-price" value="0.00" readonly></td>
-      <td><input type="text" class="readonly price-excl-tax" value="0.00" readonly></td>
-      <td><input type="number" class="tax-rate-input" step="0.01" min="0" value="0"></td>
-      <td><input type="text" class="readonly total-tax" value="0.00" readonly></td>
-      <td><input type="text" class="readonly price-incl-tax" value="0.00" readonly></td>
-      <td><input type="text" class="readonly shipping-fees" value="0.00" readonly></td>
-      <td><input type="text" class="readonly total-price" value="0.00" readonly></td>
-      <td>
-        <button class="remove-item-btn" onclick="soRemoveItemRow(this)">
-          <i class="fas fa-trash"></i>
-        </button>
-      </td>
-    `;
-    
-    tbody.appendChild(row);
-    
-    // Initialize Select2
-    $(row).find('.item-name-select').select2({
-      placeholder: 'Select Item',
-      allowClear: true,
-      dropdownParent: $('#soNewSOModal')
-    }).on('change', function() {
-      soItemChanged(this);
-    });
-    
-    // Add calculation listeners
-    $(row).find('.qty-input, .tax-rate-input').on('input', function() {
-      soCalculateRowTotals(row);
-    });
+  const row = document.createElement('tr');
+  row.setAttribute('data-detail-id', detailID);
+  
+  // Create item name dropdown
+  let itemOptions = '<option value="">Select Item</option>';
+  soInventoryItems.forEach(item => {
+    itemOptions += `<option value="${item.name}" data-item-id="${item.id}" data-type="${item.type}" data-category="${item.category}" data-subcategory="${item.subcategory}" data-sale-price="${item.sale_price}">${item.name}</option>`;
+  });
+  
+  row.innerHTML = `
+    <td><input type="text" class="readonly" value="${soDate}" readonly></td>
+    <td><input type="text" class="readonly" value="${soID}" readonly></td>
+    <td><input type="text" class="readonly" value="${detailID}" readonly></td>
+    <td><input type="text" class="readonly" value="${customerID}" readonly></td>
+    <td><input type="text" class="readonly" value="${customerName}" readonly></td>
+    <td><input type="text" class="readonly" value="${county}" readonly></td>
+    <td><input type="text" class="readonly" value="${town}" readonly></td>
+    <td><input type="text" class="readonly" value="${invoiceNum}" readonly></td>
+    <td><input type="text" class="readonly item-id" value="" readonly></td>
+    <td><input type="text" class="readonly item-type" value="" readonly></td>
+    <td><input type="text" class="readonly item-category" value="" readonly></td>
+    <td><input type="text" class="readonly item-subcategory" value="" readonly></td>
+    <td><select class="item-name-select" style="min-width: 200px;">${itemOptions}</select></td>
+    <td><input type="number" class="qty-input" min="1" value="1"></td>
+    <td><input type="text" class="readonly unit-price" value="0.00" readonly></td>
+    <td><input type="text" class="readonly price-excl-tax" value="0.00" readonly></td>
+    <td><input type="number" class="tax-rate-input" step="0.01" min="0" value="0"></td>
+    <td><input type="text" class="readonly total-tax" value="0.00" readonly></td>
+    <td><input type="text" class="readonly price-incl-tax" value="0.00" readonly></td>
+    <td><input type="text" class="readonly shipping-fees" value="0.00" readonly></td>
+    <td><input type="text" class="readonly total-price" value="0.00" readonly></td>
+    <td>
+      <button class="remove-item-btn" onclick="soRemoveItemRow(this)">
+        <i class="fas fa-trash"></i>
+      </button>
+    </td>
+  `;
+  
+  tbody.appendChild(row);
+  
+  $(row).find('.item-name-select').select2({
+    placeholder: 'Select Item',
+    allowClear: true,
+    dropdownParent: $('#soNewSOModal')
+  }).on('change', function() {
+    soItemChanged(this);
+  });
+  
+  $(row).find('.qty-input, .tax-rate-input').on('input', function() {
+    soCalculateRowTotals(row);
+  });
 }
 
 // ============================================================

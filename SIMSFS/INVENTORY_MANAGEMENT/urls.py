@@ -143,6 +143,7 @@ path('api/customers/delete/', views.api_delete_customer, name='api_delete_custom
     path('api/sales/add/', views.api_add_sales_order, name='api_add_sales_order'),
     path('api/sales/update/', views.api_update_sales_order, name='api_update_sales_order'),
     path('api/sales/delete-detail/', views.api_delete_sales_detail, name='api_delete_sales_detail'),
+    path('api/sales/get-next-detail-number/', views.api_get_next_sales_detail_number, name='api_get_next_sales_detail_number'),
     
     
     # ========================== PAYMENT MODULE URLs ===============================================================================================================
@@ -163,5 +164,13 @@ path('api/payments/update/', views.api_update_payment, name='api_update_payment'
 path('api/payments/delete/', views.api_delete_payment, name='api_delete_payment'),
 
 path('api/purchases/get-next-detail-number/', views.api_get_next_detail_number, name='api_get_next_detail_number'),
+
+# Receipt Module URLs
+path('content/receipts/', views.receipts_content, name='receipts'),
+path('api/receipts/generate-transaction-id/', views.api_generate_receipt_transaction_id, name='api_generate_receipt_transaction_id'),
+path('api/receipts/', views.api_get_receipts, name='api_get_receipts'),
+path('api/receipts/add/', views.api_add_receipt, name='api_add_receipt'),
+path('api/receipts/update/', views.api_update_receipt, name='api_update_receipt'),
+path('api/receipts/delete/', views.api_delete_receipt, name='api_delete_receipt'), 
 
 ]

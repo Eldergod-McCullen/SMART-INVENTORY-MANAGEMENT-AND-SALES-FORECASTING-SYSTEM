@@ -1,454 +1,1661 @@
+{% load static %}
 <!DOCTYPE html>
-<html>
+<html lang="en">
+
 <head>
   <base target="_top">
   <meta charset="UTF-8">
-  <title>Cash and Bank Module</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  {% csrf_token %}
+  <meta name="csrf-token" content="{{ csrf_token }}">
 
+  <title>{% block title %}RECEIPTS{% endblock %}</title>
+  
   <!-- Google Fonts -->
-  <link href="https://fonts.googleapis.com/css?family=Poppins:400,600|Roboto:400,500|Montserrat:400,500" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600&family=Poppins:wght@400;500;600&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+  
   <!-- Font Awesome -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
-
-  <!-- jQuery (required by Select2) -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
-  <!-- Select2 CSS -->
-  <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-  <!-- Select2 JS -->
-  <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Select2 -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" rel="stylesheet" />
+  
+  <!-- Flatpickr -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 
   <style>
+    :root {
+      --primary: #1abc9c;
+      --primary-light: #d1f2eb;
+      --primary-dark: #16a085;
+      --secondary: #3498db;
+      --dark: #2c3e50;
+      --light-dark: #34495e;
+      --gray: #7f8c8d;
+      --light-gray: #ecf0f1;
+      --white: #ffffff;
+      --error: #e74c3c;
+      --warning: #f39c12;
+      --success: #2ecc71;
+    }
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
     body {
-      margin:0; font-family:'Poppins',sans-serif; background:#f4f6f8; color:#333;
+      font-family: 'Roboto', sans-serif;
+      background-color: #f8f9fa;
+      color: var(--light-dark);
     }
-    h1 { margin:0; font-weight:600; font-size:1.8rem; }
-    h2 { margin:0; font-weight:400; color:#555; }
-
-    .container { padding:20px; }
-    .flex { display:flex; align-items:center; }
-    .flex-space { justify-content:space-between; }
-
-    button, .btn {
-      background:#008b8b; color:#fff; border:none;
-      padding:8px 14px; margin:0 5px; border-radius:4px;
-      cursor:pointer; font-family:'Roboto',sans-serif; font-size:0.9rem;
+    
+    .receipt-container {
+      max-width: 1600px;
+      margin: 0 auto;
+      background-color: var(--white);
+      border-radius: 8px;
+      box-shadow: 0 2px 15px rgba(0, 0, 0, 0.08);
+      padding: 25px;
     }
-    button:hover { background:#006f6f; }
-    .btn-clear { background:#ccc; color:#333; }
-
-    input, select {
-      padding:6px 10px; border-radius:4px; border:1px solid #ccc;
-      font-size:0.9rem;
+    
+    .header-section {
+      margin-bottom: 30px;
+      padding-bottom: 15px;
+      border-bottom: 1px solid var(--light-gray);
+    }
+    
+    .header-section h1 {
+      font-family: 'Montserrat', sans-serif;
+      font-weight: 600;
+      color: var(--dark);
+      margin-bottom: 8px;
+    }
+    
+    .header-section p {
+      color: var(--gray);
+      font-size: 1.05rem;
+    }
+    
+    .action-bar {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 25px;
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+    
+    .btn-group {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    
+    .btn {
+      padding: 10px 15px;
+      border: none;
+      border-radius: 4px;
+      font-family: 'Poppins', sans-serif;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.3s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.95rem;
+    }
+    
+    .btn-primary {
+      background-color: var(--primary);
+      color: var(--white);
+    }
+    
+    .btn-primary:hover {
+      background-color: var(--primary-dark);
+    }
+    
+    .btn-secondary {
+      background-color: var(--secondary);
+      color: var(--white);
+    }
+    
+    .btn-secondary:hover {
+      background-color: #2980b9;
+    }
+    
+    .btn-outline {
+      background-color: transparent;
+      border: 1px solid #bdc3c7;
+      color: var(--light-dark);
+    }
+    
+    .btn-outline:hover {
+      background-color: var(--light-gray);
+    }
+    
+    .search-group {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    
+    .search-select {
+      padding: 9px;
+      border: 1px solid #bdc3c7;
+      border-radius: 4px;
+      background-color: var(--white);
+      min-width: 160px;
+    }
+    
+    .search-input {
+      padding: 10px;
+      border: 1px solid #bdc3c7;
+      border-radius: 4px;
+      width: 250px;
+    }
+    
+    .receipt-table {
+      width: 100%;
+      border-collapse: collapse;
+      background-color: var(--white);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      margin-bottom: 20px;
+    }
+    
+    .receipt-table th {
+      background-color: var(--dark);
+      color: var(--white);
+      padding: 14px 16px;
+      text-align: left;
+      font-family: 'Poppins', sans-serif;
+      font-weight: 500;
+      font-size: 0.95rem;
+    }
+    
+    .receipt-table td {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--light-gray);
+      color: var(--light-dark);
+      font-size: 0.92rem;
+    }
+    
+    .receipt-table tr:hover {
+      background-color: rgba(26, 188, 156, 0.05);
+    }
+    
+    .action-cell {
+      display: flex;
+      gap: 8px;
+    }
+    
+    .action-btn {
+      padding: 6px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: none;
+      color: white;
+      white-space: nowrap;
+    }
+    
+    .edit-btn {
+      background-color: #3498db;
+    }
+    
+    .delete-btn {
+      background-color: var(--error);
     }
 
-    table { width:100%; border-collapse:collapse; margin-top:15px; }
-    th, td {
-      padding:8px; border:1px solid #e2e2e2;
-      font-size:0.9rem; white-space:nowrap;
+    .delete-btn:hover {
+      background-color: #c0392b;
     }
-    th { background:#e8f7f7; position:sticky; top:0; z-index:2; }
 
-    /* Overlay & Modal */
-    .modal-overlay {
-      position:fixed; top:0; left:0; right:0; bottom:0;
-      background:rgba(0,0,0,0.4); display:none;
-      align-items:center; justify-content:center; z-index:9999;
+    /* Delete Modal Styles */
+    .delete-modal {
+      width: 550px !important;
+      max-width: 90%;
     }
+
+    .delete-header {
+      background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+      color: white;
+      margin: -30px -30px 25px -30px;
+      padding: 20px 30px;
+      border-radius: 8px 8px 0 0;
+    }
+
+    .delete-header h2 {
+      color: white;
+      font-size: 1.4rem;
+      margin: 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .delete-header .close-btn {
+      color: white;
+    }
+
+    .delete-icon {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .delete-icon i {
+      font-size: 4rem;
+      color: #e74c3c;
+      animation: shake 0.5s ease-in-out;
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-10px); }
+      75% { transform: translateX(10px); }
+    }
+
+    .delete-warning {
+      background: linear-gradient(135deg, #fff5f5 0%, #ffe5e5 100%);
+      border-left: 4px solid #e74c3c;
+      padding: 15px;
+      margin-bottom: 25px;
+      border-radius: 4px;
+    }
+
+    .delete-warning p {
+      margin: 0;
+      color: #c0392b;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .transaction-details {
+      background: #f8f9fa;
+      padding: 20px;
+      border-radius: 6px;
+      margin-bottom: 20px;
+    }
+
+    .detail-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 12px 10px;
+      border-bottom: 1px solid #dee2e6;
+    }
+
+    .detail-row:last-child {
+      border-bottom: none;
+    }
+
+    .detail-label {
+      color: var(--gray);
+      font-weight: 500;
+    }
+
+    .detail-value {
+      color: var(--dark);
+      font-weight: 600;
+      text-align: right;
+    }
+
+    .detail-value.amount {
+      color: #e74c3c;
+      font-size: 1.2rem;
+    }
+
+    .btn-danger {
+      background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+      color: white;
+      border: none;
+    }
+
+    .btn-danger:hover {
+      background: linear-gradient(135deg, #c0392b 0%, #a93226 100%);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 8px rgba(231, 76, 60, 0.3);
+    }
+    
     .modal {
-      background:#fff; border-radius:6px;
-      width:90vw; max-height:90vh; overflow:auto;
-      padding:20px; box-shadow:0 4px 12px rgba(0,0,0,0.2);
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0,0,0,0.5);
+      overflow: auto;
     }
-    .modal-header { margin-bottom:15px; }
-    .modal-footer { text-align:right; margin-top:15px; }
+    
+    .modal-content {
+      background-color: var(--white);
+      margin: 3% auto;
+      padding: 30px;
+      border-radius: 8px;
+      width: 750px;
+      max-width: 90%;
+      box-shadow: 0 5px 25px rgba(0,0,0,0.2);
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 25px;
+      padding-bottom: 15px;
+      border-bottom: 1px solid var(--light-gray);
+    }
+    
+    .modal-header h2 {
+      font-family: 'Montserrat', sans-serif;
+      color: var(--dark);
+      font-size: 1.6rem;
+      margin: 0;
+    }
+    
+    .close-btn {
+      font-size: 1.8rem;
+      cursor: pointer;
+      color: var(--gray);
+      transition: color 0.3s;
+    }
+    
+    .close-btn:hover {
+      color: var(--dark);
+    }
+    
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 40px;
+      margin-bottom: 20px;
+    }
+    
+    .form-group {
+      margin-bottom: 20px;
+    }
+    
+    .form-group.full-width {
+      grid-column: 1 / -1;
+    }
+    
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 500;
+      color: var(--dark);
+      font-size: 0.95rem;
+    }
+    
+    .form-control {
+      width: 100%;
+      padding: 11px;
+      border: 1px solid #bdc3c7;
+      border-radius: 4px;
+      font-family: 'Roboto', sans-serif;
+      font-size: 0.95rem;
+    }
+    
+    .form-control:focus {
+      border-color: var(--primary);
+      outline: none;
+      box-shadow: 0 0 0 2px rgba(26, 188, 156, 0.2);
+    }
+    
+    .form-control:disabled,
+    .form-control[readonly] {
+      background-color: #f5f5f5;
+      cursor: not-allowed;
+    }
+    
+    .required:after {
+      content: " *";
+      color: var(--error);
+    }
+    
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 25px;
+      padding-top: 15px;
+      border-top: 1px solid var(--light-gray);
+    }
+    
+    .processing-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(255,255,255,0.85);
+      z-index: 2000;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+    }
+    
+    .spinner {
+      border: 5px solid #f3f3f3;
+      border-top: 5px solid var(--primary);
+      border-radius: 50%;
+      width: 60px;
+      height: 60px;
+      animation: spin 1s linear infinite;
+      margin-bottom: 20px;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    .select2-container {
+      width: 100% !important;
+      z-index: 9999 !important;
+    }
+    
+    .select2-dropdown {
+      z-index: 10000 !important;
+    }
+    
+    .id-generate {
+      display: flex;
+      gap: 10px;
+    }
+    
+    .id-field {
+      flex: 1;
+    }
+    
+    .pagination {
+      display: flex;
+      justify-content: center;
+      margin-top: 25px;
+      gap: 6px;
+    }
+    
+    .page-btn {
+      padding: 8px 14px;
+      background-color: var(--white);
+      border: 1px solid #bdc3c7;
+      border-radius: 4px;
+      cursor: pointer;
+      font-family: 'Roboto', sans-serif;
+      transition: all 0.3s;
+    }
+    
+    .page-btn:hover:not(.active) {
+      background-color: var(--light-gray);
+    }
+    
+    .page-btn.active {
+      background-color: var(--primary);
+      color: var(--white);
+      border-color: var(--primary);
+    }
+    
+    .no-data-container {
+      display: none;
+      text-align: center;
+      padding: 50px 20px;
+      background: var(--white);
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      margin-top: 20px;
+    }
+    
+    .no-data-icon {
+      font-size: 3.5rem;
+      color: #bdc3c7;
+      margin-bottom: 20px;
+    }
+    
+    .no-data-title {
+      color: var(--gray);
+      margin-bottom: 10px;
+      font-family: 'Montserrat', sans-serif;
+    }
 
-    /* Processing overlay */
-    #rcProcessing {
-      position:fixed; top:0; left:0; right:0; bottom:0;
-      background:rgba(255,255,255,0.7); display:none;
-      align-items:center; justify-content:center; z-index:10000;
-      font-size:1.2rem; color:#008b8b;
+    .balance-info {
+      background-color: var(--primary-light);
+      padding: 15px;
+      border-radius: 6px;
+      margin-bottom: 20px;
+      border-left: 4px solid var(--primary);
+    }
+
+    .balance-info p {
+      margin: 5px 0;
+      color: var(--dark);
+      font-size: 0.95rem;
+    }
+
+    .balance-info strong {
+      color: var(--primary-dark);
+    }
+
+    @media (max-width: 768px) {
+      .form-row {
+        grid-template-columns: 1fr;
+      }
+      
+      .modal-content {
+        width: 95%;
+        margin: 5% auto;
+      }
     }
   </style>
 </head>
+
 <body>
-  <div class="container">
-    <!-- Title -->
-    <div id="rcHeader" class="flex-space">
-      <div>
-        <h1>Cash and Bank Module</h1>
-        <h2>Create Receipts and Payments</h2>
-      </div>
-      <button id="rcBtnNew"><i class="fa fa-plus"></i> New Receipt</button>
+  <div class="receipt-container">
+    <!-- Header Section -->
+    <div class="header-section">
+      <h1>MANAGE RECEIPTS FROM CUSTOMERS</h1>
+      <p>Record and track all receipts received against sales orders</p>
     </div>
-
-    <!-- Nav & Search -->
-    <div class="flex-space">
-      <div></div>
-      <div class="flex">
-        <select id="rcSearchCrit">
-          <option>All</option>
-          <option>SO ID</option>
-          <option>Customer Name</option>
-          <option>Invoice Num</option>
-          <option>PMT Mode</option>
+    
+    <!-- Action Bar -->
+    <div class="action-bar">
+      <div class="btn-group">
+        <button class="btn btn-primary" id="btnNewReceipt">
+          <i class="fas fa-receipt"></i> New Receipt
+        </button>
+        <button class="btn btn-secondary" id="btnAddPaymentMode">
+          <i class="fas fa-credit-card"></i> Add Payment Mode
+        </button>
+      </div>
+      
+      <div class="search-group">
+        <select id="searchCriteria" class="search-select" title="Search criteria">
+          <option value="all">All</option>
+          <option value="Transaction ID">Transaction ID</option>
+          <option value="Customer Name">Customer Name</option>
+          <option value="SO ID">SO ID</option>
+          <option value="Invoice Number">Invoice Number</option>
+          <option value="Payment Mode">Payment Mode</option>
         </select>
-        <input type="text" id="rcSearchInput" placeholder="Search...">
-        <button id="rcBtnSearch">Search</button>
-        <button class="btn-clear" id="rcBtnClear">Clear</button>
+        <input type="text" id="searchInput" class="search-input" placeholder="Search...">
+        <button class="btn btn-outline" id="btnSearch">
+          <i class="fas fa-search"></i> Search
+        </button>
+        <button class="btn btn-outline" id="btnClear">
+          <i class="fas fa-times"></i> Clear
+        </button>
       </div>
     </div>
-
-    <!-- Receipt List Table -->
-    <table id="rcList">
-      <thead>
-        <tr>
-          <th>Trx Date</th><th>Trx ID</th><th>Customer ID</th><th>Customer Name</th>
-          <th>State</th><th>City</th><th>SO ID</th><th>Invoice Num</th>
-          <th>PMT Mode</th><th>Amount Received</th><th>Actions</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
+    
+    <!-- Receipt Table -->
+    <div id="tableContainer">
+      <table class="receipt-table">
+        <thead>
+          <tr>
+            <th>Transaction ID</th>
+            <th>Date</th>
+            <th>Customer ID</th>
+            <th>Customer Name</th>
+            <th>County</th>
+            <th>Town</th>
+            <th>SO ID</th>
+            <th>Invoice Number</th>
+            <th>Payment Mode</th>
+            <th>Amount Received</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody">
+          <!-- Data will be populated by JavaScript -->
+        </tbody>
+      </table>
+      
+      <!-- Pagination -->
+      <div class="pagination" id="pagination">
+        <!-- Pagination buttons will be added here -->
+      </div>
+    </div>
+    
+    <!-- No Data Message -->
+    <div id="noData" class="no-data-container">
+      <i class="fas fa-inbox no-data-icon"></i>
+      <h3 class="no-data-title">No receipts found</h3>
+      <p>Click "New Receipt" to record a receipt</p>
+    </div>
+  </div>
+  
+  <!-- Payment Mode Modal -->
+  <div id="paymentModeModal" class="modal">
+    <div class="modal-content" style="width: 450px;">
+      <div class="modal-header">
+        <h2>Add Payment Mode</h2>
+        <span class="close-btn" id="closePaymentModeModal">&times;</span>
+      </div>
+      <div class="form-group">
+        <label class="required">Payment Mode</label>
+        <input type="text" id="newPaymentMode" class="form-control" placeholder="e.g., Cash, Bank Transfer, Cheque, M-Pesa" required>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" id="btnClosePaymentModeModal">Close</button>
+        <button class="btn btn-primary" id="btnSavePaymentMode">Save</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- New Receipt Modal -->
+  <div id="receiptModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="modalTitle">Record New Receipt</h2>
+        <span class="close-btn" id="closeReceiptModal">&times;</span>
+      </div>
+      
+      <!-- Transaction ID and Date Row -->
+      <div class="form-row">
+        <div class="form-group">
+          <label class="required">Transaction ID</label>
+          <div class="id-generate">
+            <input type="text" id="transactionId" class="form-control id-field" readonly>
+            <button class="btn btn-secondary" id="btnGenerateId">Generate</button>
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label class="required">Receipt Date</label>
+          <input type="text" id="receiptDate" class="form-control date-picker" placeholder="DD/MM/YYYY">
+        </div>
+      </div>
+      
+      <!-- Customer Name and SO ID Row -->
+      <div class="form-row">
+        <div class="form-group">
+          <label class="required">Customer Name</label>
+          <select id="customerName" class="form-control" style="width: 100%"></select>
+        </div>
+        
+        <div class="form-group">
+          <label class="required">SO ID</label>
+          <select id="soId" class="form-control" style="width: 100%"></select>
+        </div>
+      </div>
+      
+      <!-- Customer ID and Invoice Number Row -->
+      <div class="form-row">
+        <div class="form-group">
+          <label>Customer ID</label>
+          <input type="text" id="customerId" class="form-control" readonly>
+        </div>
+        
+        <div class="form-group">
+          <label>Invoice Number</label>
+          <input type="text" id="invoiceNumber" class="form-control" readonly>
+        </div>
+      </div>
+      
+      <!-- County and Payment Mode Row -->
+      <div class="form-row">
+        <div class="form-group">
+          <label>County</label>
+          <input type="text" id="county" class="form-control" readonly>
+        </div>
+        
+        <div class="form-group">
+          <label class="required">Payment Mode</label>
+          <select id="paymentMode" class="form-control" style="width: 100%"></select>
+        </div>
+      </div>
+      
+      <!-- Town and Amount Received Row -->
+      <div class="form-row">
+        <div class="form-group">
+          <label>Town</label>
+          <input type="text" id="town" class="form-control" readonly>
+        </div>
+        
+        <div class="form-group">
+          <label class="required">Amount Received</label>
+          <input type="number" id="amountReceived" class="form-control" step="0.01" min="0" placeholder="0.00">
+        </div>
+      </div>
+      
+      <!-- SO Balance Info -->
+      <div class="balance-info" id="balanceInfo" style="display: none;">
+        <p><strong>SO Total Amount:</strong> <span id="soTotalAmount">0.00</span></p>
+        <p><strong>Amount Already Received:</strong> <span id="soAmountReceived">0.00</span></p>
+        <p><strong>Outstanding Balance:</strong> <span id="soBalance" style="font-size: 1.1rem; font-weight: 600;">0.00</span></p>
+      </div>
+      
+      <div class="modal-footer">
+        <button class="btn btn-outline" id="btnCloseReceiptModal">Close</button>
+        <button class="btn btn-primary" id="btnSaveReceipt">Save Receipt</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Processing Overlay -->
+  <div id="processingOverlay" class="processing-overlay">
+    <div class="spinner"></div>
+    <p>Processing...</p>
   </div>
 
-  <!-- Processing Overlay -->
-  <div id="rcProcessing"><i class="fa fa-spinner fa-pulse"></i> Processing...</div>
+  <!-- Delete Confirmation Modal -->
+  <div id="deleteConfirmModal" class="modal">
+    <div class="modal-content delete-modal">
+      <div class="modal-header delete-header">
+        <h2><i class="fas fa-exclamation-triangle"></i> Confirm Receipt Deletion</h2>
+        <span class="close-btn" onclick="closeDeleteModal()">&times;</span>
+      </div>
+      
+      <div class="delete-icon">
+        <i class="fas fa-trash-alt"></i>
+      </div>
 
-  <!-- Modal Overlay -->
-  <div id="rcModalOverlay" class="modal-overlay">
-    <div class="modal" id="rcModal">
-      <div class="modal-header"><h2 id="rcModalTitle"></h2></div>
-      <div class="modal-body" id="rcModalBody"></div>
-      <div class="modal-footer" id="rcModalFooter"></div>
+      <div class="delete-warning">
+        <p><i class="fas fa-exclamation-circle"></i> Warning: This action will reverse the receipt payment and update all related records!</p>
+      </div>
+
+      <div class="transaction-details">
+        <h3 style="margin-bottom: 15px; color: var(--dark);">Transaction Details</h3>
+        
+        <div class="detail-row">
+          <span class="detail-label">Transaction ID:</span>
+          <span class="detail-value" id="deleteTransactionId"></span>
+        </div>
+        
+        <div class="detail-row">
+          <span class="detail-label">Receipt Date:</span>
+          <span class="detail-value" id="deleteReceiptDate"></span>
+        </div>
+        
+        <div class="detail-row">
+          <span class="detail-label">Customer Name:</span>
+          <span class="detail-value" id="deleteCustomerName"></span>
+        </div>
+        
+        <div class="detail-row">
+          <span class="detail-label">SO ID:</span>
+          <span class="detail-value" id="deleteSOID"></span>
+        </div>
+        
+        <div class="detail-row">
+          <span class="detail-label">Invoice Number:</span>
+          <span class="detail-value" id="deleteInvoiceNumber"></span>
+        </div>
+        
+        <div class="detail-row">
+          <span class="detail-label">Payment Mode:</span>
+          <span class="detail-value" id="deletePaymentMode"></span>
+        </div>
+        
+        <div class="detail-row">
+          <span class="detail-label">SO Total Amount:</span>
+          <span class="detail-value" id="deleteSOAmount"></span>
+        </div>
+        
+        <div class="detail-row" style="background-color: #fff3cd; margin: 10px -10px -10px -10px; padding: 15px 10px;">
+          <span class="detail-label" style="font-size: 1.1rem;">Amount Received:</span>
+          <span class="detail-value amount" id="deleteAmountReceived"></span>
+        </div>
+      </div>
+
+      <p style="text-align: center; color: var(--gray); margin-top: 20px; font-size: 0.9rem;">
+        <i class="fas fa-info-circle"></i> This will update the Sales Order balance and receipt/shipping status
+      </p>
+
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="closeDeleteModal()">
+          <i class="fas fa-times"></i> Cancel
+        </button>
+        <button class="btn btn-danger" onclick="confirmDelete()">
+          <i class="fas fa-trash"></i> Confirm Delete
+        </button>
+      </div>
     </div>
   </div>
 
+  <!-- jQuery and Select2 -->
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
+  
+  <!-- Flatpickr -->
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  
   <script>
-    // Global state
-    let rcReceipts = [];
-    let rcCustomers = [];
-    let rcSalesOrders = [];
-    let rcDimensions = [];
+    console.log('Receipts module loaded');
+    
+    // Global variables
+    let currentPage = 1;
+    const pageSize = 25;
+    let allReceipts = [];
+    let filteredReceipts = [];
+    let customers = [];
+    let salesOrders = [];
+    let paymentModes = [];
+    let receiptToDelete = null; // Store receipt data for deletion
 
-    // Initialization
-    document.addEventListener('DOMContentLoaded', () => {
-      rcRefreshList();
-      google.script.run.withSuccessHandler(data => rcCustomers = data).rcGetCustomers();
-      google.script.run.withSuccessHandler(data => rcSalesOrders = data).rcGetSalesOrders();
-      google.script.run.withSuccessHandler(data => rcDimensions  = data).rcGetDimensions();
+    // Get CSRF token
+    function getCSRFToken() {
+        const metaTag = document.querySelector('meta[name="csrf-token"]');
+        if (metaTag) return metaTag.getAttribute('content');
+        
+        const cookieToken = getCookie('csrftoken');
+        if (cookieToken) return cookieToken;
+        
+        return null;
+    }
 
-      document.getElementById('rcBtnNew').onclick    = openNewReceipt;
-      document.getElementById('rcBtnSearch').onclick = doSearch;
-      document.getElementById('rcBtnClear').onclick  = clearSearch;
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    // Initialize page
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('DOM loaded, initializing...');
+        
+        // Initialize date picker
+        flatpickr("#receiptDate", {
+            dateFormat: "d/m/Y",
+            allowInput: true
+        });
+        
+        // Set up event listeners
+        document.getElementById('btnNewReceipt').addEventListener('click', openNewReceiptModal);
+        document.getElementById('btnAddPaymentMode').addEventListener('click', openPaymentModeModal);
+        document.getElementById('btnSearch').addEventListener('click', searchReceipts);
+        document.getElementById('btnClear').addEventListener('click', clearSearch);
+        
+        // Payment Mode Modal
+        document.getElementById('closePaymentModeModal').addEventListener('click', closePaymentModeModal);
+        document.getElementById('btnClosePaymentModeModal').addEventListener('click', closePaymentModeModal);
+        document.getElementById('btnSavePaymentMode').addEventListener('click', saveNewPaymentMode);
+        
+        // Receipt Modal
+        document.getElementById('closeReceiptModal').addEventListener('click', closeReceiptModal);
+        document.getElementById('btnCloseReceiptModal').addEventListener('click', closeReceiptModal);
+        document.getElementById('btnGenerateId').addEventListener('click', generateTransactionId);
+        document.getElementById('btnSaveReceipt').addEventListener('click', saveReceipt);
+        
+        // Initialize Select2
+        initializeSelect2();
+        
+        // Load data
+        loadCustomers();
+        loadSalesOrders();
+        loadPaymentModes();
+        loadReceipts();
+        
+        console.log('Initialization complete');
     });
 
-    // Refresh receipt list
-    function rcRefreshList() {
-      showProcessing();
-      google.script.run
-        .withSuccessHandler(renderList)
-        .withFailureHandler(hideProcessing)
-        .rcGetAllReceipts();
-    }
-
-    function renderList(rows) {
-      hideProcessing();
-      rcReceipts = rows;
-      const tbody = document.querySelector('#rcList tbody');
-      tbody.innerHTML = '';
-      rows.forEach(r => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td>${r['Trx Date']}</td>
-          <td>${r['Trx ID']}</td>
-          <td>${r['Customer ID']}</td>
-          <td>${r['Customer Name']}</td>
-          <td>${r['State']}</td>
-          <td>${r['City']}</td>
-          <td>${r['SO ID']}</td>
-          <td>${r['Invoice Num']}</td>
-          <td>${r['PMT Mode']}</td>
-          <td>${parseFloat(r['Amount Received']).toFixed(2)}</td>
-          <td>
-            <button class="btn" onclick="openEditReceipt('${r['Trx ID']}')">Edit</button>
-            <button class="btn-clear" onclick="deleteReceipt('${r['Trx ID']}')">Delete</button>
-          </td>
-        `;
-        tbody.appendChild(tr);
-      });
-    }
-
-    // Search / Clear
-    function doSearch() {
-      const crit = document.getElementById('rcSearchCrit').value;
-      const val  = document.getElementById('rcSearchInput').value.toLowerCase();
-      if (crit==='All' || !val) return renderList(rcReceipts);
-      const filtered = rcReceipts.filter(r => 
-        (''+r[crit]).toLowerCase().includes(val)
-      );
-      if (!filtered.length) alert('No matching data found');
-      renderList(filtered);
-    }
-    function clearSearch() {
-      document.getElementById('rcSearchInput').value='';
-      document.getElementById('rcSearchCrit').value='All';
-      renderList(rcReceipts);
-    }
-
-    // Show / hide processing
-    function showProcessing() { document.getElementById('rcProcessing').style.display='flex'; }
-    function hideProcessing() { document.getElementById('rcProcessing').style.display='none'; }
-
-    // Open New Receipt form
-    function openNewReceipt() {
-      showModal('New Receipt', rcFormBody(), rcFormFooter('Save','rcSaveReceipt()'));
-      initFormElements(true);
-    }
-
-    // HTML for form body
-    function rcFormBody() {
-      return `
-      <div class="flex-space">
-        <div style="flex:1; padding-right:10px;">
-          <label>Trx Date</label><br>
-          <input type="date" id="rcTrxDate"><br><br>
-
-          <label>Trx ID</label><br>
-          <input type="text" id="rcTrxID" readonly style="width:70%">
-          <button class="btn" onclick="rcGenTrxID()">Generate</button><br><br>
-
-          <label>Customer Name</label><br>
-          <select id="rcCustomerName" style="width:100%"></select><br><br>
-
-          <label>State</label><br>
-          <input type="text" id="rcState" readonly><br><br>
-
-          <label>City</label><br>
-          <input type="text" id="rcCity" readonly><br><br>
-
-          <label>Customer ID</label><br>
-          <input type="text" id="rcCustomerID" readonly><br><br>
-        </div>
-        <div style="flex:1; padding-left:10px">
-          <label>SO ID</label><br>
-          <select id="rcSOID" style="width:100%"></select><br><br>
-
-          <label>Invoice Num</label><br>
-          <select id="rcInvoiceNum" style="width:100%"></select><br><br>
-
-          <label>SO Balance</label><br>
-          <input type="text" id="rcSOBalance" readonly><br><br>
-
-          <label>PMT Mode</label><br>
-          <select id="rcPMTMode" style="width:100%"></select><br><br>
-
-          <label>Amount Received</label><br>
-          <input type="number" id="rcAmount" step="0.01" placeholder="0.00"><br>
-        </div>
-      </div>`;
-    }
-
-    // Generic form footer
-    function rcFormFooter(btnText, onClick) {
-      return `
-        <button class="btn" onclick="${onClick}">${btnText}</button>
-        <button class="btn-clear" onclick="closeModal()">Close</button>
-      `;
-    }
-
-    // Show modal
-    function showModal(title, body, footer) {
-      document.getElementById('rcModalTitle').innerText = title;
-      document.getElementById('rcModalBody').innerHTML  = body;
-      document.getElementById('rcModalFooter').innerHTML= footer;
-      document.getElementById('rcModalOverlay').style.display = 'flex';
-      initSelect2();  // global init
-    }
-    function closeModal() {
-      document.getElementById('rcModalOverlay').style.display='none';
-    }
-
-    // Initialize all select2 in form
-    function initSelect2() {
-      $('#rcCustomerName').select2({ placeholder:'Select Customer', dropdownParent:$('#rcModal') })
-        .on('change', onCustomerChange);
-      $('#rcSOID').select2({ placeholder:'Select SO ID', dropdownParent:$('#rcModal') })
-        .on('change', onSOChange);
-      $('#rcInvoiceNum').select2({ placeholder:'Select Invoice', dropdownParent:$('#rcModal') });
-      $('#rcPMTMode').select2({ placeholder:'Payment Mode', dropdownParent:$('#rcModal') });
-    }
-
-    // Initialize form elements (for both New & Edit)
-    function initFormElements(isNew) {
-      // Populate Customer dropdown
-      const custSel = document.getElementById('rcCustomerName');
-      custSel.innerHTML = '<option></option>';
-      rcCustomers.filter(c=>c['Customer Name'])
-        .forEach(c=>{
-          const opt=new Option(c['Customer Name'],c['Customer Name']);
-          custSel.add(opt);
+    function initializeSelect2() {
+        $('#customerName').select2({
+            placeholder: 'Select Customer',
+            allowClear: true,
+            dropdownParent: $('#receiptModal'),
+            width: '100%'
+        }).on('change', customerChanged);
+        
+        $('#soId').select2({
+            placeholder: 'Select SO ID',
+            allowClear: true,
+            dropdownParent: $('#receiptModal'),
+            width: '100%'
+        }).on('change', soChanged);
+        
+        $('#paymentMode').select2({
+            placeholder: 'Select Payment Mode',
+            allowClear: true,
+            dropdownParent: $('#receiptModal'),
+            width: '100%'
         });
-
-      // Populate PMT Mode
-      const pmSel = document.getElementById('rcPMTMode');
-      pmSel.innerHTML = '<option></option>';
-      rcDimensions.filter(d=>d['PMT Mode'])
-        .map(d=>d['PMT Mode'])
-        .filter((v,i,self)=>self.indexOf(v)===i)
-        .forEach(v=>pmSel.add(new Option(v,v)));
-
-      if (!isNew) return;
-
-      // Clear form
-      ['rcTrxDate','rcTrxID','rcState','rcCity','rcCustomerID','rcSOID',
-       'rcInvoiceNum','rcSOBalance','rcAmount'].forEach(id=>{
-         document.getElementById(id).value = '';
-       });
     }
 
-    // Generate unique Trx ID
-    function rcGenTrxID() {
-      showProcessing();
-      google.script.run.withSuccessHandler(id=>{
-        document.getElementById('rcTrxID').value = id;
+    // ============= LOAD DATA FUNCTIONS =============
+    
+    async function loadCustomers() {
+        try {
+            const response = await fetch('/api/customers/', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCSRFToken()
+                },
+                credentials: 'same-origin'
+            });
+            
+            const result = await response.json();
+            if (result.success) {
+                customers = result.data;
+                populateCustomerDropdown();
+            }
+        } catch (error) {
+            console.error('Error loading customers:', error);
+        }
+    }
+
+    async function loadSalesOrders() {
+        try {
+            const response = await fetch('/api/sales/', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCSRFToken()
+                },
+                credentials: 'same-origin'
+            });
+            
+            const result = await response.json();
+            if (result.success) {
+                salesOrders = result.data;
+            }
+        } catch (error) {
+            console.error('Error loading sales orders:', error);
+        }
+    }
+
+    async function loadPaymentModes() {
+        try {
+            const response = await fetch('/api/payments/payment-modes/', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCSRFToken()
+                },
+                credentials: 'same-origin'
+            });
+            
+            const result = await response.json();
+            if (result.success) {
+                paymentModes = result.data;
+                populatePaymentModeDropdown();
+            }
+        } catch (error) {
+            console.error('Error loading payment modes:', error);
+        }
+    }
+
+    async function loadReceipts() {
+    showProcessing();
+    try {
+        const response = await fetch('/api/receipts/', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCSRFToken()
+            },
+            credentials: 'same-origin'
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            // ✅ FIX: Validate and clean data
+            allReceipts = (result.data || []).filter(receipt => {
+                // Ensure each receipt has required fields
+                if (!receipt.transaction_id) {
+                    console.warn('Receipt missing transaction_id:', receipt);
+                    return false;
+                }
+                return true;
+            });
+            
+            filteredReceipts = [...allReceipts];
+            
+            console.log('✅ Loaded receipts:', allReceipts.length);
+            renderReceiptTable();
+        } else {
+            alert('Error loading receipts: ' + result.message);
+            allReceipts = [];
+            filteredReceipts = [];
+            renderReceiptTable();
+        }
+    } catch (error) {
+        console.error('Error loading receipts:', error);
+        alert('Failed to load receipts');
+        allReceipts = [];
+        filteredReceipts = [];
+        renderReceiptTable();
+    } finally {
         hideProcessing();
-      }).rcGenerateTrxID();
     }
+}
 
-    // When Customer changes, auto-fill ID/State/City, populate SO and Invoice lists
-    function onCustomerChange() {
-      const name = this.value;
-      const cust = rcCustomers.find(c=>c['Customer Name']===name) || {};
-      document.getElementById('rcCustomerID').value = cust['Customer ID']||'';
-      document.getElementById('rcState').value      = cust['State']||'';
-      document.getElementById('rcCity').value       = cust['City']||'';
-
-      // Populate SO ID dropdown
-      const soSel = $('#rcSOID');
-      soSel.empty().append('<option></option>');
-      rcSalesOrders
-        .filter(o=>o['Customer ID']===cust['Customer ID'])
-        .forEach(o=>soSel.append(new Option(o['SO ID'], o['SO ID'])));
-      soSel.trigger('change');
-    }
-
-    // When SO ID changes, auto-fill Invoice & SO Balance
-    function onSOChange() {
-      const soID = this.value;
-      const order = rcSalesOrders.find(o=>o['SO ID']===soID)||{};
-      $('#rcInvoiceNum').empty().append('<option></option>')
-        .append(new Option(order['Invoice Num'], order['Invoice Num']))
-        .trigger('change');
-      document.getElementById('rcSOBalance').value = order['SO Balance']||'';
-    }
-
-    // Save new receipt
-    function rcSaveReceipt() {
-      const trxDate = document.getElementById('rcTrxDate').value;
-      const trxID   = document.getElementById('rcTrxID').value;
-      const custID  = document.getElementById('rcCustomerID').value;
-      const custNm  = $('#rcCustomerName').val();
-      const state   = document.getElementById('rcState').value;
-      const city    = document.getElementById('rcCity').value;
-      const soID    = $('#rcSOID').val();
-      const inv     = $('#rcInvoiceNum').val();
-      const mode    = $('#rcPMTMode').val();
-      const amt     = parseFloat(document.getElementById('rcAmount').value);
-
-      // Validation
-      if (!trxDate||!trxID||!custNm||!soID||!inv||!mode||isNaN(amt)) {
-        alert('Please fill all required fields.');
-        return;
-      }
-      const soBal = parseFloat(document.getElementById('rcSOBalance').value)||0;
-      if (amt > soBal) {
-        alert('Amount received is more than SO Balance');
-        return;
-      }
-
-      showProcessing();
-      google.script.run
-        .withSuccessHandler(()=>{
-          alert('New Receipt Saved');
-          closeModal();
-          rcRefreshList();
-          hideProcessing();
-        })
-        .rcSaveNewReceipt({
-          'Trx Date': trxDate,
-          'Trx ID': trxID,
-          'Customer ID': custID,
-          'Customer Name': custNm,
-          'State': state,
-          'City': city,
-          'SO ID': soID,
-          'Invoice Num': inv,
-          'PMT Mode': mode,
-          'Amount Received': amt
+    // ============= POPULATE DROPDOWNS =============
+    
+    function populateCustomerDropdown() {
+        const customerSelect = $('#customerName');
+        customerSelect.empty();
+        customerSelect.append(new Option('Select Customer', '', true, true));
+        
+        customers.forEach(customer => {
+            customerSelect.append(new Option(customer.name, customer.name));
         });
+        
+        customerSelect.trigger('change');
     }
 
-    // Edit existing receipt
-    function openEditReceipt(trxID) {
-      // Find the record
-      const rec = rcReceipts.find(r=>r['Trx ID']===trxID);
-      if (!rec) return;
-
-      showModal('Edit Receipt', rcFormBody(), rcFormFooter('Update','rcUpdateReceipt()'));
-      initFormElements(false);
-
-      // Prefill
-      document.getElementById('rcTrxDate').value     = rec['Trx Date'];
-      document.getElementById('rcTrxID').value       = rec['Trx ID'];
-      $('#rcCustomerName').append(new Option(rec['Customer Name'],rec['Customer Name'],true,true))
-        .trigger('change');
-      $('#rcSOID').append(new Option(rec['SO ID'],rec['SO ID'],true,true))
-        .trigger('change');
-      $('#rcInvoiceNum').append(new Option(rec['Invoice Num'],rec['Invoice Num'],true,true))
-        .trigger('change');
-      $('#rcPMTMode').append(new Option(rec['PMT Mode'],rec['PMT Mode'],true,true))
-        .trigger('change');
-      document.getElementById('rcAmount').value     = parseFloat(rec['Amount Received']).toFixed(2);
+    function populatePaymentModeDropdown() {
+        const modeSelect = $('#paymentMode');
+        modeSelect.empty();
+        modeSelect.append(new Option('Select Payment Mode', '', true, true));
+        
+        paymentModes.forEach(mode => {
+            modeSelect.append(new Option(mode, mode));
+        });
+        
+        modeSelect.trigger('change');
     }
 
-    // Update receipt
-    function rcUpdateReceipt() {
-      const payload = {
-        'Trx Date': document.getElementById('rcTrxDate').value,
-        'Trx ID':   document.getElementById('rcTrxID').value,
-        'Customer ID': document.getElementById('rcCustomerID').value,
-        'Customer Name': $('#rcCustomerName').val(),
-        'State': document.getElementById('rcState').value,
-        'City':  document.getElementById('rcCity').value,
-        'SO ID': $('#rcSOID').val(),
-        'Invoice Num': $('#rcInvoiceNum').val(),
-        'PMT Mode': $('#rcPMTMode').val(),
-        'Amount Received': parseFloat(document.getElementById('rcAmount').value)
-      };
-      showProcessing();
-      google.script.run
-        .withSuccessHandler(()=>{
-          alert('Receipt Updated');
-          closeModal();
-          rcRefreshList();
-          hideProcessing();
-        })
-        .rcUpdateReceipt(payload);
+    // ============= CUSTOMER CHANGED EVENT =============
+    
+    function customerChanged() {
+        const customerName = $('#customerName').val();
+        
+        if (!customerName) {
+            // Clear all fields
+            $('#customerId').val('');
+            $('#county').val('');
+            $('#town').val('');
+            $('#soId').empty().append(new Option('Select SO ID', '', true, true)).trigger('change');
+            document.getElementById('balanceInfo').style.display = 'none';
+            return;
+        }
+        
+        // Find customer in customers array
+        const customer = customers.find(c => c.name === customerName);
+        
+        if (customer) {
+            // Auto-populate customer details
+            $('#customerId').val(customer.id);
+            $('#county').val(customer.state || '');
+            $('#town').val(customer.city || '');
+            
+            // Filter SOs for this customer - only show SOs with outstanding balance
+            const customerSOs = salesOrders.filter(so => 
+                so.customer_name === customerName && 
+                parseFloat(so.balance_left) > 0
+            );
+            
+            // Populate SO dropdown
+            const soSelect = $('#soId');
+            soSelect.empty();
+            soSelect.append(new Option('Select SO ID', '', true, true));
+            
+            if (customerSOs.length === 0) {
+                soSelect.append(new Option('No outstanding SOs', '', false, false));
+            } else {
+                customerSOs.forEach(so => {
+                    const balance = parseFloat(so.balance_left).toFixed(2);
+                    soSelect.append(new Option(`${so.so_id} (Balance: ${balance})`, so.so_id));
+                });
+            }
+            
+            soSelect.trigger('change');
+            
+            // Hide balance info until SO is selected
+            document.getElementById('balanceInfo').style.display = 'none';
+        }
     }
 
-    // Delete receipt
-    function deleteReceipt(trxID) {
-      if (!confirm('Delete this receipt?')) return;
-      showProcessing();
-      google.script.run
-        .withSuccessHandler(()=>{
-          alert('Receipt Deleted');
-          rcRefreshList();
-          hideProcessing();
-        })
-        .rcDeleteReceipt(trxID);
+    // ============= SO CHANGED EVENT =============
+    
+    function soChanged() {
+        const soId = $('#soId').val();
+        const so = salesOrders.find(s => s.so_id === soId);
+        
+        if (so) {
+            // Auto-populate invoice number
+            $('#invoiceNumber').val(so.invoice_number);
+            
+            // Calculate and display balance
+            const totalAmount = parseFloat(so.total_amount);
+            const amountReceived = parseFloat(so.amount_received);
+            const balance = totalAmount - amountReceived;
+            
+            document.getElementById('soTotalAmount').textContent = totalAmount.toFixed(2);
+            document.getElementById('soAmountReceived').textContent = amountReceived.toFixed(2);
+            document.getElementById('soBalance').textContent = balance.toFixed(2);
+            
+            // Show balance info
+            document.getElementById('balanceInfo').style.display = 'block';
+        } else {
+            $('#invoiceNumber').val('');
+            document.getElementById('balanceInfo').style.display = 'none';
+        }
+    }
+
+    // ======================= RENDER RECEIPT TABLE ===================================================================================================================
+    function renderReceiptTable() {
+    const startIndex = (currentPage - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    const pageReceipts = filteredReceipts.slice(startIndex, endIndex);
+    const tableBody = document.getElementById('tableBody');
+    
+    tableBody.innerHTML = '';
+    
+    if (pageReceipts.length === 0) {
+        document.getElementById('tableContainer').style.display = 'none';
+        document.getElementById('noData').style.display = 'block';
+        document.getElementById('pagination').innerHTML = '';
+        return;
+    }
+    
+    document.getElementById('tableContainer').style.display = 'block';
+    document.getElementById('noData').style.display = 'none';
+    
+    pageReceipts.forEach((receipt) => {
+        const row = document.createElement('tr');
+        row.setAttribute('data-receipt-id', receipt.transaction_id);
+        
+        // ✅ FIX: Validate all parameters before passing to delete function
+        const transactionId = receipt.transaction_id || '';
+        const date = receipt.date || '';
+        const customerName = receipt.customer_name || '';
+        const soId = receipt.so_id || '';
+        const invoiceNumber = receipt.invoice_number || '';
+        const paymentMode = receipt.payment_mode || '';
+        const amountReceived = parseFloat(receipt.amount_received) || 0;
+        
+        // ✅ FIX: Escape quotes in parameters to prevent JavaScript errors
+        const escapedCustomerName = customerName.replace(/'/g, "\\'");
+        const escapedPaymentMode = paymentMode.replace(/'/g, "\\'");
+        
+        row.innerHTML = `
+            <td>${transactionId}</td>
+            <td>${date}</td>
+            <td>${receipt.customer_id || ''}</td>
+            <td>${customerName}</td>
+            <td>${receipt.county || ''}</td>
+            <td>${receipt.town || ''}</td>
+            <td>${soId}</td>
+            <td>${invoiceNumber}</td>
+            <td>${paymentMode}</td>
+            <td>${amountReceived.toFixed(2)}</td>
+            <td class="action-cell">
+                <button class="action-btn delete-btn" 
+                        onclick="openDeleteModal('${transactionId}', '${date}', '${escapedCustomerName}', '${soId}', '${invoiceNumber}', '${escapedPaymentMode}', ${amountReceived})"
+                        title="Delete this receipt">
+                    <i class="fas fa-trash"></i> Delete
+                </button>
+            </td>
+        `;
+        
+        tableBody.appendChild(row);
+    });
+    
+    renderPagination();
+  }
+
+    // ============= PAGINATION =============
+    
+    function renderPagination() {
+        const totalPages = Math.ceil(filteredReceipts.length / pageSize);
+        const paginationDiv = document.getElementById('pagination');
+        paginationDiv.innerHTML = '';
+        
+        if (totalPages <= 1) return;
+        
+        const prevBtn = document.createElement('button');
+        prevBtn.className = 'page-btn';
+        prevBtn.innerHTML = '<i class="fas fa-chevron-left"></i>';
+        prevBtn.disabled = currentPage === 1;
+        prevBtn.onclick = () => {
+            if (currentPage > 1) {
+                currentPage--;
+                renderReceiptTable();
+            }
+        };
+        paginationDiv.appendChild(prevBtn);
+        
+        for (let i = 1; i <= totalPages; i++) {
+            const pageBtn = document.createElement('button');
+            pageBtn.className = `page-btn ${i === currentPage ? 'active' : ''}`;
+            pageBtn.textContent = i;
+            pageBtn.onclick = () => {
+                currentPage = i;
+                renderReceiptTable();
+            };
+            paginationDiv.appendChild(pageBtn);
+        }
+        
+        const nextBtn = document.createElement('button');
+        nextBtn.className = 'page-btn';
+        nextBtn.innerHTML = '<i class="fas fa-chevron-right"></i>';
+        nextBtn.disabled = currentPage === totalPages;
+        nextBtn.onclick = () => {
+            if (currentPage < totalPages) {
+                currentPage++;
+                renderReceiptTable();
+            }
+        };
+        paginationDiv.appendChild(nextBtn);
+    }
+
+    // ============= MODAL FUNCTIONS =============
+    
+    function openNewReceiptModal() {
+        document.getElementById('modalTitle').textContent = 'Record New Receipt';
+        document.getElementById('btnSaveReceipt').textContent = 'Save Receipt';
+        
+        // Clear form
+        document.getElementById('transactionId').value = '';
+        document.getElementById('receiptDate').value = '';
+        $('#customerName').val('').trigger('change');
+        document.getElementById('customerId').value = '';
+        document.getElementById('county').value = '';
+        document.getElementById('town').value = '';
+        $('#soId').empty().append(new Option('Select SO ID', '', true, true)).trigger('change');
+        document.getElementById('invoiceNumber').value = '';
+        $('#paymentMode').val('').trigger('change');
+        document.getElementById('amountReceived').value = '';
+        document.getElementById('balanceInfo').style.display = 'none';
+        
+        document.getElementById('receiptModal').style.display = 'block';
+    }
+
+    function closeReceiptModal() {
+        document.getElementById('receiptModal').style.display = 'none';
+    }
+
+    function openPaymentModeModal() {
+        document.getElementById('newPaymentMode').value = '';
+        document.getElementById('paymentModeModal').style.display = 'block';
+    }
+
+    function closePaymentModeModal() {
+        document.getElementById('paymentModeModal').style.display = 'none';
+    }
+
+    // =========================== GENERATE TRANSACTION ID ===============================================================================================================
+    
+    async function generateTransactionId() {
+        showProcessing();
+        try {
+            const response = await fetch('/api/receipts/generate-transaction-id/', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCSRFToken()
+                },
+                credentials: 'same-origin'
+            });
+            
+            const result = await response.json();
+            if (result.success) {
+                document.getElementById('transactionId').value = result.transaction_id;
+            } else {
+                alert('Error generating Transaction ID: ' + result.message);
+            }
+        } catch (error) {
+            console.error('Error generating Transaction ID:', error);
+            alert('Failed to generate Transaction ID');
+        } finally {
+            hideProcessing();
+        }
+    }
+
+    // ============= SAVE PAYMENT MODE =============
+    
+    async function saveNewPaymentMode() {
+        const modeName = document.getElementById('newPaymentMode').value.trim();
+        
+        if (!modeName) {
+            alert('Please enter a payment mode');
+            return;
+        }
+        
+        showProcessing();
+        try {
+            const response = await fetch('/api/payments/payment-modes/add/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCSRFToken()
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify({ mode_name: modeName })
+            });
+            
+            const result = await response.json();
+            if (result.success) {
+                alert('Payment Mode Added Successfully');
+                closePaymentModeModal();
+                await loadPaymentModes();
+            } else {
+                alert('Error: ' + result.message);
+            }
+        } catch (error) {
+            console.error('Error saving payment mode:', error);
+            alert('Failed to add payment mode');
+        } finally {
+            hideProcessing();
+        }
+    }
+
+    // ============= SAVE RECEIPT =============
+    
+    async function saveReceipt() {
+        const receiptData = {
+            transaction_id: document.getElementById('transactionId').value.trim(),
+            receipt_date: document.getElementById('receiptDate').value.trim(),
+            customer_id: document.getElementById('customerId').value.trim(),
+            customer_name: $('#customerName').val(),
+            county: document.getElementById('county').value.trim(),
+            town: document.getElementById('town').value.trim(),
+            so_id: $('#soId').val(),
+            invoice_number: document.getElementById('invoiceNumber').value.trim(),
+            payment_mode: $('#paymentMode').val(),
+            amount_received: parseFloat(document.getElementById('amountReceived').value) || 0
+        };
+        
+        // DEBUG: Log all values to see what's missing
+        console.log('=== RECEIPT DATA DEBUG ===');
+        console.log('Transaction ID:', receiptData.transaction_id);
+        console.log('Receipt Date:', receiptData.receipt_date);
+        console.log('Customer ID:', receiptData.customer_id);
+        console.log('Customer Name:', receiptData.customer_name);
+        console.log('County:', receiptData.county);
+        console.log('Town:', receiptData.town);
+        console.log('SO ID:', receiptData.so_id);
+        console.log('Invoice Number:', receiptData.invoice_number);
+        console.log('Payment Mode:', receiptData.payment_mode);
+        console.log('Amount Received:', receiptData.amount_received);
+        console.log('========================');
+        
+        // Validation with detailed error messages
+        if (!receiptData.transaction_id) {
+            alert('❌ Please generate a Transaction ID');
+            return;
+        }
+        if (!receiptData.receipt_date) {
+            alert('❌ Please select receipt date');
+            return;
+        }
+        if (!receiptData.customer_name) {
+            alert('❌ Please select a customer');
+            return;
+        }
+        if (!receiptData.so_id) {
+            alert('❌ Please select a Sales Order');
+            return;
+        }
+        if (!receiptData.payment_mode) {
+            alert('❌ Please select payment mode');
+            return;
+        }
+        if (isNaN(receiptData.amount_received) || receiptData.amount_received <= 0) {
+            alert('❌ Please enter a valid amount (must be greater than 0)');
+            return;
+        }
+        
+        // Check if amount exceeds SO balance
+        const soBalance = parseFloat(document.getElementById('soBalance').textContent || 0);
+        if (receiptData.amount_received > soBalance) {
+            alert(`Amount received (${receiptData.amount_received.toFixed(2)}) exceeds SO Balance (${soBalance.toFixed(2)})`);
+            return;
+        }
+        
+        showProcessing();
+        
+        try {
+            const url = '/api/receipts/add/';
+            
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCSRFToken()
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify(receiptData)
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                alert('✅ Receipt Recorded Successfully!\n\n' +
+                      'Receipt Status: ' + result.status_info.receipt_status + '\n' +
+                      'Shipping Status: ' + result.status_info.shipping_status);
+                
+                closeReceiptModal();
+                await loadReceipts();
+                await loadSalesOrders(); // Refresh SO data
+            } else {
+                alert('Error: ' + result.message);
+            }
+        } catch (error) {
+            console.error('Error saving receipt:', error);
+            alert('Failed to save receipt. Please try again.');
+        } finally {
+            hideProcessing();
+        }
+    }
+
+    // ============= OPEN DELETE CONFIRMATION MODAL =============
+    function openDeleteModal(transactionId, receiptDate, customerName, soId, invoiceNumber, paymentMode, amountReceived) {
+    console.log('🔍 Opening delete modal for:', transactionId);
+    
+    // ✅ FIX: Add validation before accessing properties
+    if (!transactionId) {
+        alert('❌ Invalid transaction ID');
+        return;
+    }
+    
+    // Find the full receipt to get SO total amount
+    const receipt = allReceipts.find(r => r.transaction_id === transactionId);
+    
+    // ✅ FIX: Check if receipt was found
+    if (!receipt) {
+        alert('❌ Receipt not found in local data. Please refresh the page and try again.');
+        console.error('Receipt not found:', transactionId);
+        console.log('Available receipts:', allReceipts.map(r => r.transaction_id));
+        return;
+    }
+    
+    // Find the SO to get total amount
+    const so = salesOrders.find(s => s.so_id === soId);
+    const soTotalAmount = so ? parseFloat(so.total_amount).toFixed(2) : '0.00';
+    
+    // ✅ FIX: Validate amount_received parameter
+    const validatedAmount = parseFloat(amountReceived);
+    if (isNaN(validatedAmount) || validatedAmount <= 0) {
+        alert('❌ Invalid receipt amount');
+        console.error('Invalid amount:', amountReceived);
+        return;
+    }
+    
+    receiptToDelete = {
+        transaction_id: transactionId,
+        so_id: soId,
+        amount_received: validatedAmount
+    };
+    
+    console.log('💾 Receipt to delete:', receiptToDelete);
+    
+    // Populate modal with receipt info
+    document.getElementById('deleteTransactionId').textContent = transactionId || 'N/A';
+    document.getElementById('deleteReceiptDate').textContent = receiptDate || 'N/A';
+    document.getElementById('deleteCustomerName').textContent = customerName || 'N/A';
+    document.getElementById('deleteSOID').textContent = soId || 'N/A';
+    document.getElementById('deleteInvoiceNumber').textContent = invoiceNumber || 'N/A';
+    document.getElementById('deletePaymentMode').textContent = paymentMode || 'N/A';
+    document.getElementById('deleteSOAmount').textContent = soTotalAmount;
+    document.getElementById('deleteAmountReceived').textContent = validatedAmount.toFixed(2);
+    
+    // Show modal
+    document.getElementById('deleteConfirmModal').style.display = 'block';
+}
+
+    // ============= CLOSE DELETE MODAL =============
+    
+    function closeDeleteModal() {
+        document.getElementById('deleteConfirmModal').style.display = 'none';
+        receiptToDelete = null;
+    }
+
+    // ============= CONFIRM DELETE =============
+    async function confirmDelete() {
+    // ✅ FIX: Validate receiptToDelete exists
+    if (!receiptToDelete) {
+        alert('❌ No receipt selected for deletion');
+        closeDeleteModal();
+        return;
+    }
+    
+    // ✅ FIX: Validate receiptToDelete has required properties
+    if (!receiptToDelete.transaction_id) {
+        alert('❌ Invalid receipt data');
+        closeDeleteModal();
+        return;
+    }
+    
+    console.log('🗑️ Attempting to delete receipt:', receiptToDelete);
+    
+    showProcessing();
+    closeDeleteModal();
+    
+    try {
+        const response = await fetch('/api/receipts/delete/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCSRFToken()
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify({ 
+                transaction_id: receiptToDelete.transaction_id
+            })
+        });
+        
+        console.log('📡 Delete response status:', response.status);
+        
+        // ✅ FIX: Handle non-JSON responses
+        const contentType = response.headers.get("content-type");
+        if (!contentType || !contentType.includes("application/json")) {
+            throw new Error('Server returned non-JSON response');
+        }
+        
+        const result = await response.json();
+        console.log('📦 Delete response data:', result);
+        
+        if (result.success) {
+            alert('✅ Receipt Deleted Successfully!\n\n' +
+                  'Transaction ID: ' + receiptToDelete.transaction_id + '\n' +
+                  'Amount: ' + parseFloat(receiptToDelete.amount_received).toFixed(2) + '\n\n' +
+                  'Sales Order statuses have been updated accordingly.\n\n' +
+                  'New Receipt Status: ' + (result.status_info?.receipt_status || 'N/A') + '\n' +
+                  'New Shipping Status: ' + (result.status_info?.shipping_status || 'N/A'));
+            
+            // Reload data
+            await loadReceipts();
+            await loadSalesOrders();
+        } else {
+            alert('❌ Error: ' + (result.message || 'Unknown error occurred'));
+        }
+    } catch (error) {
+        console.error('❌ Error deleting receipt:', error);
+        alert('❌ Failed to delete receipt. Please try again.\n\nError: ' + error.message);
+    } finally {
+        hideProcessing();
+        receiptToDelete = null;
+    }
+}
+
+    // ============= SEARCH FUNCTIONS =============
+    
+    function searchReceipts() {
+        const criteria = document.getElementById('searchCriteria').value;
+        const query = document.getElementById('searchInput').value.toLowerCase().trim();
+        
+        if (!query) {
+            filteredReceipts = [...allReceipts];
+        } else {
+            filteredReceipts = allReceipts.filter(receipt => {
+                if (criteria === 'all') {
+                    return (
+                        receipt.transaction_id.toLowerCase().includes(query) ||
+                        receipt.customer_name.toLowerCase().includes(query) ||
+                        receipt.so_id.toLowerCase().includes(query) ||
+                        receipt.invoice_number.toLowerCase().includes(query) ||
+                        receipt.payment_mode.toLowerCase().includes(query)
+                    );
+                } else if (criteria === 'Transaction ID') {
+                    return receipt.transaction_id.toLowerCase().includes(query);
+                } else if (criteria === 'Customer Name') {
+                    return receipt.customer_name.toLowerCase().includes(query);
+                } else if (criteria === 'SO ID') {
+                    return receipt.so_id.toLowerCase().includes(query);
+                } else if (criteria === 'Invoice Number') {
+                    return receipt.invoice_number.toLowerCase().includes(query);
+                } else if (criteria === 'Payment Mode') {
+                    return receipt.payment_mode.toLowerCase().includes(query);
+                }
+                return true;
+            });
+        }
+        
+        currentPage = 1;
+        renderReceiptTable();
+        
+        if (filteredReceipts.length === 0) {
+            alert('No matching data found');
+        }
+    }
+
+    function clearSearch() {
+        document.getElementById('searchInput').value = '';
+        document.getElementById('searchCriteria').value = 'all';
+        filteredReceipts = [...allReceipts];
+        currentPage = 1;
+        renderReceiptTable();
+    }
+
+    // ============= UTILITY FUNCTIONS =============
+    
+    function showProcessing() {
+        document.getElementById('processingOverlay').style.display = 'flex';
+    }
+
+    function hideProcessing() {
+        document.getElementById('processingOverlay').style.display = 'none';
+    }
+
+    // Close modal when clicking outside
+    window.onclick = function(event) {
+        const receiptModal = document.getElementById('receiptModal');
+        const paymentModeModal = document.getElementById('paymentModeModal');
+        const deleteModal = document.getElementById('deleteConfirmModal');
+        
+        if (event.target === receiptModal) {
+            closeReceiptModal();
+        }
+        if (event.target === paymentModeModal) {
+            closePaymentModeModal();
+        }
+        if (event.target === deleteModal) {
+            closeDeleteModal();
+        }
     }
   </script>
-</body>
+
+  </body>
 </html>
