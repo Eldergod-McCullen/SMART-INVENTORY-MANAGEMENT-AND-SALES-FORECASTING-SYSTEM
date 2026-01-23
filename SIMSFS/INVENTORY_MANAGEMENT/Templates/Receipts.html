@@ -1506,32 +1506,39 @@
 }
 
     // ============= CLOSE DELETE MODAL =============
-    
     function closeDeleteModal() {
-        document.getElementById('deleteConfirmModal').style.display = 'none';
-        receiptToDelete = null;
+      document.getElementById('deleteConfirmModal').style.display = 'none';
+      receiptToDelete = null;  // ⚠️ THIS CLEARS THE DATA!
     }
 
     // ============= CONFIRM DELETE =============
     async function confirmDelete() {
-    // ✅ FIX: Validate receiptToDelete exists
+    // ✅ CRITICAL FIX: Store receipt data BEFORE closing modal
     if (!receiptToDelete) {
         alert('❌ No receipt selected for deletion');
         closeDeleteModal();
         return;
     }
     
-    // ✅ FIX: Validate receiptToDelete has required properties
+    // ✅ CRITICAL FIX: Validate receiptToDelete has required properties
     if (!receiptToDelete.transaction_id) {
         alert('❌ Invalid receipt data');
         closeDeleteModal();
         return;
     }
     
-    console.log('🗑️ Attempting to delete receipt:', receiptToDelete);
+    // ✅ CRITICAL FIX: Copy the data to local variable BEFORE closing modal
+    const receiptData = {
+        transaction_id: receiptToDelete.transaction_id,
+        so_id: receiptToDelete.so_id,
+        amount_received: receiptToDelete.amount_received
+    };
     
-    showProcessing();
+    console.log('🗑️ Attempting to delete receipt:', receiptData);
+    
+    // NOW close modal and show processing
     closeDeleteModal();
+    showProcessing();
     
     try {
         const response = await fetch('/api/receipts/delete/', {
@@ -1542,7 +1549,7 @@
             },
             credentials: 'same-origin',
             body: JSON.stringify({ 
-                transaction_id: receiptToDelete.transaction_id
+                transaction_id: receiptData.transaction_id
             })
         });
         
@@ -1559,8 +1566,8 @@
         
         if (result.success) {
             alert('✅ Receipt Deleted Successfully!\n\n' +
-                  'Transaction ID: ' + receiptToDelete.transaction_id + '\n' +
-                  'Amount: ' + parseFloat(receiptToDelete.amount_received).toFixed(2) + '\n\n' +
+                  'Transaction ID: ' + receiptData.transaction_id + '\n' +
+                  'Amount: ' + parseFloat(receiptData.amount_received).toFixed(2) + '\n\n' +
                   'Sales Order statuses have been updated accordingly.\n\n' +
                   'New Receipt Status: ' + (result.status_info?.receipt_status || 'N/A') + '\n' +
                   'New Shipping Status: ' + (result.status_info?.shipping_status || 'N/A'));

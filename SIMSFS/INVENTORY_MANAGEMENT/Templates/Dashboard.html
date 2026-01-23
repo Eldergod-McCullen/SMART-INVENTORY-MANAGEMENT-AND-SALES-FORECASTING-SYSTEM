@@ -1,0 +1,1969 @@
+{% load static %}
+<!DOCTYPE html>
+< lang="en">
+
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  {% csrf_token %}
+  <meta name="csrf-token" content="{{ csrf_token }}">
+
+  <title>{% block title %}DASHBOARD{% endblock %}</title>
+  
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Poppins:wght@400;500;600&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+  
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+  <style>
+    :root {
+      --primary: #1abc9c;
+      --primary-light: #d1f2eb;
+      --primary-dark: #16a085;
+      --secondary: #3498db;
+      --dark: #2c3e50;
+      --light-dark: #34495e;
+      --gray: #7f8c8d;
+      --light-gray: #ecf0f1;
+      --white: #ffffff;
+      --error: #e74c3c;
+      --warning: #f39c12;
+      --success: #2ecc71;
+      --info: #3498db;
+      --purple: #9b59b6;
+      --orange: #e67e22;
+    }
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Roboto', sans-serif;
+      background-color: #f5f7fa;
+      color: var(--light-dark);
+    }
+    
+    .dashboard-container {
+      max-width: 1800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    
+    /* Header Section */
+    .dashboard-header {
+      margin-bottom: 30px;
+    }
+    
+    .dashboard-header h1 {
+      font-family: 'Montserrat', sans-serif;
+      font-weight: 700;
+      color: var(--dark);
+      font-size: 2rem;
+      margin-bottom: 8px;
+    }
+    
+    .dashboard-header p {
+      color: var(--gray);
+      font-size: 1.05rem;
+    }
+    
+    /* Stats Grid */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+    
+    .stat-card {
+      background: var(--white);
+      border-radius: 10px;
+      padding: 25px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      transition: transform 0.3s, box-shadow 0.3s;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .stat-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 5px 20px rgba(0, 0, 0, 0.12);
+    }
+    
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 5px;
+      height: 100%;
+      background: var(--primary);
+    }
+    
+    .stat-icon {
+      width: 70px;
+      height: 70px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+      flex-shrink: 0;
+    }
+    
+    .stat-icon.primary {
+      background: linear-gradient(135deg, var(--primary-light) 0%, var(--primary) 100%);
+      color: var(--primary-dark);
+    }
+    
+    .stat-icon.secondary {
+      background: linear-gradient(135deg, #e3f2fd 0%, var(--secondary) 100%);
+      color: #1565c0;
+    }
+    
+    .stat-icon.success {
+      background: linear-gradient(135deg, #e8f5e9 0%, var(--success) 100%);
+      color: #2e7d32;
+    }
+    
+    .stat-icon.warning {
+      background: linear-gradient(135deg, #fff3e0 0%, var(--warning) 100%);
+      color: #e65100;
+    }
+    
+    .stat-icon.error {
+      background: linear-gradient(135deg, #ffebee 0%, var(--error) 100%);
+      color: #c62828;
+    }
+    
+    .stat-icon.purple {
+      background: linear-gradient(135deg, #f3e5f5 0%, var(--purple) 100%);
+      color: #6a1b9a;
+    }
+    
+    .stat-content {
+      flex: 1;
+    }
+    
+    .stat-label {
+      font-size: 0.9rem;
+      color: var(--gray);
+      margin-bottom: 5px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-weight: 500;
+    }
+    
+    .stat-value {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--dark);
+      font-family: 'Montserrat', sans-serif;
+    }
+    
+    .stat-change {
+      font-size: 0.85rem;
+      margin-top: 5px;
+    }
+    
+    .stat-change.positive {
+      color: var(--success);
+    }
+    
+    .stat-change.negative {
+      color: var(--error);
+    }
+    
+    /* Charts Grid */
+    .charts-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+    
+    .chart-card {
+      background: var(--white);
+      border-radius: 10px;
+      padding: 25px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+    }
+    
+    .chart-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      padding-bottom: 15px;
+      border-bottom: 2px solid var(--light-gray);
+    }
+    
+    .chart-title {
+      font-family: 'Montserrat', sans-serif;
+      font-weight: 600;
+      color: var(--dark);
+      font-size: 1.3rem;
+    }
+    
+    .chart-subtitle {
+      color: var(--gray);
+      font-size: 0.9rem;
+      margin-top: 5px;
+    }
+    
+    .chart-container {
+      position: relative;
+      height: 350px;
+    }
+    
+    /* Tables Section */
+    .tables-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+    
+    .table-card {
+      background: var(--white);
+      border-radius: 10px;
+      padding: 25px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+    }
+    
+    .table-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      padding-bottom: 15px;
+      border-bottom: 2px solid var(--light-gray);
+    }
+    
+    .table-title {
+      font-family: 'Montserrat', sans-serif;
+      font-weight: 600;
+      color: var(--dark);
+      font-size: 1.3rem;
+    }
+    
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    
+    .data-table th {
+      background-color: var(--dark);
+      color: var(--white);
+      padding: 12px 15px;
+      text-align: left;
+      font-family: 'Poppins', sans-serif;
+      font-weight: 500;
+      font-size: 0.9rem;
+    }
+    
+    .data-table td {
+      padding: 12px 15px;
+      border-bottom: 1px solid var(--light-gray);
+      color: var(--light-dark);
+      font-size: 0.9rem;
+    }
+    
+    .data-table tr:hover {
+      background-color: rgba(26, 188, 156, 0.05);
+    }
+    
+    .status-badge {
+      padding: 5px 12px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      display: inline-block;
+      text-transform: uppercase;
+    }
+    
+    .status-badge.completed {
+      background-color: #d4edda;
+      color: #155724;
+    }
+    
+    .status-badge.pending {
+      background-color: #fff3cd;
+      color: #856404;
+    }
+    
+    .status-badge.partial {
+      background-color: #d1ecf1;
+      color: #0c5460;
+    }
+    
+    .status-badge.processing {
+      background-color: #e7f3ff;
+      color: #004085;
+    }
+    
+    .status-badge.delivered {
+      background-color: #d4edda;
+      color: #155724;
+    }
+    
+    .status-badge.reorder {
+      background-color: #f8d7da;
+      color: #721c24;
+    }
+    
+    /* Loading Spinner */
+    .loading-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(255, 255, 255, 0.9);
+      z-index: 2000;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+    }
+    
+    .spinner {
+      border: 5px solid var(--light-gray);
+      border-top: 5px solid var(--primary);
+      border-radius: 50%;
+      width: 60px;
+      height: 60px;
+      animation: spin 1s linear infinite;
+      margin-bottom: 20px;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    /* Responsive Design */
+    @media (max-width: 1200px) {
+      .charts-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    
+    @media (max-width: 768px) {
+      .stats-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .chart-container {
+        height: 250px;
+      }
+      
+      .dashboard-header h1 {
+        font-size: 1.5rem;
+      }
+    }
+  </style>
+</head>
+
+<b>
+  <div class="dashboard-container">
+    <!-- Header -->
+    <div class="dashboard-header">
+      <h1><i class="fas fa-tachometer-alt"></i> Business Dashboard</h1>
+      <p>Real-time overview of your inventory and business operations</p>
+    </div>
+    
+    <!-- Stats Grid -->
+    <div class="stats-grid">
+      <!-- Total Inventory Value -->
+      <div class="stat-card">
+        <div class="stat-icon primary">
+          <i class="fas fa-boxes"></i>
+        </div>
+        <div class="stat-content">
+          <div class="stat-label">Total Inventory Value</div>
+          <div class="stat-value" id="totalInventoryValue">KSH 0.00</div>
+          <div class="stat-change" id="inventoryChange"></div>
+        </div>
+      </div>
+      
+      <!-- Total Sales -->
+      <div class="stat-card">
+        <div class="stat-icon success">
+          <i class="fas fa-chart-line"></i>
+        </div>
+        <div class="stat-content">
+          <div class="stat-label">Total Sales</div>
+          <div class="stat-value" id="totalSales">KSH 0.00</div>
+          <div class="stat-change positive" id="salesChange"></div>
+        </div>
+      </div>
+      
+      <!-- Total Purchases -->
+      <div class="stat-card">
+        <div class="stat-icon secondary">
+          <i class="fas fa-shopping-cart"></i>
+        </div>
+        <div class="stat-content">
+          <div class="stat-label">Total Purchases</div>
+          <div class="stat-value" id="totalPurchases">KSH 0.00</div>
+          <div class="stat-change" id="purchasesChange"></div>
+        </div>
+      </div>
+      
+      <!-- Outstanding Receivables -->
+      <div class="stat-card">
+        <div class="stat-icon warning">
+          <i class="fas fa-hand-holding-usd"></i>
+        </div>
+        <div class="stat-content">
+          <div class="stat-label">Receivables</div>
+          <div class="stat-value" id="totalReceivables">KSH 0.00</div>
+          <div class="stat-change" id="receivablesChange"></div>
+        </div>
+      </div>
+      
+      <!-- Outstanding Payables -->
+      <div class="stat-card">
+        <div class="stat-icon error">
+          <i class="fas fa-file-invoice-dollar"></i>
+        </div>
+        <div class="stat-content">
+          <div class="stat-label">Payables</div>
+          <div class="stat-value" id="totalPayables">KSH 0.00</div>
+          <div class="stat-change" id="payablesChange"></div>
+        </div>
+      </div>
+      
+      <!-- Items Requiring Reorder -->
+      <div class="stat-card">
+        <div class="stat-icon purple">
+          <i class="fas fa-exclamation-triangle"></i>
+        </div>
+        <div class="stat-content">
+          <div class="stat-label">Reorder Required</div>
+          <div class="stat-value" id="reorderItems">0</div>
+          <div class="stat-change negative">Items below minimum</div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Charts Grid -->
+    <div class="charts-grid">
+      <!-- Sales vs Purchases Chart -->
+      <div class="chart-card">
+        <div class="chart-header">
+          <div>
+            <div class="chart-title">Sales vs Purchases</div>
+            <div class="chart-subtitle">Monthly comparison</div>
+          </div>
+        </div>
+        <div class="chart-container">
+          <canvas id="salesPurchasesChart"></canvas>
+        </div>
+      </div>
+      
+      <!-- Inventory Status Chart -->
+      <div class="chart-card">
+        <div class="chart-header">
+          <div>
+            <div class="chart-title">Inventory by Category</div>
+            <div class="chart-subtitle">Stock distribution</div>
+          </div>
+        </div>
+        <div class="chart-container">
+          <canvas id="inventoryCategoryChart"></canvas>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Payment Status Chart -->
+    <div class="charts-grid">
+      <div class="chart-card">
+        <div class="chart-header">
+          <div>
+            <div class="chart-title">Payment Status Overview</div>
+            <div class="chart-subtitle">Purchase orders and sales orders</div>
+          </div>
+        </div>
+        <div class="chart-container">
+          <canvas id="paymentStatusChart"></canvas>
+        </div>
+      </div>
+      
+      <!-- Top Customers Chart -->
+      <div class="chart-card">
+        <div class="chart-header">
+          <div>
+            <div class="chart-title">Top 5 Customers</div>
+            <div class="chart-subtitle">By total sales</div>
+          </div>
+        </div>
+        <div class="chart-container">
+          <canvas id="topCustomersChart"></canvas>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Tables Section -->
+    <div class="tables-grid">
+      <!-- Low Stock Items -->
+      <div class="table-card">
+        <div class="table-header">
+          <div class="table-title">
+            <i class="fas fa-exclamation-circle" style="color: var(--error);"></i>
+            Items Requiring Reorder
+          </div>
+        </div>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Item ID</th>
+              <th>Item Name</th>
+              <th>Category</th>
+              <th>Current Stock</th>
+              <th>Reorder Level</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="lowStockTable">
+            <tr>
+              <td colspan="6" style="text-align: center; padding: 30px;">
+                Loading data...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      
+      <!-- Recent Sales -->
+      <div class="table-card">
+        <div class="table-header">
+          <div class="table-title">
+            <i class="fas fa-receipt" style="color: var(--success);"></i>
+            Recent Sales Orders
+          </div>
+        </div>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>SO ID</th>
+              <th>Date</th>
+              <th>Customer</th>
+              <th>Amount</th>
+              <th>Receipt Status</th>
+              <th>Shipping Status</th>
+            </tr>
+          </thead>
+          <tbody id="recentSalesTable">
+            <tr>
+              <td colspan="6" style="text-align: center; padding: 30px;">
+                Loading data...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      
+      <!-- Recent Purchases -->
+      <div class="table-card">
+        <div class="table-header">
+          <div class="table-title">
+            <i class="fas fa-shopping-bag" style="color: var(--secondary);"></i>
+            Recent Purchase Orders
+          </div>
+        </div>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>PO ID</th>
+              <th>Date</th>
+              <th>Supplier</th>
+              <th>Amount</th>
+              <th>Payment Status</th>
+              <th>Shipping Status</th>
+            </tr>
+          </thead>
+          <tbody id="recentPurchasesTable">
+            <tr>
+              <td colspan="6" style="text-align: center; padding: 30px;">
+                Loading data...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Loading Overlay -->
+  <div id="loadingOverlay" class="loading-overlay">
+    <div class="spinner"></div>
+    <p>Loading dashboard data...</p>
+  </div>
+
+   <!-- jQuery and Select2 -->
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
+  
+  <!-- Flatpickr -->
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+
+   <!--script src="{% static 'Dashboard.js' %}"></!--script-->
+
+  <script>
+    console.log('Dashboard.js loaded');
+    
+    // Global variables
+    let dashboardData = {
+      inventory: [],
+      sales: [],
+      purchases: [],
+      customers: [],
+      suppliers: []
+    };
+    
+    let charts = {
+      salesPurchases: null,
+      inventoryCategory: null,
+      paymentStatus: null,
+      topCustomers: null
+    };
+    
+    // Get CSRF token
+    function getCSRFToken() {
+      const metaTag = document.querySelector('meta[name="csrf-token"]');
+      if (metaTag) return metaTag.getAttribute('content');
+      
+      const cookies = document.cookie.split(';');
+      for (let cookie of cookies) {
+        const [name, value] = cookie.trim().split('=');
+        if (name === 'csrftoken') return value;
+      }
+      return null;
+    }
+    
+    // Initialize dashboard
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('Initializing dashboard...');
+      loadAllData();
+    });
+    
+    // Load all data
+    async function loadAllData() {
+      showLoading();
+      try {
+        await Promise.all([
+          loadInventory(),
+          loadSales(),
+          loadPurchases(),
+          loadCustomers(),
+          loadSuppliers()
+        ]);
+        
+        // Calculate and display stats
+        calculateStats();
+        
+        // Render charts
+        renderCharts();
+        
+        // Render tables
+        renderTables();
+        
+        console.log('✅ Dashboard loaded successfully');
+      } catch (error) {
+        console.error('Error loading dashboard:', error);
+        alert('Failed to load dashboard data');
+      } finally {
+        hideLoading();
+      }
+    }
+    
+    // Load inventory data
+    async function loadInventory() {
+      try {
+        const response = await fetch('/api/inventory/all/', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCSRFToken()
+          },
+          credentials: 'same-origin'
+        });
+        
+        const result = await response.json();
+        if (result.success) {
+          dashboardData.inventory = result.data;
+        }
+      } catch (error) {
+        console.error('Error loading inventory:', error);
+      }
+    }
+    
+    // Load sales data
+    async function loadSales() {
+      try {
+        const response = await fetch('/api/sales/', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCSRFToken()
+          },
+          credentials: 'same-origin'
+        });
+        
+        const result = await response.json();
+        if (result.success) {
+          dashboardData.sales = result.data;
+        }
+      } catch (error) {
+        console.error('Error loading sales:', error);
+      }
+    }
+    
+    // Load purchases data
+    async function loadPurchases() {
+      try {
+        const response = await fetch('/api/purchases/', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCSRFToken()
+          },
+          credentials: 'same-origin'
+        });
+        
+        const result = await response.json();
+        if (result.success) {
+          dashboardData.purchases = result.data;
+        }
+      } catch (error) {
+        console.error('Error loading purchases:', error);
+      }
+    }
+    
+    // Load customers data
+    async function loadCustomers() {
+      try {
+        const response = await fetch('/api/customers/', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCSRFToken()
+          },
+          credentials: 'same-origin'
+        });
+        
+        const result = await response.json();
+        if (result.success) {
+          dashboardData.customers = result.data;
+        }
+      } catch (error) {
+        console.error('Error loading customers:', error);
+      }
+    }
+    
+    // Load suppliers data
+    async function loadSuppliers() {
+      try {
+        const response = await fetch('/api/suppliers/', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCSRFToken()
+          },
+          credentials: 'same-origin'
+        });
+        
+        const result = await response.json();
+        if (result.success) {
+          dashboardData.suppliers = result.data;
+        }
+      } catch (error) {
+        console.error('Error loading suppliers:', error);
+      }
+    }
+    
+    // Calculate statistics
+    function calculateStats() {
+      // Total Inventory Value
+      const inventoryValue = dashboardData.inventory.reduce((sum, item) => {
+        return sum + (item.remainingQty * item.sale_price);
+      }, 0);
+      document.getElementById('totalInventoryValue').textContent = 
+        'KSH ' + inventoryValue.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+      
+      // Total Sales
+      const totalSales = dashboardData.sales.reduce((sum, sale) => sum + sale.total_amount, 0);
+      document.getElementById('totalSales').textContent = 
+        'KSH ' + totalSales.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+      
+      // Total Purchases
+      const totalPurchases = dashboardData.purchases.reduce((sum, purchase) => sum + purchase.total_amount, 0);
+      document.getElementById('totalPurchases').textContent = 
+        'KSH ' + totalPurchases.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+      
+      // Total Receivables
+      const totalReceivables = dashboardData.customers.reduce((sum, customer) => sum + customer.balance, 0);
+      document.getElementById('totalReceivables').textContent = 
+        'KSH ' + totalReceivables.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+      
+      // Total Payables
+      const totalPayables = dashboardData.suppliers.reduce((sum, supplier) => sum + supplier.balance, 0);
+      document.getElementById('totalPayables').textContent = 
+        'KSH ' + totalPayables.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+      
+      // Items Requiring Reorder
+      const reorderItems = dashboardData.inventory.filter(item => item.reorderRequired === 'YES').length;
+      document.getElementById('reorderItems').textContent = reorderItems;
+    }
+    
+    // Render charts
+    function renderCharts() {
+      renderSalesPurchasesChart();
+      renderInventoryCategoryChart();
+      renderPaymentStatusChart();
+      renderTopCustomersChart();
+    }
+    
+    // Sales vs Purchases Chart
+    function renderSalesPurchasesChart() {
+      const ctx = document.getElementById('salesPurchasesChart');
+      
+      // Destroy existing chart
+      if (charts.salesPurchases) {
+        charts.salesPurchases.destroy();
+      }
+      
+      // Get monthly data
+      const monthlyData = getMonthlyData();
+      
+      charts.salesPurchases = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: monthlyData.labels,
+          datasets: [
+            {
+              label: 'Sales',
+              data: monthlyData.sales,
+              backgroundColor: 'rgba(46, 204, 113, 0.7)',
+              borderColor: 'rgba(46, 204, 113, 1)',
+              borderWidth: 2
+            },
+            {
+              label: 'Purchases',
+              data: monthlyData.purchases,
+              backgroundColor: 'rgba(52, 152, 219, 0.7)',
+              borderColor: 'rgba(52, 152, 219, 1)',
+              borderWidth: 2
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'top',
+            },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  return context.dataset.label + ': KSH ' + 
+                    context.parsed.y.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+                }
+              }
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: {
+                callback: function(value) {
+                  return 'KSH ' + value.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+    
+    // Inventory Category Chart
+    function renderInventoryCategoryChart() {
+      const ctx = document.getElementById('inventoryCategoryChart');
+      
+      if (charts.inventoryCategory) {
+        charts.inventoryCategory.destroy();
+      }
+      
+      // Group by category
+      const categoryData = {};
+      dashboardData.inventory.forEach(item => {
+        const category = item.category;
+        if (!categoryData[category]) {
+          categoryData[category] = 0;
+        }
+        categoryData[category] += item.remainingQty;
+      });
+      
+      const labels = Object.keys(categoryData);
+      const data = Object.values(categoryData);
+      
+      charts.inventoryCategory = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: labels,
+          datasets: [{
+            data: data,
+            backgroundColor: [
+              'rgba(26, 188, 156, 0.8)',
+              'rgba(52, 152, 219, 0.8)',
+              'rgba(155, 89, 182, 0.8)',
+              'rgba(241, 196, 15, 0.8)',
+              'rgba(231, 76, 60, 0.8)',
+              'rgba(230, 126, 34, 0.8)'
+            ],
+            borderWidth: 2,
+            borderColor: '#ffffff'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'right',
+            }
+          }
+        }
+      });
+    }
+
+function renderPaymentStatusChart() {
+const ctx = document.getElementById('paymentStatusChart');
+  if (charts.paymentStatus) {
+    charts.paymentStatus.destroy();
+  }
+  
+  // Count payment statuses for both purchases and sales
+  const statusCounts = {
+    completed: 0,
+    pending: 0,
+    partial: 0
+  };
+  
+  dashboardData.purchases.forEach(po => {
+    const status = po.payment_status.toLowerCase();
+    if (status === 'completed') statusCounts.completed++;
+    else if (status === 'pending') statusCounts.pending++;
+    else if (status.includes('partial')) statusCounts.partial++;
+  });
+  
+  dashboardData.sales.forEach(so => {
+    const status = so.receipt_status.toLowerCase();
+    if (status === 'completed') statusCounts.completed++;
+    else if (status === 'pending') statusCounts.pending++;
+    else if (status.includes('partial')) statusCounts.partial++;
+  });
+  
+  charts.paymentStatus = new Chart(ctx, {
+    type: 'pie',
+    data: {
+      labels: ['Completed', 'Partial Payment', 'Pending'],
+      datasets: [{
+        data: [statusCounts.completed, statusCounts.partial, statusCounts.pending],
+        backgroundColor: [
+          'rgba(46, 204, 113, 0.8)',
+          'rgba(52, 152, 219, 0.8)',
+          'rgba(243, 156, 18, 0.8)'
+        ],
+        borderWidth: 2,
+        borderColor: '#ffffff'
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'bottom',
+        }
+      }
+    }
+  });
+}
+
+// Top Customers Chart
+function renderTopCustomersChart() {
+  const ctx = document.getElementById('topCustomersChart');
+  
+  if (charts.topCustomers) {
+    charts.topCustomers.destroy();
+  }
+  
+  // Sort customers by sales and get top 5
+  const topCustomers = [...dashboardData.customers]
+    .sort((a, b) => b.sales - a.sales)
+    .slice(0, 5);
+  
+  const labels = topCustomers.map(c => c.name);
+  const data = topCustomers.map(c => c.sales);
+  
+  charts.topCustomers = new Chart(ctx, {
+    type: 'horizontalBar',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: 'Total Sales',
+        data: data,
+        backgroundColor: 'rgba(155, 89, 182, 0.7)',
+        borderColor: 'rgba(155, 89, 182, 1)',
+        borderWidth: 2
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: false
+        },
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              return 'KSH ' + context.parsed.x.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          beginAtZero: true,
+          ticks: {
+            callback: function(value) {
+              return 'KSH ' + value.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+            }
+          }
+        }
+      }
+    }
+  });
+}
+
+// Get monthly data
+function getMonthlyData() {
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const currentYear = new Date().getFullYear();
+  
+  const monthlyData = {
+    labels: [],
+    sales: [],
+    purchases: []
+  };
+  
+  // Get last 6 months
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date();
+    d.setMonth(d.getMonth() - i);
+    const monthIndex = d.getMonth();
+    const year = d.getFullYear();
+    
+    monthlyData.labels.push(months[monthIndex]);
+    
+    // Calculate sales for this month
+    const monthlySales = dashboardData.sales
+      .filter(sale => {
+        const saleDate = parseDate(sale.date);
+        return saleDate.getMonth() === monthIndex && saleDate.getFullYear() === year;
+      })
+      .reduce((sum, sale) => sum + sale.total_amount, 0);
+    
+    monthlyData.sales.push(monthlySales);
+    
+    // Calculate purchases for this month
+    const monthlyPurchases = dashboardData.purchases
+      .filter(purchase => {
+        const purchaseDate = parseDate(purchase.date);
+        return purchaseDate.getMonth() === monthIndex && purchaseDate.getFullYear() === year;
+      })
+      .reduce((sum, purchase) => sum + purchase.total_amount, 0);
+    
+    monthlyData.purchases.push(monthlyPurchases);
+  }
+  
+  return monthlyData;
+}
+
+// Parse date from DD/MM/YYYY
+function parseDate(dateStr) {
+  const [day, month, year] = dateStr.split('/');
+  return new Date(year, month - 1, day);
+}
+
+// Render tables
+function renderTables() {
+  renderLowStockTable();
+  renderRecentSalesTable();
+  renderRecentPurchasesTable();
+}
+
+// Low Stock Table
+function renderLowStockTable() {
+  const tbody = document.getElementById('lowStockTable');
+  const lowStock = dashboardData.inventory.filter(item => item.reorderRequired === 'YES');
+  
+  if (lowStock.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 30px; color: var(--success);">✅ All items are sufficiently stocked!</td></tr>';
+    return;
+  }
+  
+  tbody.innerHTML = lowStock.slice(0, 10).map(item => `
+    <tr>
+      <td>${item.id}</td>
+      <td>${item.name}</td>
+      <td>${item.category}</td>
+      <td>${item.remainingQty}</td>
+      <td>${item.reorderLevel}</td>
+      <td><span class="status-badge reorder">Reorder Now</span></td>
+    </tr>
+  `).join('');
+}
+
+// Recent Sales Table
+function renderRecentSalesTable() {
+  const tbody = document.getElementById('recentSalesTable');
+  const recentSales = [...dashboardData.sales]
+    .sort((a, b) => parseDate(b.date) - parseDate(a.date))
+    .slice(0, 10);
+  
+  if (recentSales.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 30px;">No sales orders found</td></tr>';
+    return;
+  }
+  
+  tbody.innerHTML = recentSales.map(sale => `
+    <tr>
+      <td>${sale.so_id}</td>
+      <td>${sale.date}</td>
+      <td>${sale.customer_name}</td>
+      <td>KSH ${sale.total_amount.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}</td>
+      <td><span class="status-badge ${getStatusClass(sale.receipt_status)}">${sale.receipt_status}</span></td>
+      <td><span class="status-badge ${getStatusClass(sale.shipping_status)}">${sale.shipping_status}</span></td>
+    </tr>
+  `).join('');
+}
+
+// Recent Purchases Table
+function renderRecentPurchasesTable() {
+  const tbody = document.getElementById('recentPurchasesTable');
+  const recentPurchases = [...dashboardData.purchases]
+    .sort((a, b) => parseDate(b.date) - parseDate(a.date))
+    .slice(0, 10);
+  
+  if (recentPurchases.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 30px;">No purchase orders found</td></tr>';
+    return;
+  }
+  
+  tbody.innerHTML = recentPurchases.map(purchase => `
+    <tr>
+      <td>${purchase.po_id}</td>
+      <td>${purchase.date}</td>
+      <td>${purchase.supplier_name}</td>
+      <td>KSH ${purchase.total_amount.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}</td>
+      <td><span class="status-badge ${getStatusClass(purchase.payment_status)}">${purchase.payment_status}</span></td>
+      <td><span class="status-badge ${getStatusClass(purchase.shipping_status)}">${purchase.shipping_status}</span></td>
+    </tr>
+  `).join('');
+}
+
+// Get status badge class
+function getStatusClass(status) {
+  const s = status.toLowerCase();
+  if (s === 'completed' || s === 'delivered') return 'completed';
+  if (s === 'pending') return 'pending';
+  if (s.includes('partial')) return 'partial';
+  if (s === 'processing') return 'processing';
+  return 'pending';
+}
+
+// Show/hide loading
+function showLoading() {
+  document.getElementById('loadingOverlay').style.display = 'flex';
+}
+
+function hideLoading() {
+  document.getElementById('loadingOverlay').style.display = 'none';
+}
+
+// Load purchase details
+    async function loadPurchaseDetails() {
+      try {
+        // We need to get all purchase details from all purchase orders
+        const allDetails = [];
+        
+        for (const po of dashboardData.purchases) {
+          const response = await fetch(`/api/purchases/details/${po.po_id}/`, {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-CSRFToken': getCSRFToken()
+            },
+            credentials: 'same-origin'
+          });
+          
+          const result = await response.json();
+          if (result.success && result.data.purchase_details) {
+            allDetails.push(...result.data.purchase_details);
+          }
+        }
+        
+        dashboardData.purchaseDetails = allDetails;
+      } catch (error) {
+        console.error('Error loading purchase details:', error);
+        dashboardData.purchaseDetails = [];
+      }
+    }
+    
+    // Calculate statistics
+    function calculateStats() {
+      // Total Inventory Value
+      const inventoryValue = dashboardData.inventory.reduce((sum, item) => {
+        const remaining = item.remainingQty || 0;
+        const price = parseFloat(item.sale_price) || 0;
+        return sum + (remaining * price);
+      }, 0);
+      document.getElementById('totalInventoryValue').textContent = 
+        'KSH ' + formatNumber(inventoryValue);
+      
+      // Total Sales
+      const totalSales = dashboardData.sales.reduce((sum, sale) => sum + (parseFloat(sale.total_amount) || 0), 0);
+      document.getElementById('totalSales').textContent = 
+        'KSH ' + formatNumber(totalSales);
+      
+      // Total Purchases
+      const totalPurchases = dashboardData.purchases.reduce((sum, purchase) => sum + (parseFloat(purchase.total_amount) || 0), 0);
+      document.getElementById('totalPurchases').textContent = 
+        'KSH ' + formatNumber(totalPurchases);
+
+      // NET PROFIT (NEW)
+      const netProfit = totalSales - totalPurchases;
+      const profitMarginPercent = totalSales > 0 ? ((netProfit / totalSales) * 100).toFixed(1) : 0;
+      document.getElementById('netProfit').textContent = 
+        'KSH ' + formatNumber(netProfit);
+      document.getElementById('profitMargin').textContent = 
+        `Margin: ${profitMarginPercent}%`;
+      document.getElementById('profitMargin').className = 
+        netProfit >= 0 ? 'stat-change positive' : 'stat-change negative';
+      
+      // Total Receivables
+      const totalReceivables = dashboardData.customers.reduce((sum, customer) => sum + (parseFloat(customer.balance) || 0), 0);
+      document.getElementById('totalReceivables').textContent = 
+        'KSH ' + formatNumber(totalReceivables);
+      
+      // Total Payables
+      const totalPayables = dashboardData.suppliers.reduce((sum, supplier) => sum + (parseFloat(supplier.balance) || 0), 0);
+      document.getElementById('totalPayables').textContent = 
+        'KSH ' + formatNumber(totalPayables);
+      
+      // Items Requiring Reorder
+      const reorderItems = dashboardData.inventory.filter(item => item.reorderRequired === 'YES').length;
+      document.getElementById('reorderItems').textContent = reorderItems;
+
+      // TOP SELLING ITEM (NEW)
+      calculateTopSellingItem();
+
+      // TOP SALES LOCATION (NEW)
+      calculateTopSalesLocation();
+    }
+
+    // Calculate Top Selling Item
+    function calculateTopSellingItem() {
+      if (dashboardData.salesDetails.length === 0) {
+        document.getElementById('topSellingItem').textContent = 'No Data';
+        document.getElementById('topItemCategory').textContent = 'No sales yet';
+        return;
+      }
+
+      // Group by item and sum quantities
+      const itemSales = {};
+      dashboardData.salesDetails.forEach(detail => {
+        const itemName = detail.item_name;
+        const quantity = detail.quantity_sold || 0;
+        const category = detail.item_category || 'N/A';
+        const type = detail.item_type || 'N/A';
+        
+        if (!itemSales[itemName]) {
+          itemSales[itemName] = {
+            quantity: 0,
+            category: category,
+            type: type
+          };
+        }
+        itemSales[itemName].quantity += quantity;
+      });
+
+      // Find top item
+      let topItem = null;
+      let maxQuantity = 0;
+      
+      Object.keys(itemSales).forEach(itemName => {
+        if (itemSales[itemName].quantity > maxQuantity) {
+          maxQuantity = itemSales[itemName].quantity;
+          topItem = {
+            name: itemName,
+            quantity: maxQuantity,
+            category: itemSales[itemName].category,
+            type: itemSales[itemName].type
+          };
+        }
+      });
+
+      if (topItem) {
+        document.getElementById('topSellingItem').textContent = topItem.name;
+        document.getElementById('topItemCategory').textContent = 
+          `${topItem.type} • ${topItem.category} (${topItem.quantity} units)`;
+      } else {
+        document.getElementById('topSellingItem').textContent = 'No Data';
+        document.getElementById('topItemCategory').textContent = 'No sales yet';
+      }
+    }
+
+    // Calculate Top Sales Location
+    function calculateTopSalesLocation() {
+      if (dashboardData.sales.length === 0) {
+        document.getElementById('topSalesLocation').textContent = 'No Data';
+        document.getElementById('topLocationAmount').textContent = 'No sales yet';
+        return;
+      }
+
+      // Group by county and sum amounts
+      const locationSales = {};
+      dashboardData.sales.forEach(sale => {
+        const county = sale.county || 'Unknown';
+        const amount = parseFloat(sale.total_amount) || 0;
+        
+        if (!locationSales[county]) {
+          locationSales[county] = 0;
+        }
+        locationSales[county] += amount;
+      });
+
+      // Find top location
+      let topLocation = null;
+      let maxAmount = 0;
+      
+      Object.keys(locationSales).forEach(county => {
+        if (locationSales[county] > maxAmount) {
+          maxAmount = locationSales[county];
+          topLocation = {
+            county: county,
+            amount: maxAmount
+          };
+        }
+      });
+
+      if (topLocation) {
+        document.getElementById('topSalesLocation').textContent = topLocation.county;
+        document.getElementById('topLocationAmount').textContent = 
+          `KSH ${formatNumber(topLocation.amount)}`;
+      } else {
+        document.getElementById('topSalesLocation').textContent = 'No Data';
+        document.getElementById('topLocationAmount').textContent = 'No sales yet';
+      }
+    }
+
+    // Format number with commas
+    function formatNumber(num) {
+      return num.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    }
+
+    // Format to thousands (1K, 2.5K, etc)
+    function formatToThousands(num) {
+      if (num >= 1000) {
+        return (num / 1000).toFixed(1) + 'K';
+      }
+      return num.toFixed(0);
+    }
+    
+    // Parse date from DD/MM/YYYY
+    function parseDate(dateStr) {
+      if (!dateStr) return new Date();
+      const [day, month, year] = dateStr.split('/');
+      return new Date(year, month - 1, day);
+    }
+    
+    // Render all charts
+    function renderCharts() {
+      renderOverallSalesTrendChart();
+      renderSalesByLocationChart();
+      renderSalesByCategoryChart();
+      renderPurchasesByLocationChart();
+      renderPurchasesByCategoryChart();
+      renderPaymentStatusChart();
+      renderTopCustomersChart();
+    }
+
+    // 1. OVERALL SALES TREND CHART (Spline Area)
+    function renderOverallSalesTrendChart() {
+      const ctx = document.getElementById('overallSalesTrendChart');
+      
+      if (charts.overallSalesTrend) {
+        charts.overallSalesTrend.destroy();
+      }
+
+      // Group sales by month and year
+      const monthlySales = {};
+      
+      dashboardData.sales.forEach(sale => {
+        const date = parseDate(sale.date);
+        const monthYear = `${date.getMonth() + 1}/${date.getFullYear()}`;
+        const amount = parseFloat(sale.total_amount) || 0;
+        
+        if (!monthlySales[monthYear]) {
+          monthlySales[monthYear] = {
+            date: date,
+            amount: 0
+          };
+        }
+        monthlySales[monthYear].amount += amount;
+      });
+
+      // Sort by date
+      const sortedMonths = Object.keys(monthlySales).sort((a, b) => {
+        return monthlySales[a].date - monthlySales[b].date;
+      });
+
+      const labels = sortedMonths.map(key => {
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const date = monthlySales[key].date;
+        return `${months[date.getMonth()]} ${date.getFullYear()}`;
+      });
+
+      const data = sortedMonths.map(key => monthlySales[key].amount);
+
+      charts.overallSalesTrend = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Sales',
+            data: data,
+            backgroundColor: 'rgba(2, 22, 64, 0.2)',
+            borderColor: '#021640',
+            borderWidth: 2,
+            fill: true,
+            tension: 0.4,
+            pointBackgroundColor: '#021640',
+            pointBorderColor: '#021640',
+            pointRadius: 2,
+            pointHoverRadius: 5
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              display: false
+            },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  return 'KSH ' + formatNumber(context.parsed.y);
+                }
+              }
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: {
+                callback: function(value) {
+                  return formatToThousands(value);
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // 2. SALES BY LOCATION CHART (Column)
+    function renderSalesByLocationChart() {
+      const ctx = document.getElementById('salesByLocationChart');
+      
+      if (charts.salesByLocation) {
+        charts.salesByLocation.destroy();
+      }
+
+      // Group by county
+      const locationSales = {};
+      dashboardData.sales.forEach(sale => {
+        const county = sale.county || 'Unknown';
+        const amount = parseFloat(sale.total_amount) || 0;
+        
+        if (!locationSales[county]) {
+          locationSales[county] = 0;
+        }
+        locationSales[county] += amount;
+      });
+
+      const labels = Object.keys(locationSales);
+      const data = Object.values(locationSales);
+
+      charts.salesByLocation = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Sales Amount',
+            data: data,
+            backgroundColor: 'rgba(26, 188, 156, 0.7)',
+            borderColor: 'rgba(26, 188, 156, 1)',
+            borderWidth: 2
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              display: false
+            },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  return 'KSH ' + formatNumber(context.parsed.y);
+                }
+              }
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: {
+                callback: function(value) {
+                  return formatToThousands(value);
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // 3. SALES BY CATEGORY CHART (Pie)
+    function renderSalesByCategoryChart() {
+      const ctx = document.getElementById('salesByCategoryChart');
+      
+      if (charts.salesByCategory) {
+        charts.salesByCategory.destroy();
+      }
+
+      // Group by item type
+      const categorySales = {};
+      dashboardData.salesDetails.forEach(detail => {
+        const type = detail.item_type || 'Unknown';
+        const amount = parseFloat(detail.total_sales_price) || 0;
+        
+        if (!categorySales[type]) {
+          categorySales[type] = 0;
+        }
+        categorySales[type] += amount;
+      });
+
+      const labels = Object.keys(categorySales);
+      const data = Object.values(categorySales);
+
+      charts.salesByCategory = new Chart(ctx, {
+        type: 'pie',
+        data: {
+          labels: labels,
+          datasets: [{
+            data: data,
+            backgroundColor: [
+              'rgba(26, 188, 156, 0.8)',
+              'rgba(52, 152, 219, 0.8)',
+              'rgba(155, 89, 182, 0.8)',
+              'rgba(241, 196, 15, 0.8)',
+              'rgba(231, 76, 60, 0.8)',
+              'rgba(230, 126, 34, 0.8)'
+            ],
+            borderWidth: 2,
+            borderColor: '#ffffff'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'right'
+            },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                  const percentage = ((context.parsed / total) * 100).toFixed(1);
+                  return context.label + ': ' + percentage + '% (KSH ' + formatNumber(context.parsed) + ')';
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // 4. PURCHASES BY LOCATION CHART (Column)
+    function renderPurchasesByLocationChart() {
+      const ctx = document.getElementById('purchasesByLocationChart');
+      
+      if (charts.purchasesByLocation) {
+        charts.purchasesByLocation.destroy();
+      }
+
+      // Group by county
+      const locationPurchases = {};
+      dashboardData.purchases.forEach(purchase => {
+        const county = purchase.county || 'Unknown';
+        const amount = parseFloat(purchase.total_amount) || 0;
+        
+        if (!locationPurchases[county]) {
+          locationPurchases[county] = 0;
+        }
+        locationPurchases[county] += amount;
+      });
+
+      const labels = Object.keys(locationPurchases);
+      const data = Object.values(locationPurchases);
+
+      charts.purchasesByLocation = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Purchase Amount',
+            data: data,
+            backgroundColor: 'rgba(52, 152, 219, 0.7)',
+            borderColor: 'rgba(52, 152, 219, 1)',
+            borderWidth: 2
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              display: false
+            },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  return 'KSH ' + formatNumber(context.parsed.y);
+                }
+              }
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: {
+                callback: function(value) {
+                  return formatToThousands(value);
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // 5. PURCHASES BY CATEGORY CHART (Pie)
+    function renderPurchasesByCategoryChart() {
+      const ctx = document.getElementById('purchasesByCategoryChart');
+      
+      if (charts.purchasesByCategory) {
+        charts.purchasesByCategory.destroy();
+      }
+
+      // Group by item type
+      const categoryPurchases = {};
+      dashboardData.purchaseDetails.forEach(detail => {
+        const type = detail.item_type || 'Unknown';
+        const amount = parseFloat(detail.total_purchase_price) || 0;
+        
+        if (!categoryPurchases[type]) {
+          categoryPurchases[type] = 0;
+        }
+        categoryPurchases[type] += amount;
+      });
+
+      const labels = Object.keys(categoryPurchases);
+      const data = Object.values(categoryPurchases);
+
+      charts.purchasesByCategory = new Chart(ctx, {
+        type: 'pie',
+        data: {
+          labels: labels,
+          datasets: [{
+            data: data,
+            backgroundColor: [
+              'rgba(52, 152, 219, 0.8)',
+              'rgba(155, 89, 182, 0.8)',
+              'rgba(241, 196, 15, 0.8)',
+              'rgba(231, 76, 60, 0.8)',
+              'rgba(230, 126, 34, 0.8)',
+              'rgba(26, 188, 156, 0.8)'
+            ],
+            borderWidth: 2,
+            borderColor: '#ffffff'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'right'
+            },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                  const percentage = ((context.parsed / total) * 100).toFixed(1);
+                  return context.label + ': ' + percentage + '% (KSH ' + formatNumber(context.parsed) + ')';
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // 6. Payment Status Chart
+    function renderPaymentStatusChart() {
+      const ctx = document.getElementById('paymentStatusChart');
+      
+      if (charts.paymentStatus) {
+        charts.paymentStatus.destroy();
+      }
+      
+      // Count payment statuses for both purchases and sales
+      const statusCounts = {
+        completed: 0,
+        pending: 0,
+        partial: 0
+      };
+      
+      dashboardData.purchases.forEach(po => {
+        const status = (po.payment_status || '').toLowerCase();
+        if (status === 'completed') statusCounts.completed++;
+        else if (status === 'pending') statusCounts.pending++;
+        else if (status.includes('partial')) statusCounts.partial++;
+      });
+      
+      dashboardData.sales.forEach(so => {
+        const status = (so.receipt_status || '').toLowerCase();
+        if (status === 'completed') statusCounts.completed++;
+        else if (status === 'pending') statusCounts.pending++;
+        else if (status.includes('partial')) statusCounts.partial++;
+      });
+      
+      charts.paymentStatus = new Chart(ctx, {
+        type: 'pie',
+        data: {
+          labels: ['Completed', 'Partial Payment', 'Pending'],
+          datasets: [{
+            data: [statusCounts.completed, statusCounts.partial, statusCounts.pending],
+            backgroundColor: [
+              'rgba(46, 204, 113, 0.8)',
+              'rgba(52, 152, 219, 0.8)',
+              'rgba(243, 156, 18, 0.8)'
+            ],
+            borderWidth: 2,
+            borderColor: '#ffffff'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'bottom',
+            }
+          }
+        }
+      });
+    }
+    
+    // 7. Top Customers Chart
+    function renderTopCustomersChart() {
+      const ctx = document.getElementById('topCustomersChart');
+      
+      if (charts.topCustomers) {
+        charts.topCustomers.destroy();
+      }
+      
+      // Sort customers by sales and get top 5
+      const topCustomers = [...dashboardData.customers]
+        .sort((a, b) => (parseFloat(b.sales) || 0) - (parseFloat(a.sales) || 0))
+        .slice(0, 5);
+      
+      const labels = topCustomers.map(c => c.name || 'Unknown');
+      const data = topCustomers.map(c => parseFloat(c.sales) || 0);
+      
+      charts.topCustomers = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Total Sales',
+            data: data,
+            backgroundColor: 'rgba(155, 89, 182, 0.7)',
+            borderColor: 'rgba(155, 89, 182, 1)',
+            borderWidth: 2
+          }]
+        },
+        options: {
+          indexAxis: 'y',
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              display: false
+            },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  return 'KSH ' + formatNumber(context.parsed.x);
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              beginAtZero: true,
+              ticks: {
+                callback: function(value) {
+                  return formatToThousands(value);
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+    
+    // Render tables
+    function renderTables() {
+      renderLowStockTable();
+      renderRecentSalesTable();
+      renderRecentPurchasesTable();
+    }
+    
+    // Low Stock Table
+    function renderLowStockTable() {
+      const tbody = document.getElementById('lowStockTable');
+      const lowStock = dashboardData.inventory.filter(item => item.reorderRequired === 'YES');
+      
+      if (lowStock.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 30px; color: var(--success);">✅ All items are sufficiently stocked!</td></tr>';
+        return;
+      }
+      
+      tbody.innerHTML = lowStock.slice(0, 10).map(item => `
+        <tr>
+          <td>${item.id}</td>
+          <td>${item.name}</td>
+          <td>${item.category}</td>
+          <td>${item.remainingQty}</td>
+          <td>${item.reorderLevel}</td>
+          <td><span class="status-badge reorder">Reorder Now</span></td>
+        </tr>
+      `).join('');
+    }
+    
+    // Recent Sales Table
+    function renderRecentSalesTable() {
+      const tbody = document.getElementById('recentSalesTable');
+      const recentSales = [...dashboardData.sales]
+        .sort((a, b) => parseDate(b.date) - parseDate(a.date))
+        .slice(0, 10);
+      
+      if (recentSales.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 30px;">No sales orders found</td></tr>';
+        return;
+      }
+      
+      tbody.innerHTML = recentSales.map(sale => `
+        <tr>
+          <td>${sale.so_id}</td>
+          <td>${sale.date}</td>
+          <td>${sale.customer_name}</td>
+          <td>KSH ${formatNumber(sale.total_amount)}</td>
+          <td><span class="status-badge ${getStatusClass(sale.receipt_status)}">${sale.receipt_status}</span></td>
+          <td><span class="status-badge ${getStatusClass(sale.shipping_status)}">${sale.shipping_status}</span></td>
+        </tr>
+      `).join('');
+    }
+    
+    // Recent Purchases Table
+    function renderRecentPurchasesTable() {
+      const tbody = document.getElementById('recentPurchasesTable');
+      const recentPurchases = [...dashboardData.purchases]
+        .sort((a, b) => parseDate(b.date) - parseDate(a.date))
+        .slice(0, 10);
+      
+      if (recentPurchases.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 30px;">No purchase orders found</td></tr>';
+        return;
+      }
+      
+      tbody.innerHTML = recentPurchases.map(purchase => `
+        <tr>
+          <td>${purchase.po_id}</td>
+          <td>${purchase.date}</td>
+          <td>${purchase.supplier_name}</td>
+          <td>KSH ${formatNumber(purchase.total_amount)}</td>
+          <td><span class="status-badge ${getStatusClass(purchase.payment_status)}">${purchase.payment_status}</span></td>
+          <td><span class="status-badge ${getStatusClass(purchase.shipping_status)}">${purchase.shipping_status}</span></td>
+        </tr>
+      `).join('');
+    }
+    
+    // Get status badge class
+    function getStatusClass(status) {
+      const s = (status || '').toLowerCase();
+      if (s === 'completed' || s === 'delivered') return 'completed';
+      if (s === 'pending') return 'pending';
+      if (s.includes('partial')) return 'partial';
+      if (s === 'processing') return 'processing';
+      return 'pending';
+    }
+    
+    // Show/hide loading
+    function showLoading() {
+      document.getElementById('loadingOverlay').style.display = 'flex';
+    }
+    
+    function hideLoading() {
+      document.getElementById('loadingOverlay').style.display = 'none';
+    }
+
+  </script>
+</body>
+</html>
