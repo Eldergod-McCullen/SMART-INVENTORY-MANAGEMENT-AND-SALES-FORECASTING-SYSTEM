@@ -690,6 +690,7 @@ def api_delete_inventory_item(request):
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
     
+    
 # ================================= ADDED FOR THE INVENTORY MODULE ============================================
     # Get all inventory with calculated fields
 @csrf_exempt
@@ -716,7 +717,9 @@ def api_get_inventory(request):
                 'soldQty': item.quantity_sold,
                 'remainingQty': remaining_qty,
                 'reorderLevel': item.reorder_level,
-                'reorderRequired': reorder_required
+                'reorderRequired': reorder_required,
+                'purchase_price': float(item.purchase_price),  
+                'sale_price': float(item.sale_price)           
             })
         
         return JsonResponse({'success': True, 'data': items_list})
