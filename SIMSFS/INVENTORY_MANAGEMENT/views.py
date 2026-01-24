@@ -3979,3 +3979,86 @@ def api_update_receipt(request):
         return JsonResponse({'success': False, 'message': 'Invalid JSON data'}, status=400)
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
+    
+    
+# =============================== DASHBOARD VIEWS ==============================================================================================================================================
+# ============================================
+# NEW ENDPOINT: Get All Sales Details
+# ============================================
+@csrf_exempt
+@login_required(login_url='/login/')
+def api_get_all_sales_details(request):
+    """
+    Get all sales details efficiently in a single call
+    Used for: Top Selling Item, Sales by Category charts
+    """
+    try:
+        sales_details = SalesDetail.objects.select_related(
+            'so_id', 'customer_id', 'item_id'
+        ).all()
+        
+        details_list = []
+        for detail in sales_details:
+            details_list.append({
+                'detail_id': detail.detail_id,
+                'item_name': detail.item_name,
+                'item_type': detail.item_type,
+                'item_category': detail.item_category,
+                'item_subcategory': detail.item_subcategory,
+                'quantity_sold': detail.quantity_sold,
+                'total_sales_price': float(detail.total_sales_price)
+            })
+        
+        return JsonResponse({
+            'success': True,
+            'data': details_list,
+            'count': len(details_list)
+        })
+    
+    except Exception as e:
+        print(f"❌ Error getting sales details: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'message': str(e)
+        }, status=500)
+
+
+# ============================================
+# NEW ENDPOINT: Get All Purchase Details
+# ============================================
+@csrf_exempt
+@login_required(login_url='/login/')
+def api_get_all_purchase_details(request):
+    """
+    Get all purchase details efficiently in a single call
+    Used for: Purchases by Category chart
+    """
+    try:
+        purchase_details = PurchaseDetail.objects.select_related(
+            'po_id', 'supplier_id', 'item_id'
+        ).all()
+        
+        details_list = []
+        for detail in purchase_details:
+            details_list.append({
+                'detail_id': detail.detail_id,
+                'item_name': detail.item_name,
+                'item_type': detail.item_type,
+                'item_category': detail.item_category,
+                'item_subcategory': detail.item_subcategory,
+                'quantity_purchased': detail.quantity_purchased,
+                'total_purchase_price': float(detail.total_purchase_price)
+            })
+        
+        return JsonResponse({
+            'success': True,
+            'data': details_list,
+            'count': len(details_list)
+        })
+    
+    except Exception as e:
+        print(f"❌ Error getting purchase details: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'message': str(e)
+        }, status=500)

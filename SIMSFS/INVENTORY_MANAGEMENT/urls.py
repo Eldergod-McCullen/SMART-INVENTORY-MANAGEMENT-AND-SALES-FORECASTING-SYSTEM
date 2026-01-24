@@ -127,6 +127,7 @@ path('api/customers/delete/', views.api_delete_customer, name='api_delete_custom
     
     # Content page
     path('content/sales/', views.sales_content, name='sales'),
+    path('api/sales/', views.api_get_sales_orders, name='api_get_sales_orders'),
     
     # Receipt Status APIs
     path('api/sales/receipt-statuses/', views.api_get_receipt_statuses, name='api_get_receipt_statuses'),   
@@ -172,5 +173,10 @@ path('api/receipts/', views.api_get_receipts, name='api_get_receipts'),
 path('api/receipts/add/', views.api_add_receipt, name='api_add_receipt'),
 path('api/receipts/update/', views.api_update_receipt, name='api_update_receipt'),
 path('api/receipts/delete/', views.api_delete_receipt, name='api_delete_receipt'), 
+
+
+# =============================== DASHBOARD URLS/API ENDPOINTS =======================================================================================================================
+path('api/dashboard/sales-details/', views.api_get_all_sales_details, name='api_get_all_sales_details'),
+path('api/dashboard/purchase-details/', views.api_get_all_purchase_details, name='api_get_all_purchase_details'),
 
 ]

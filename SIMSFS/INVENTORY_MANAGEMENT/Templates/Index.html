@@ -41,7 +41,7 @@
       font-family: 'Roboto', sans-serif;
       background-color: #f5f7fa;
       color: var(--text-dark);
-      display: flex;
+      display: flex;              /* MAKE SURE YOU CHECK IF THIS IS WHAT'S MAKING THE BODY TO MOVE DOWNWARDS */
       min-height: 100vh;
     }
     
@@ -481,7 +481,7 @@ async function loadContent(page, title) {
   }
     }
 
-// ⭐ NEW FUNCTION: Execute scripts from dynamically loaded content
+// NEW FUNCTION: Execute scripts from dynamically loaded content
 function executeScripts(container) {
   // Find all script tags in the loaded content
   const scripts = container.querySelectorAll('script');
@@ -504,7 +504,6 @@ function executeScripts(container) {
   
   console.log(`✅ Executed ${scripts.length} script(s) in loaded content`);
 }
-
 
     // Add click event listeners to navigation items
 navItems.forEach(item => {
@@ -558,5 +557,6 @@ window.addEventListener('DOMContentLoaded', function() {
       });
     }
   </script>
+
 </body>
 </html>
