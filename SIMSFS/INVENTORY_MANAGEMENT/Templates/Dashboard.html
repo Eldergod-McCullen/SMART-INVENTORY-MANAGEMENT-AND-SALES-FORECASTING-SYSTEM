@@ -747,550 +747,537 @@
     }
     
     function calculateKPIs() {
-      // 1. Inventory Cost Value (at purchase price - actual investment)
-      const inventoryCostValue = dashboardData.inventory.reduce((sum, item) => {
-        return sum + ((parseFloat(item.remainingQty) || 0) * (parseFloat(item.purchase_price) || 0));
-      }, 0);
-      document.getElementById('inventoryCostValue').textContent = 'KSH ' + formatNumber(inventoryCostValue);
-      document.getElementById('inventoryCostChange').textContent = `${dashboardData.inventory.length} items | Cost basis`;
-      
-      // 2. Potential Revenue (at sale price - what you could earn if all sold)
-      const potentialRevenue = dashboardData.inventory.reduce((sum, item) => {
-        return sum + ((parseFloat(item.remainingQty) || 0) * (parseFloat(item.sale_price) || 0));
-      }, 0);
-      const potentialProfit = potentialRevenue - inventoryCostValue;
-      const potentialMargin = inventoryCostValue > 0 ? ((potentialProfit / inventoryCostValue) * 100).toFixed(1) : 0;
-      document.getElementById('potentialRevenue').textContent = 'KSH ' + formatNumber(potentialRevenue);
-      const potentialProfitElement = document.getElementById('potentialProfit');
-      potentialProfitElement.textContent = `KSH ${formatNumber(potentialProfit)} (${potentialMargin}% margin)`;
-      potentialProfitElement.className = potentialProfit >= 0 ? 'stat-change positive' : 'stat-change negative';
-      
-      const inventoryValue = dashboardData.inventory.reduce((sum, item) => {
-        return sum + ((parseFloat(item.remainingQty) || 0) * (parseFloat(item.sale_price) || 0));
-      }, 0);
-      document.getElementById('totalInventoryValue').textContent = 'KSH ' + formatNumber(inventoryValue);
-      document.getElementById('inventoryChange').textContent = `${dashboardData.inventory.length} items in stock`;
-      
-      const totalSales = dashboardData.sales.reduce((sum, sale) => sum + (parseFloat(sale.total_amount) || 0), 0);
-      document.getElementById('totalSales').textContent = 'KSH ' + formatNumber(totalSales);
-      document.getElementById('salesChange').textContent = `${dashboardData.sales.length} sales orders`;
-      
-      const totalPurchases = dashboardData.purchases.reduce((sum, purchase) => sum + (parseFloat(purchase.total_amount) || 0), 0);
-      document.getElementById('totalPurchases').textContent = 'KSH ' + formatNumber(totalPurchases);
-      document.getElementById('purchasesChange').textContent = `${dashboardData.purchases.length} purchase orders`;
-      
-      const netProfit = totalSales - totalPurchases;
-      const profitMargin = totalSales > 0 ? ((netProfit / totalSales) * 100).toFixed(1) : 0;
-      document.getElementById('netProfit').textContent = 'KSH ' + formatNumber(netProfit);
-      const profitMarginElement = document.getElementById('profitMargin');
-      profitMarginElement.textContent = `Margin: ${profitMargin}%`;
-      profitMarginElement.className = netProfit >= 0 ? 'stat-change positive' : 'stat-change negative';
-      
-      const totalReceivables = dashboardData.customers.reduce((sum, customer) => sum + (parseFloat(customer.balance) || 0), 0);
-      document.getElementById('totalReceivables').textContent = 'KSH ' + formatNumber(totalReceivables);
-      document.getElementById('receivablesChange').textContent = `From ${dashboardData.customers.length} customers`;
-      
-      const totalPayables = dashboardData.suppliers.reduce((sum, supplier) => sum + (parseFloat(supplier.balance) || 0), 0);
-      document.getElementById('totalPayables').textContent = 'KSH ' + formatNumber(totalPayables);
-      document.getElementById('payablesChange').textContent = `To ${dashboardData.suppliers.length} suppliers`;
-      
-      const reorderItems = dashboardData.inventory.filter(item => item.reorderRequired === 'YES').length;
-      document.getElementById('reorderItems').textContent = reorderItems;
-    }
-    
-    function renderCharts() {
-      console.log('📊 Rendering charts...');
-      renderSalesTrendChart();
-      renderSalesLocationChart();
-      renderPurchasesLocationChart();
-      renderPaymentStatusChart();
-      renderTopCustomersChart();
-      console.log('✅ All charts rendered');
-    }
-    
-    // 1. Overall Sales Trend Chart
-    function renderSalesTrendChart() {
-      const ctx = document.getElementById('salesTrendChart');
-      if (charts.salesTrend) charts.salesTrend.destroy();
-      
-      const monthlySales = {};
-      dashboardData.sales.forEach(sale => {
-        const date = parseDate(sale.date);
-        const monthYear = `${date.getMonth() + 1}/${date.getFullYear()}`;
-        if (!monthlySales[monthYear]) {
-          monthlySales[monthYear] = { date: date, amount: 0 };
-        }
-        monthlySales[monthYear].amount += parseFloat(sale.total_amount) || 0;
-      });
-      
-      const sortedMonths = Object.keys(monthlySales).sort((a, b) => monthlySales[a].date - monthlySales[b].date);
-      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-      const labels = sortedMonths.map(key => {
-        const date = monthlySales[key].date;
-        return `${months[date.getMonth()]} ${date.getFullYear()}`;
-      });
-      const data = sortedMonths.map(key => monthlySales[key].amount);
-      
-      charts.salesTrend = new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels: labels,
-          datasets: [{
-            label: 'Sales',
-            data: data,
-            backgroundColor: 'rgba(2, 22, 64, 0.2)',
-            borderColor: '#021640',
-            borderWidth: 2,
-            fill: true,
-            tension: 0.4,
-            pointBackgroundColor: '#021640',
-            pointBorderColor: '#021640',
-            pointRadius: 2,
-            pointHoverRadius: 5
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: { display: false },
-            tooltip: {
-              callbacks: {
-                label: (context) => 'KSH ' + formatNumber(context.parsed.y)
-              }
-            }
-          },
-          scales: {
-            y: {
-              beginAtZero: true,
-              ticks: { callback: (value) => formatToThousands(value) }
-            }
-          }
-        }
-      });
-    }
-    
-    // 2. Sales by Location
-    function renderSalesLocationChart() {
-      const ctx = document.getElementById('salesLocationChart');
-      if (charts.salesLocation) charts.salesLocation.destroy();
-      
-      const locationSales = {};
-      dashboardData.sales.forEach(sale => {
-        const county = sale.county || 'Unknown';
-        locationSales[county] = (locationSales[county] || 0) + (parseFloat(sale.total_amount) || 0);
-      });
-      
-      charts.salesLocation = new Chart(ctx, {
-        type: 'bar',
-        data: {
-          labels: Object.keys(locationSales),
-          datasets: [{
-            label: 'Sales Amount',
-            data: Object.values(locationSales),
-            backgroundColor: 'rgba(26, 188, 156, 0.7)',
-            borderColor: 'rgba(26, 188, 156, 1)',
-            borderWidth: 2
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: { display: false },
-            tooltip: { callbacks: { label: (context) => 'KSH ' + formatNumber(context.parsed.y) } }
-          },
-          scales: {
-            y: { beginAtZero: true, ticks: { callback: (value) => formatToThousands(value) } }
-          }
-        }
-      });
-    }
-    
-    // 3. Purchases by Location
-    function renderPurchasesLocationChart() {
-      const ctx = document.getElementById('purchasesLocationChart');
-      if (charts.purchasesLocation) charts.purchasesLocation.destroy();
-      
-      const locationPurchases = {};
-      dashboardData.purchases.forEach(purchase => {
-        const county = purchase.county || 'Unknown';
-        locationPurchases[county] = (locationPurchases[county] || 0) + (parseFloat(purchase.total_amount) || 0);
-      });
-      
-      charts.purchasesLocation = new Chart(ctx, {
-        type: 'bar',
-        data: {
-          labels: Object.keys(locationPurchases),
-          datasets: [{
-            label: 'Purchase Amount',
-            data: Object.values(locationPurchases),
-            backgroundColor: 'rgba(52, 152, 219, 0.7)',
-            borderColor: 'rgba(52, 152, 219, 1)',
-            borderWidth: 2
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: { display: false },
-            tooltip: { callbacks: { label: (context) => 'KSH ' + formatNumber(context.parsed.y) } }
-          },
-          scales: {
-            y: { beginAtZero: true, ticks: { callback: (value) => formatToThousands(value) } }
-          }
-        }
-      });
-    }
-    
-    // 4. Payment Status
-    function renderPaymentStatusChart() {
-      const ctx = document.getElementById('paymentStatusChart');
-      if (charts.paymentStatus) charts.paymentStatus.destroy();
-      
-      const statusCounts = { completed: 0, pending: 0, partial: 0 };
-      
-      dashboardData.purchases.forEach(po => {
-        const status = (po.payment_status || '').toLowerCase();
-        if (status === 'completed') statusCounts.completed++;
-        else if (status === 'pending') statusCounts.pending++;
-        else if (status.includes('partial')) statusCounts.partial++;
-      });
-      
-      dashboardData.sales.forEach(so => {
-        const status = (so.receipt_status || '').toLowerCase();
-        if (status === 'completed') statusCounts.completed++;
-        else if (status === 'pending') statusCounts.pending++;
-        else if (status.includes('partial')) statusCounts.partial++;
-      });
-      
-      charts.paymentStatus = new Chart(ctx, {
-        type: 'pie',
-        data: {
-          labels: ['Completed', 'Partial Payment', 'Pending'],
-          datasets: [{
-            data: [statusCounts.completed, statusCounts.partial, statusCounts.pending],
-            backgroundColor: ['rgba(46, 204, 113, 0.8)', 'rgba(52, 152, 219, 0.8)', 'rgba(243, 156, 18, 0.8)'],
-            borderWidth: 2,
-            borderColor: '#ffffff'
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: { legend: { position: 'bottom' } }
-        }
-      });
-    }
-    
-    // 5. Top Customers
-    function renderTopCustomersChart() {
-      const ctx = document.getElementById('topCustomersChart');
-      if (charts.topCustomers) charts.topCustomers.destroy();
-      
-      const topCustomers = [...dashboardData.customers]
-        .sort((a, b) => (parseFloat(b.sales) || 0) - (parseFloat(a.sales) || 0))
-        .slice(0, 5);
-      
-      charts.topCustomers = new Chart(ctx, {
-        type: 'bar',
-        data: {
-          labels: topCustomers.map(c => c.name || 'Unknown'),
-          datasets: [{
-            label: 'Total Sales',
-            data: topCustomers.map(c => parseFloat(c.sales) || 0),
-            backgroundColor: 'rgba(155, 89, 182, 0.7)',
-            borderColor: 'rgba(155, 89, 182, 1)',
-            borderWidth: 2
-          }]
-        },
-        options: {
-          indexAxis: 'y',
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: { display: false },
-            tooltip: { callbacks: { label: (context) => 'KSH ' + formatNumber(context.parsed.x) } }
-          },
-scales: {
-x: { beginAtZero: true, ticks: { callback: (value) => formatToThousands(value) } }
-}
-}
-});
+  // 1. Inventory Cost Value (at purchase price - actual investment)
+  const inventoryCostValue = dashboardData.inventory.reduce((sum, item) => {
+    return sum + ((parseFloat(item.remainingQty) || 0) * (parseFloat(item.purchase_price) || 0));
+  }, 0);
+  document.getElementById('inventoryCostValue').textContent = 'KSH ' + formatNumber(inventoryCostValue);
+  document.getElementById('inventoryCostChange').textContent = `${dashboardData.inventory.length} items | Cost basis`;
+  
+  // 2. Potential Revenue (at sale price - what you could earn if all sold)
+  const potentialRevenue = dashboardData.inventory.reduce((sum, item) => {
+    return sum + ((parseFloat(item.remainingQty) || 0) * (parseFloat(item.sale_price) || 0));
+  }, 0);
+  const potentialProfit = potentialRevenue - inventoryCostValue;
+  const potentialMargin = inventoryCostValue > 0 ? ((potentialProfit / inventoryCostValue) * 100).toFixed(1) : 0;
+  document.getElementById('potentialRevenue').textContent = 'KSH ' + formatNumber(potentialRevenue);
+  const potentialProfitElement = document.getElementById('potentialProfit');
+  potentialProfitElement.textContent = `KSH ${formatNumber(potentialProfit)} (${potentialMargin}% margin)`;
+  potentialProfitElement.className = potentialProfit >= 0 ? 'stat-change positive' : 'stat-change negative';
+  
+  // 3. Total Sales
+  const totalSales = dashboardData.sales.reduce((sum, sale) => sum + (parseFloat(sale.total_amount) || 0), 0);
+  document.getElementById('totalSales').textContent = 'KSH ' + formatNumber(totalSales);
+  document.getElementById('salesChange').textContent = `${dashboardData.sales.length} sales orders`;
+  
+  // 4. Total Purchases
+  const totalPurchases = dashboardData.purchases.reduce((sum, purchase) => sum + (parseFloat(purchase.total_amount) || 0), 0);
+  document.getElementById('totalPurchases').textContent = 'KSH ' + formatNumber(totalPurchases);
+  document.getElementById('purchasesChange').textContent = `${dashboardData.purchases.length} purchase orders`;
+  
+  // 5. Net Profit & Margin
+  const netProfit = totalSales - totalPurchases;
+  const profitMargin = totalSales > 0 ? ((netProfit / totalSales) * 100).toFixed(1) : 0;
+  document.getElementById('netProfit').textContent = 'KSH ' + formatNumber(netProfit);
+  const profitMarginElement = document.getElementById('profitMargin');
+  profitMarginElement.textContent = `Margin: ${profitMargin}%`;
+  profitMarginElement.className = netProfit >= 0 ? 'stat-change positive' : 'stat-change negative';
+  
+  // 6. Total Receivables
+  const totalReceivables = dashboardData.customers.reduce((sum, customer) => sum + (parseFloat(customer.balance) || 0), 0);
+  document.getElementById('totalReceivables').textContent = 'KSH ' + formatNumber(totalReceivables);
+  document.getElementById('receivablesChange').textContent = `From ${dashboardData.customers.length} customers`;
+  
+  // 7. Total Payables
+  const totalPayables = dashboardData.suppliers.reduce((sum, supplier) => sum + (parseFloat(supplier.balance) || 0), 0);
+  document.getElementById('totalPayables').textContent = 'KSH ' + formatNumber(totalPayables);
+  document.getElementById('payablesChange').textContent = `To ${dashboardData.suppliers.length} suppliers`;
+  
+  // 8. Reorder Required Items
+  const reorderItems = dashboardData.inventory.filter(item => item.reorderRequired === 'YES').length;
+  document.getElementById('reorderItems').textContent = reorderItems;
 }
 
-// 6. Sales by Category (from Details)
-    function renderSalesCategoryChart() {
-      const ctx = document.getElementById('salesCategoryChart');
-      if (charts.salesCategory) charts.salesCategory.destroy();
-      
-      const categorySales = {};
-      dashboardData.salesDetails.forEach(detail => {
-        const category = detail.item_category || 'Unknown';
-        categorySales[category] = (categorySales[category] || 0) + (parseFloat(detail.total_sales_price) || 0);
-      });
-      
-      const sortedCategories = Object.entries(categorySales)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 6);
-      
-      charts.salesCategory = new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-          labels: sortedCategories.map(c => c[0]),
-          datasets: [{
-            data: sortedCategories.map(c => c[1]),
-            backgroundColor: [
-              'rgba(26, 188, 156, 0.8)',
-              'rgba(52, 152, 219, 0.8)',
-              'rgba(155, 89, 182, 0.8)',
-              'rgba(230, 126, 34, 0.8)',
-              'rgba(231, 76, 60, 0.8)',
-              'rgba(243, 156, 18, 0.8)'
-            ],
-            borderWidth: 2,
-            borderColor: '#ffffff'
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: { position: 'bottom' },
-            tooltip: {
-              callbacks: {
-                label: (context) => {
-                  const label = context.label || '';
-                  const value = context.parsed || 0;
-                  const total = context.dataset.data.reduce((sum, val) => sum + val, 0);
-                  const percentage = ((value / total) * 100).toFixed(1);
-                  return `${label}: KSH ${formatNumber(value)} (${percentage}%)`;
-                }
-              }
+function renderCharts() {
+  console.log('📊 Rendering charts...');
+  renderSalesTrendChart();
+  renderSalesLocationChart();
+  renderPurchasesLocationChart();
+  renderPaymentStatusChart();
+  renderTopCustomersChart();
+  console.log('✅ All charts rendered');
+}
+
+function renderSalesTrendChart() {
+  const ctx = document.getElementById('salesTrendChart');
+  if (charts.salesTrend) charts.salesTrend.destroy();
+  
+  const monthlySales = {};
+  dashboardData.sales.forEach(sale => {
+    const date = parseDate(sale.date);
+    const monthYear = `${date.getMonth() + 1}/${date.getFullYear()}`;
+    if (!monthlySales[monthYear]) {
+      monthlySales[monthYear] = { date: date, amount: 0 };
+    }
+    monthlySales[monthYear].amount += parseFloat(sale.total_amount) || 0;
+  });
+  
+  const sortedMonths = Object.keys(monthlySales).sort((a, b) => monthlySales[a].date - monthlySales[b].date);
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const labels = sortedMonths.map(key => {
+    const date = monthlySales[key].date;
+    return `${months[date.getMonth()]} ${date.getFullYear()}`;
+  });
+  const data = sortedMonths.map(key => monthlySales[key].amount);
+  
+  charts.salesTrend = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: 'Sales',
+        data: data,
+        backgroundColor: 'rgba(2, 22, 64, 0.2)',
+        borderColor: '#021640',
+        borderWidth: 2,
+        fill: true,
+        tension: 0.4,
+        pointBackgroundColor: '#021640',
+        pointBorderColor: '#021640',
+        pointRadius: 2,
+        pointHoverRadius: 5
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: (context) => 'KSH ' + formatNumber(context.parsed.y)
+          }
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: { callback: (value) => formatToThousands(value) }
+        }
+      }
+    }
+  });
+}
+
+function renderSalesLocationChart() {
+  const ctx = document.getElementById('salesLocationChart');
+  if (charts.salesLocation) charts.salesLocation.destroy();
+  
+  const locationSales = {};
+  dashboardData.sales.forEach(sale => {
+    const county = sale.county || 'Unknown';
+    locationSales[county] = (locationSales[county] || 0) + (parseFloat(sale.total_amount) || 0);
+  });
+  
+  charts.salesLocation = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: Object.keys(locationSales),
+      datasets: [{
+        label: 'Sales Amount',
+        data: Object.values(locationSales),
+        backgroundColor: 'rgba(26, 188, 156, 0.7)',
+        borderColor: 'rgba(26, 188, 156, 1)',
+        borderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: (context) => 'KSH ' + formatNumber(context.parsed.y) } }
+      },
+      scales: {
+        y: { beginAtZero: true, ticks: { callback: (value) => formatToThousands(value) } }
+      }
+    }
+  });
+}
+
+function renderPurchasesLocationChart() {
+  const ctx = document.getElementById('purchasesLocationChart');
+  if (charts.purchasesLocation) charts.purchasesLocation.destroy();
+  
+  const locationPurchases = {};
+  dashboardData.purchases.forEach(purchase => {
+    const county = purchase.county || 'Unknown';
+    locationPurchases[county] = (locationPurchases[county] || 0) + (parseFloat(purchase.total_amount) || 0);
+  });
+  
+  charts.purchasesLocation = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: Object.keys(locationPurchases),
+      datasets: [{
+        label: 'Purchase Amount',
+        data: Object.values(locationPurchases),
+        backgroundColor: 'rgba(52, 152, 219, 0.7)',
+        borderColor: 'rgba(52, 152, 219, 1)',
+        borderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: (context) => 'KSH ' + formatNumber(context.parsed.y) } }
+      },
+      scales: {
+        y: { beginAtZero: true, ticks: { callback: (value) => formatToThousands(value) } }
+      }
+    }
+  });
+}
+
+function renderPaymentStatusChart() {
+  const ctx = document.getElementById('paymentStatusChart');
+  if (charts.paymentStatus) charts.paymentStatus.destroy();
+  
+  const statusCounts = { completed: 0, pending: 0, partial: 0 };
+  
+  dashboardData.purchases.forEach(po => {
+    const status = (po.payment_status || '').toLowerCase();
+    if (status === 'completed') statusCounts.completed++;
+    else if (status === 'pending') statusCounts.pending++;
+    else if (status.includes('partial')) statusCounts.partial++;
+  });
+  
+  dashboardData.sales.forEach(so => {
+    const status = (so.receipt_status || '').toLowerCase();
+    if (status === 'completed') statusCounts.completed++;
+    else if (status === 'pending') statusCounts.pending++;
+    else if (status.includes('partial')) statusCounts.partial++;
+  });
+  
+  charts.paymentStatus = new Chart(ctx, {
+    type: 'pie',
+    data: {
+      labels: ['Completed', 'Partial Payment', 'Pending'],
+      datasets: [{
+        data: [statusCounts.completed, statusCounts.partial, statusCounts.pending],
+        backgroundColor: ['rgba(46, 204, 113, 0.8)', 'rgba(52, 152, 219, 0.8)', 'rgba(243, 156, 18, 0.8)'],
+        borderWidth: 2,
+        borderColor: '#ffffff'
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom' } }
+    }
+  });
+}
+
+function renderTopCustomersChart() {
+  const ctx = document.getElementById('topCustomersChart');
+  if (charts.topCustomers) charts.topCustomers.destroy();
+  
+  const topCustomers = [...dashboardData.customers]
+    .sort((a, b) => (parseFloat(b.sales) || 0) - (parseFloat(a.sales) || 0))
+    .slice(0, 5);
+  
+  charts.topCustomers = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: topCustomers.map(c => c.name || 'Unknown'),
+      datasets: [{
+        label: 'Total Sales',
+        data: topCustomers.map(c => parseFloat(c.sales) || 0),
+        backgroundColor: 'rgba(155, 89, 182, 0.7)',
+        borderColor: 'rgba(155, 89, 182, 1)',
+        borderWidth: 2
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: (context) => 'KSH ' + formatNumber(context.parsed.x) } }
+      },
+      scales: {
+        x: { beginAtZero: true, ticks: { callback: (value) => formatToThousands(value) } }
+      }
+    }
+  });
+}
+
+function renderSalesCategoryChart() {
+  const ctx = document.getElementById('salesCategoryChart');
+  if (charts.salesCategory) charts.salesCategory.destroy();
+  
+  const categorySales = {};
+  dashboardData.salesDetails.forEach(detail => {
+    const category = detail.item_category || 'Unknown';
+    categorySales[category] = (categorySales[category] || 0) + (parseFloat(detail.total_sales_price) || 0);
+  });
+  
+  const sortedCategories = Object.entries(categorySales)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 6);
+  
+  charts.salesCategory = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: sortedCategories.map(c => c[0]),
+      datasets: [{
+        data: sortedCategories.map(c => c[1]),
+        backgroundColor: [
+          'rgba(26, 188, 156, 0.8)',
+          'rgba(52, 152, 219, 0.8)',
+          'rgba(155, 89, 182, 0.8)',
+          'rgba(230, 126, 34, 0.8)',
+          'rgba(231, 76, 60, 0.8)',
+          'rgba(243, 156, 18, 0.8)'
+        ],
+        borderWidth: 2,
+        borderColor: '#ffffff'
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom' },
+        tooltip: {
+          callbacks: {
+            label: (context) => {
+              const label = context.label || '';
+              const value = context.parsed || 0;
+              const total = context.dataset.data.reduce((sum, val) => sum + val, 0);
+              const percentage = ((value / total) * 100).toFixed(1);
+              return `${label}: KSH ${formatNumber(value)} (${percentage}%)`;
             }
           }
         }
-      });
+      }
     }
-    
-    // 7. Purchases by Category (from Details)
-    function renderPurchasesCategoryChart() {
-      const ctx = document.getElementById('purchasesCategoryChart');
-      if (charts.purchasesCategory) charts.purchasesCategory.destroy();
-      
-      const categoryPurchases = {};
-      dashboardData.purchaseDetails.forEach(detail => {
-        const category = detail.item_category || 'Unknown';
-        categoryPurchases[category] = (categoryPurchases[category] || 0) + (parseFloat(detail.total_purchase_price) || 0);
-      });
-      
-      const sortedCategories = Object.entries(categoryPurchases)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 6);
-      
-      charts.purchasesCategory = new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-          labels: sortedCategories.map(c => c[0]),
-          datasets: [{
-            data: sortedCategories.map(c => c[1]),
-            backgroundColor: [
-              'rgba(52, 152, 219, 0.8)',
-              'rgba(26, 188, 156, 0.8)',
-              'rgba(230, 126, 34, 0.8)',
-              'rgba(155, 89, 182, 0.8)',
-              'rgba(243, 156, 18, 0.8)',
-              'rgba(231, 76, 60, 0.8)'
-            ],
-            borderWidth: 2,
-            borderColor: '#ffffff'
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: { position: 'bottom' },
-            tooltip: {
-              callbacks: {
-                label: (context) => {
-                  const label = context.label || '';
-                  const value = context.parsed || 0;
-                  const total = context.dataset.data.reduce((sum, val) => sum + val, 0);
-                  const percentage = ((value / total) * 100).toFixed(1);
-                  return `${label}: KSH ${formatNumber(value)} (${percentage}%)`;
-                }
-              }
+  });
+}
+
+function renderPurchasesCategoryChart() {
+  const ctx = document.getElementById('purchasesCategoryChart');
+  if (charts.purchasesCategory) charts.purchasesCategory.destroy();
+  
+  const categoryPurchases = {};
+  dashboardData.purchaseDetails.forEach(detail => {
+    const category = detail.item_category || 'Unknown';
+    categoryPurchases[category] = (categoryPurchases[category] || 0) + (parseFloat(detail.total_purchase_price) || 0);
+  });
+  
+  const sortedCategories = Object.entries(categoryPurchases)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 6);
+  
+  charts.purchasesCategory = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: sortedCategories.map(c => c[0]),
+      datasets: [{
+        data: sortedCategories.map(c => c[1]),
+        backgroundColor: [
+          'rgba(52, 152, 219, 0.8)',
+          'rgba(26, 188, 156, 0.8)',
+          'rgba(230, 126, 34, 0.8)',
+          'rgba(155, 89, 182, 0.8)',
+          'rgba(243, 156, 18, 0.8)',
+          'rgba(231, 76, 60, 0.8)'
+        ],
+        borderWidth: 2,
+        borderColor: '#ffffff'
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom' },
+        tooltip: {
+          callbacks: {
+            label: (context) => {
+              const label = context.label || '';
+              const value = context.parsed || 0;
+              const total = context.dataset.data.reduce((sum, val) => sum + val, 0);
+              const percentage = ((value / total) * 100).toFixed(1);
+              return `${label}: KSH ${formatNumber(value)} (${percentage}%)`;
             }
           }
         }
-      });
-    }
-    
-    // Update KPIs - Additional Calculations
-    function updateAdditionalKPIs() {
-      // Top Selling Item
-      const itemSales = {};
-      dashboardData.salesDetails.forEach(detail => {
-        const itemName = detail.item_name;
-        if (!itemSales[itemName]) {
-          itemSales[itemName] = {
-            qty: 0,
-            revenue: 0,
-            category: detail.item_category,
-            type: detail.item_type
-          };
-        }
-        itemSales[itemName].qty += parseInt(detail.quantity_sold) || 0;
-        itemSales[itemName].revenue += parseFloat(detail.total_sales_price) || 0;
-      });
-      
-      const topItem = Object.entries(itemSales)
-        .sort((a, b) => b[1].qty - a[1].qty)[0];
-      
-      if (topItem) {
-        const [itemName, data] = topItem;
-        document.getElementById('topSellingItem').textContent = itemName;
-        document.getElementById('topItemCategory').textContent = `${data.category} | ${data.type}`;
-      } else {
-        document.getElementById('topSellingItem').textContent = 'No Data';
-        document.getElementById('topItemCategory').textContent = 'N/A';
-      }
-      
-      // Top Sales Location
-      const locationSales = {};
-      dashboardData.sales.forEach(sale => {
-        const county = sale.county || 'Unknown';
-        locationSales[county] = (locationSales[county] || 0) + (parseFloat(sale.total_amount) || 0);
-      });
-      
-      const topLocation = Object.entries(locationSales)
-        .sort((a, b) => b[1] - a[1])[0];
-      
-      if (topLocation) {
-        const [county, amount] = topLocation;
-        document.getElementById('topSalesLocation').textContent = county;
-        document.getElementById('topLocationAmount').textContent = `KSH ${formatNumber(amount)}`;
-      } else {
-        document.getElementById('topSalesLocation').textContent = 'No Data';
-        document.getElementById('topLocationAmount').textContent = 'N/A';
       }
     }
-    
-    // Render Tables
-    function renderTables() {
-      renderLowStockTable();
-      renderRecentSalesTable();
-      renderRecentPurchasesTable();
-      updateAdditionalKPIs();
-      renderSalesCategoryChart();
-      renderPurchasesCategoryChart();
+  });
+}
+
+function updateAdditionalKPIs() {
+  const itemSales = {};
+  dashboardData.salesDetails.forEach(detail => {
+    const itemName = detail.item_name;
+    if (!itemSales[itemName]) {
+      itemSales[itemName] = {
+        qty: 0,
+        revenue: 0,
+        category: detail.item_category,
+        type: detail.item_type
+      };
     }
+    itemSales[itemName].qty += parseInt(detail.quantity_sold) || 0;
+    itemSales[itemName].revenue += parseFloat(detail.total_sales_price) || 0;
+  });
+  
+  const topItem = Object.entries(itemSales)
+    .sort((a, b) => b[1].qty - a[1].qty)[0];
+  
+  if (topItem) {
+    const [itemName, data] = topItem;
+    document.getElementById('topSellingItem').textContent = itemName;
+    document.getElementById('topItemCategory').textContent = `${data.category} | ${data.type}`;
+  } else {
+    document.getElementById('topSellingItem').textContent = 'No Data';
+    document.getElementById('topItemCategory').textContent = 'N/A';
+  }
+  
+  const locationSales = {};
+  dashboardData.sales.forEach(sale => {
+    const county = sale.county || 'Unknown';
+    locationSales[county] = (locationSales[county] || 0) + (parseFloat(sale.total_amount) || 0);
+  });
+  
+  const topLocation = Object.entries(locationSales)
+    .sort((a, b) => b[1] - a[1])[0];
+  
+  if (topLocation) {
+    const [county, amount] = topLocation;
+    document.getElementById('topSalesLocation').textContent = county;
+    document.getElementById('topLocationAmount').textContent = `KSH ${formatNumber(amount)}`;
+  } else {
+    document.getElementById('topSalesLocation').textContent = 'No Data';
+    document.getElementById('topLocationAmount').textContent = 'N/A';
+  }
+}
+
+function renderTables() {
+  renderLowStockTable();
+  renderRecentSalesTable();
+  renderRecentPurchasesTable();
+  updateAdditionalKPIs();
+  renderSalesCategoryChart();
+  renderPurchasesCategoryChart();
+}
+
+function renderLowStockTable() {
+  const tableBody = document.getElementById('lowStockTable');
+  const lowStockItems = dashboardData.inventory
+    .filter(item => item.reorderRequired === 'YES')
+    .sort((a, b) => (a.remainingQty - a.reorderLevel) - (b.remainingQty - b.reorderLevel))
+    .slice(0, 10);
+  
+  if (lowStockItems.length === 0) {
+    tableBody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 30px; color: #2ecc71;"><i class="fas fa-check-circle" style="font-size: 2rem; margin-bottom: 10px; display: block;"></i>All items are adequately stocked!</td></tr>';
+    return;
+  }
+  
+  tableBody.innerHTML = lowStockItems.map(item => `
+    <tr>
+      <td>${item.id}</td>
+      <td>${item.name}</td>
+      <td>${item.category}</td>
+      <td style="font-weight: 600; color: ${item.remainingQty === 0 ? '#e74c3c' : '#f39c12'};">${item.remainingQty}</td>
+      <td>${item.reorderLevel}</td>
+      <td>
+        <span class="status-badge reorder">
+          <i class="fas fa-exclamation-triangle"></i> REORDER
+        </span>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function renderRecentSalesTable() {
+  const tableBody = document.getElementById('recentSalesTable');
+  const recentSales = [...dashboardData.sales]
+    .sort((a, b) => parseDate(b.date) - parseDate(a.date))
+    .slice(0, 10);
+  
+  if (recentSales.length === 0) {
+    tableBody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 30px;">No sales orders yet</td></tr>';
+    return;
+  }
+  
+  tableBody.innerHTML = recentSales.map(sale => {
+    const receiptStatusClass = (sale.receipt_status || '').toLowerCase().replace(/\s+/g, '-');
+    const shippingStatusClass = (sale.shipping_status || '').toLowerCase().replace(/\s+/g, '-');
     
-    // 1. Low Stock Table
-    function renderLowStockTable() {
-      const tableBody = document.getElementById('lowStockTable');
-      const lowStockItems = dashboardData.inventory
-        .filter(item => item.reorderRequired === 'YES')
-        .sort((a, b) => (a.remainingQty - a.reorderLevel) - (b.remainingQty - b.reorderLevel))
-        .slice(0, 10);
-      
-      if (lowStockItems.length === 0) {
-        tableBody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 30px; color: #2ecc71;"><i class="fas fa-check-circle" style="font-size: 2rem; margin-bottom: 10px; display: block;"></i>All items are adequately stocked!</td></tr>';
-        return;
-      }
-      
-      tableBody.innerHTML = lowStockItems.map(item => `
-        <tr>
-          <td>${item.id}</td>
-          <td>${item.name}</td>
-          <td>${item.category}</td>
-          <td style="font-weight: 600; color: ${item.remainingQty === 0 ? '#e74c3c' : '#f39c12'};">${item.remainingQty}</td>
-          <td>${item.reorderLevel}</td>
-          <td>
-            <span class="status-badge reorder">
-              <i class="fas fa-exclamation-triangle"></i> REORDER
-            </span>
-          </td>
-        </tr>
-      `).join('');
-    }
+    return `
+      <tr>
+        <td>${sale.so_id}</td>
+        <td>${sale.date}</td>
+        <td>${sale.customer_name}</td>
+        <td>KSH ${formatNumber(parseFloat(sale.total_amount) || 0)}</td>
+        <td>
+          <span class="status-badge ${receiptStatusClass}">
+            ${sale.receipt_status || 'N/A'}
+          </span>
+        </td>
+        <td>
+          <span class="status-badge ${shippingStatusClass}">
+            ${sale.shipping_status || 'N/A'}
+          </span>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function renderRecentPurchasesTable() {
+  const tableBody = document.getElementById('recentPurchasesTable');
+  const recentPurchases = [...dashboardData.purchases]
+    .sort((a, b) => parseDate(b.date) - parseDate(a.date))
+    .slice(0, 10);
+  
+  if (recentPurchases.length === 0) {
+    tableBody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 30px;">No purchase orders yet</td></tr>';
+    return;
+  }
+  
+  tableBody.innerHTML = recentPurchases.map(purchase => {
+    const paymentStatusClass = (purchase.payment_status || '').toLowerCase().replace(/\s+/g, '-');
+    const shippingStatusClass = (purchase.shipping_status || '').toLowerCase().replace(/\s+/g, '-');
     
-    // 2. Recent Sales Table
-    function renderRecentSalesTable() {
-      const tableBody = document.getElementById('recentSalesTable');
-      const recentSales = [...dashboardData.sales]
-        .sort((a, b) => parseDate(b.date) - parseDate(a.date))
-        .slice(0, 10);
-      
-      if (recentSales.length === 0) {
-        tableBody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 30px;">No sales orders yet</td></tr>';
-        return;
-      }
-      
-      tableBody.innerHTML = recentSales.map(sale => {
-        const receiptStatusClass = (sale.receipt_status || '').toLowerCase().replace(/\s+/g, '-');
-        const shippingStatusClass = (sale.shipping_status || '').toLowerCase().replace(/\s+/g, '-');
-        
-        return `
-          <tr>
-            <td>${sale.so_id}</td>
-            <td>${sale.date}</td>
-            <td>${sale.customer_name}</td>
-            <td>KSH ${formatNumber(parseFloat(sale.total_amount) || 0)}</td>
-            <td>
-              <span class="status-badge ${receiptStatusClass}">
-                ${sale.receipt_status || 'N/A'}
-              </span>
-            </td>
-            <td>
-              <span class="status-badge ${shippingStatusClass}">
-                ${sale.shipping_status || 'N/A'}
-              </span>
-            </td>
-          </tr>
-        `;
-      }).join('');
-    }
-    
-    // 3. Recent Purchases Table
-    function renderRecentPurchasesTable() {
-      const tableBody = document.getElementById('recentPurchasesTable');
-      const recentPurchases = [...dashboardData.purchases]
-        .sort((a, b) => parseDate(b.date) - parseDate(a.date))
-        .slice(0, 10);
-      
-      if (recentPurchases.length === 0) {
-        tableBody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 30px;">No purchase orders yet</td></tr>';
-        return;
-      }
-      
-      tableBody.innerHTML = recentPurchases.map(purchase => {
-        const paymentStatusClass = (purchase.payment_status || '').toLowerCase().replace(/\s+/g, '-');
-        const shippingStatusClass = (purchase.shipping_status || '').toLowerCase().replace(/\s+/g, '-');
-        
-        return `
-          <tr>
-            <td>${purchase.po_id}</td>
-            <td>${purchase.date}</td>
-            <td>${purchase.supplier_name}</td>
-            <td>KSH ${formatNumber(parseFloat(purchase.total_amount) || 0)}</td>
-            <td>
-              <span class="status-badge ${paymentStatusClass}">
-                ${purchase.payment_status || 'N/A'}
-              </span>
-            </td>
-            <td>
-              <span class="status-badge ${shippingStatusClass}">
-                ${purchase.shipping_status || 'N/A'}
-              </span>
-            </td>
-          </tr>
-        `;
-      }).join('');
-    }
-    console.log('✅ Dashboard JavaScript Complete!');
+    return `
+      <tr>
+        <td>${purchase.po_id}</td>
+        <td>${purchase.date}</td>
+        <td>${purchase.supplier_name}</td>
+        <td>KSH ${formatNumber(parseFloat(purchase.total_amount) || 0)}</td>
+        <td>
+          <span class="status-badge ${paymentStatusClass}">
+            ${purchase.payment_status || 'N/A'}
+          </span>
+        </td>
+        <td>
+          <span class="status-badge ${shippingStatusClass}">
+            ${purchase.shipping_status || 'N/A'}
+          </span>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+console.log('✅ Dashboard JavaScript Complete!');
 
   </script>
 </body>
