@@ -957,12 +957,14 @@ function openDeleteModal(button) {
     const itemName = button.getAttribute('data-item-name');
     const itemQty = parseInt(button.getAttribute('data-item-qty')) || 0;
     
-    // Store item data for deletion
+    // ✅ Store item data globally
     itemToDelete = {
         id: itemId,
         name: itemName,
         qty: itemQty
     };
+    
+    console.log('📋 Item selected for deletion:', itemToDelete);
     
     // Populate modal with item info
     document.getElementById('deleteItemId').textContent = itemId;
@@ -972,9 +974,9 @@ function openDeleteModal(button) {
     // Change qty color based on value
     const qtyElement = document.getElementById('deleteItemQty');
     if (itemQty > 0) {
-        qtyElement.style.color = '#e74c3c'; // Red for items with stock
+        qtyElement.style.color = '#bb1300'; // Red for items with stock
     } else {
-        qtyElement.style.color = '#27ae60'; // Green for zero stock
+        qtyElement.style.color = '#1e8348'; // Green for zero stock
     }
     
     // Show modal
@@ -984,28 +986,67 @@ function openDeleteModal(button) {
 // Close delete modal
 function closeDeleteModal() {
     document.getElementById('deleteConfirmModal').style.display = 'none';
-    itemToDelete = null;
+    // ✅ DON'T clear itemToDelete here - let confirmDelete handle it
+    // itemToDelete will be cleared after the delete operation completes
 }
 
 // Confirm delete
 async function confirmDelete() {
-    if (!itemToDelete) {
+    // ✅ CRITICAL: Check if itemToDelete exists and has required data
+    if (!itemToDelete || !itemToDelete.id) {
+        console.error('❌ No item data available for deletion');
         closeDeleteModal();
+        alert('⚠️ Error: No item selected for deletion. Please try again.');
+        itemToDelete = null;
         return;
     }
     
-    // Check if item has stock
-    if (itemToDelete.qty > 0) {
+    // ✅ STORE ALL DATA FIRST - Before any modal closing or clearing
+    const itemIdToDelete = itemToDelete.id;
+    const itemNameToDelete = itemToDelete.name;
+    const itemQtyToDelete = itemToDelete.qty;
+    
+    console.log('🗑️ Attempting to delete:', { itemIdToDelete, itemNameToDelete, itemQtyToDelete });
+    
+    // ✅ FRONTEND CHECK: Prevent deletion if item has stock
+    if (itemQtyToDelete > 0) {
         closeDeleteModal();
-        alert('❌ Item with stock in hand can\'t be deleted\n\nItem: ' + itemToDelete.name + '\nQuantity Remaining: ' + itemToDelete.qty);
+        itemToDelete = null; // Clear after showing error
+        alert(`❌ Cannot delete item with existing stock!
+
+Item: ${itemNameToDelete}
+Remaining Quantity: ${itemQtyToDelete}
+
+Please sell or adjust the inventory first.`);
+        return;
+    }
+    
+    // Close modal
+    closeDeleteModal();
+    
+    // Show confirmation using stored variables
+    if (!confirm(`⚠️ FINAL CONFIRMATION
+
+Are you absolutely sure you want to delete this item?
+
+Item ID: ${itemIdToDelete}
+Item Name: ${itemNameToDelete}
+
+This will delete the item from BOTH:
+• Inventory table
+• Inventory Items table
+
+This action CANNOT be undone.`)) {
+        itemToDelete = null; // Clear if user cancels
         return;
     }
     
     // Proceed with deletion
     showProcessing();
-    closeDeleteModal();
     
     try {
+        console.log('📤 Sending delete request for:', itemIdToDelete);
+        
         const response = await fetch('/api/inventory/delete/', {
             method: 'POST',
             headers: {
@@ -1013,22 +1054,34 @@ async function confirmDelete() {
                 'X-CSRFToken': getCSRFToken()
             },
             credentials: 'same-origin',
-            body: JSON.stringify({ item_id: itemToDelete.id })
+            body: JSON.stringify({ item_id: itemIdToDelete })
         });
         
         const result = await response.json();
+        console.log('📥 Delete response:', result);
+        
         if (result.success) {
-            alert('✅ Item deleted successfully');
+            alert(result.message || `✅ Item deleted successfully!
+
+Item: ${itemNameToDelete}
+ID: ${itemIdToDelete}
+
+Deleted from both Inventory and Inventory Items tables.`);
             await loadInventoryItems();
         } else {
-            alert('Error: ' + result.message);
+            // Backend returned an error (has stock, has transactions, etc.)
+            alert(result.message || '❌ Error: Unable to delete item');
         }
     } catch (error) {
-        console.error('Error deleting item:', error);
-        alert('Failed to delete item');
+        console.error('❌ Error deleting item:', error);
+        alert(`❌ Failed to delete item
+
+Error: ${error.message || 'Unknown error'}
+
+Please try again or contact support.`);
     } finally {
         hideProcessing();
-        itemToDelete = null;
+        itemToDelete = null; // ✅ Always clear after operation
     }
 }
 
@@ -1161,13 +1214,14 @@ document.getElementById('searchCriteria')?.addEventListener('change', function()
     }
 });
 
-// Close modal when clicking outside
 window.onclick = function(event) {
     const modal = document.getElementById('deleteConfirmModal');
     if (event.target === modal) {
         closeDeleteModal();
+        itemToDelete = null; // Clear when clicking outside
     }
 }
+
 </script>
   
 </body>

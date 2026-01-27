@@ -646,11 +646,13 @@ def api_update_inventory_item(request):
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
 
-
 @csrf_exempt
 @login_required(login_url='/login/')
 def api_delete_inventory_item(request):
-    """Delete inventory item only if no stock exists"""
+    """
+    Delete inventory item only if no stock exists
+    Deletes from BOTH Inventory and InventoryItem tables
+    """
     if request.method != 'POST':
         return JsonResponse({'success': False, 'message': 'Invalid request method'}, status=405)
     
@@ -662,34 +664,76 @@ def api_delete_inventory_item(request):
             return JsonResponse({'success': False, 'message': 'Item ID is required'}, status=400)
         
         try:
-            item = Inventory.objects.get(item_id=item_id)
+            # Try to get from Inventory table first
+            inventory_item = Inventory.objects.get(item_id=item_id)
             
-            # Check if item has stock
-            remaining_qty = item.quantity_purchased - item.quantity_sold
+            # Calculate remaining quantity
+            remaining_qty = inventory_item.quantity_purchased - inventory_item.quantity_sold
+            
+            # ✅ CRITICAL CHECK: Prevent deletion if stock exists
             if remaining_qty > 0:
                 return JsonResponse({
                     'success': False,
-                    'message': f'Item with stock in hand can\'t be deleted. Quantity Remaining: {remaining_qty}'
+                    'message': f'❌ Cannot delete item with existing stock!\n\nItem: {inventory_item.item_name}\nRemaining Quantity: {remaining_qty}\n\nPlease sell or adjust the inventory first.',
+                    'has_stock': True,
+                    'remaining_qty': remaining_qty
                 }, status=400)
             
-            # Delete from both tables
+            # ✅ CRITICAL CHECK: Prevent deletion if there were any transactions
+            if inventory_item.quantity_purchased > 0 or inventory_item.quantity_sold > 0:
+                return JsonResponse({
+                    'success': False,
+                    'message': f'❌ Cannot delete item with transaction history!\n\nItem: {inventory_item.item_name}\nPurchased: {inventory_item.quantity_purchased}\nSold: {inventory_item.quantity_sold}\n\nThis item has existing transactions.',
+                    'has_transactions': True
+                }, status=400)
+            
+            # ✅ Safe to delete - no stock and no transactions
             with transaction.atomic():
-                InventoryItem.objects.filter(item_id=item_id).delete()
-                item.delete()
+                # Delete from InventoryItem table
+                try:
+                    inventory_master = InventoryItem.objects.get(item_id=item_id)
+                    inventory_master.delete()
+                    print(f"✅ Deleted from InventoryItem: {item_id}")
+                except InventoryItem.DoesNotExist:
+                    print(f"⚠️ Item {item_id} not found in InventoryItem table (already deleted or never existed)")
+                
+                # Delete from Inventory table
+                inventory_item.delete()
+                print(f"✅ Deleted from Inventory: {item_id}")
             
             return JsonResponse({
                 'success': True,
-                'message': 'Inventory item deleted successfully'
+                'message': f'✅ Item deleted successfully!\n\nItem ID: {item_id}\nItem Name: {inventory_item.item_name}'
             })
         
         except Inventory.DoesNotExist:
-            return JsonResponse({'success': False, 'message': 'Item not found'}, status=404)
+            # Item not found in Inventory, check InventoryItem
+            try:
+                inventory_master = InventoryItem.objects.get(item_id=item_id)
+                
+                # If found in InventoryItem only, safe to delete (no transactions ever happened)
+                with transaction.atomic():
+                    inventory_master.delete()
+                    print(f"✅ Deleted from InventoryItem only: {item_id}")
+                
+                return JsonResponse({
+                    'success': True,
+                    'message': f'✅ Item deleted successfully!\n\nItem ID: {item_id}'
+                })
+            
+            except InventoryItem.DoesNotExist:
+                return JsonResponse({
+                    'success': False, 
+                    'message': f'❌ Item not found!\n\nItem ID: {item_id}'
+                }, status=404)
     
     except json.JSONDecodeError:
         return JsonResponse({'success': False, 'message': 'Invalid JSON data'}, status=400)
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
-    
+        print(f"❌ Error deleting inventory item: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'success': False, 'message': f'Server error: {str(e)}'}, status=500)
     
 # ================================= ADDED FOR THE INVENTORY MODULE ============================================
     # Get all inventory with calculated fields

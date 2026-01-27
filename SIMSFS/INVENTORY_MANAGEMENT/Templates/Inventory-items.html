@@ -1282,36 +1282,124 @@
     }
 
     async function deleteItem(itemId) {
-        if (!confirm('Are you sure you want to delete this inventory item?')) {
-            return;
-        }
-        
-        showProcessing();
-        try {
-            const response = await fetch('/api/inventory-items/delete/', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCSRFToken()
-                },
-                credentials: 'same-origin',
-                body: JSON.stringify({ item_id: itemId })
-            });
-            
-            const result = await response.json();
-            if (result.success) {
-                alert('Inventory Item Deleted Successfully');
-                await loadInventoryItems();
-            } else {
-                alert('Error: ' + result.message);
-            }
-        } catch (error) {
-            console.error('Error deleting item:', error);
-            alert('Error deleting inventory item');
-        } finally {
-            hideProcessing();
-        }
+    // ✅ Validate item ID
+    if (!itemId) {
+        alert('⚠️ Error: No item ID provided');
+        return;
     }
+    
+    // ✅ STEP 1: Check if item has inventory stock BEFORE attempting deletion
+    try {
+        // First, check the Inventory table to see if this item has stock
+        const inventoryResponse = await fetch('/api/inventory/all/', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCSRFToken()
+            },
+            credentials: 'same-origin'
+        });
+        
+        const inventoryResult = await inventoryResponse.json();
+        
+        if (inventoryResult.success) {
+            // Find this specific item in inventory
+            const inventoryItem = inventoryResult.data.find(item => item.id === itemId);
+            
+            if (inventoryItem) {
+                // Item exists in Inventory table - check stock
+                const remainingQty = inventoryItem.remainingQty || 0;
+                const purchasedQty = inventoryItem.purchasedQty || 0;
+                const soldQty = inventoryItem.soldQty || 0;
+                
+                // ✅ CRITICAL CHECK: Has stock or transactions
+                if (remainingQty > 0) {
+                    alert(`❌ Cannot delete item with existing stock!
+
+Item ID: ${itemId}
+Item Name: ${inventoryItem.name}
+Remaining Stock: ${remainingQty}
+
+Please sell or adjust the inventory first.`);
+                    return;
+                }
+                
+                // ✅ CRITICAL CHECK: Has transaction history
+                if (purchasedQty > 0 || soldQty > 0) {
+                    alert(`❌ Cannot delete item with transaction history!
+
+Item ID: ${itemId}
+Item Name: ${inventoryItem.name}
+Purchased: ${purchasedQty}
+Sold: ${soldQty}
+
+This item has existing transactions and cannot be deleted.`);
+                    return;
+                }
+            }
+        }
+    } catch (error) {
+        console.error('Error checking inventory:', error);
+        // Continue to deletion attempt - backend will also validate
+    }
+    
+    // ✅ STEP 2: Final confirmation
+    if (!confirm(`⚠️ DELETE CONFIRMATION
+
+Are you sure you want to delete this item?
+
+Item ID: ${itemId}
+
+This will delete the item from BOTH:
+• Inventory Items table
+• Inventory table (if exists)
+
+This action CANNOT be undone.
+
+Click OK to proceed with deletion.`)) {
+        return;
+    }
+    
+    // ✅ STEP 3: Proceed with deletion
+    showProcessing();
+    
+    try {
+        const response = await fetch('/api/inventory-items/delete/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCSRFToken()
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify({ item_id: itemId })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            alert(result.message || `✅ Item deleted successfully!
+
+Item ID: ${itemId}
+
+Deleted from both tables.`);
+            
+            // Reload the items list
+            await loadInventoryItems();
+        } else {
+            // Backend returned specific error (has stock, has transactions, etc.)
+            alert(result.message || '❌ Error: Unable to delete item');
+        }
+    } catch (error) {
+        console.error('❌ Error deleting item:', error);
+        alert(`❌ Failed to delete item
+
+Error: ${error.message || 'Unknown error'}
+
+Please try again or contact support.`);
+    } finally {
+        hideProcessing();
+    }
+}
 
     function searchItems() {
         const criteria = document.getElementById('searchCriteria').value;
