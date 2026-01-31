@@ -21,12 +21,12 @@ from . import views
 urlpatterns = [
     path('admin/', admin.site.urls),
     
-    # Authentication URLs
+    # AUTHENTICATION URLs-LOG IN/LOG OUT/REGISTER
     path('login/', views.login_view, name='login'),
     path('register/', views.register_view, name='register'),
     path('logout/', views.logout_view, name='logout'),
     
-    # Main application
+    # MAIN APPLICATION
     path('', views.index, name='index'),
     
     # Dynamic content loading endpoints
@@ -40,14 +40,18 @@ urlpatterns = [
     path('content/receipts/', views.receipts_content, name='receipts'),
     path('content/payments/', views.payments_content, name='payments'),
     path('content/reports/', views.reports_content, name='reports'),
-    path('content/forecasting/', views.forecasting_content, name='forecasting'),
+    path('content/sales-forecasting/', views.sales_forecasting_content, name='sales_forecasting'),
     path('content/settings/', views.settings_content, name='settings'),
     
-    # API ENDPOINTS
+    # INVENTORY API ENDPOINTS/URLs
     path('api/inventory/', views.api_get_inventory, name='api_get_inventory'),
     path('api/inventory/save/', views.api_save_inventory, name='api_save_inventory'),
+    path('api/inventory/all/', views.api_get_inventory, name='api_get_inventory'),
+    path('api/inventory/update-reorder/', views.api_update_reorder_level, name='api_update_reorder_level'),
+    path('api/inventory/delete/', views.api_delete_inventory_item, name='api_delete_inventory_item'),
     
-    # INVENTORY-ITEM URLS
+    
+    # INVENTORY-ITEM URLs
     path('api/inventory-items/types/', views.api_get_item_types, name='api_get_item_types'),
     path('api/inventory-items/types/add/', views.api_add_item_type, name='api_add_item_type'),
     
@@ -63,14 +67,10 @@ urlpatterns = [
     path('api/inventory-items/update/', views.api_update_inventory_item, name='api_update_inventory_item'),
     path('api/inventory-items/delete/', views.api_delete_inventory_item, name='api_delete_inventory_item'),
     
-    path('test/', views.test_page, name='test'),
     
-    # INVENTORY URLS / Inventory API endpoints
-    path('api/inventory/all/', views.api_get_inventory, name='api_get_inventory'),
-    path('api/inventory/update-reorder/', views.api_update_reorder_level, name='api_update_reorder_level'),
-    path('api/inventory/delete/', views.api_delete_inventory_item, name='api_delete_inventory_item'),
     
-     # Suppliers Module URLs
+    
+    # Suppliers Module URLs
     path('api/suppliers/counties/', views.api_get_counties, name='api_get_counties'),
     path('api/suppliers/counties/add/', views.api_add_county, name='api_add_county'),
     
@@ -178,5 +178,9 @@ path('api/receipts/delete/', views.api_delete_receipt, name='api_delete_receipt'
 # =============================== DASHBOARD URLS/API ENDPOINTS =======================================================================================================================
 path('api/dashboard/sales-details/', views.api_get_all_sales_details, name='api_get_all_sales_details'),
 path('api/dashboard/purchase-details/', views.api_get_all_purchase_details, name='api_get_all_purchase_details'),
+
+
+# ============= TEST URL ==========================================================================================================================================
+path('test/', views.test_page, name='test'),
 
 ]

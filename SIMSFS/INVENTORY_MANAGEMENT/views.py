@@ -25,11 +25,10 @@ from .models import UserManager,User
 def test_page(request):
     return render(request, 'Test.html')
 
-# ============= AUTHENTICATION VIEWS =============
+# ========================================== AUTHENTICATION VIEWS ==============================================================================================
 
 @ensure_csrf_cookie
-def login_view(request):
-    """Handle both login form display and login processing"""
+def login_view(request):                   # HANDLING BOTH THE LOG-IN FORM AND THE LOG-IN PROCESSING
     print("Login view called!")  
     print("Method:", request.method) 
     
@@ -42,14 +41,14 @@ def login_view(request):
             email = data.get('email', '').strip().lower()
             password = data.get('password', '').strip()
             
-            # Validate inputs
+            # INPUT VALIDATION
             if not email or not password:
                 return JsonResponse({
                     'success': False,
                     'message': 'Email and password are required'
                 }, status=400)
             
-            # Find user by email
+            # FIND THE USER USING THE EMAIL
             try:
                 user = User.objects.get(email=email)
             except User.DoesNotExist:
@@ -58,22 +57,21 @@ def login_view(request):
                     'message': 'Invalid email or password'
                 }, status=401)
             
-            # Check password
+            # CHECK THE PASSWORD
             if not user.check_password(password):
                 return JsonResponse({
                     'success': False,
                     'message': 'Invalid email or password'
                 }, status=401)
             
-            # Check if user is active
+            # CONFIRM WHETHER THE USER IS ACTIVE
             if not user.is_active:
                 return JsonResponse({
                     'success': False,
                     'message': 'Account is inactive. Please contact administrator.'
                 }, status=403)
             
-            # Login the user
-            login(request, user)
+            login(request, user)      # LOG-IN THE USER
             
             return JsonResponse({
                 'success': True,
@@ -93,31 +91,30 @@ def login_view(request):
                 'message': f'An error occurred: {str(e)}'
             }, status=500)
     
-    # GET request - show login form
+    # THIS IS THE GET REQUEST FOR THE LOG-IN FORM
     return render(request, 'Log-in_Register.html')
 
 
-def register_view(request):
-    """Handle user registration"""
+def register_view(request):                   # HANDLING BOTH THE USER REGISTRATION FORM AND THE REGISTRATION PROCESS
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
             
-            # Extract and validate data
+            # EXTRACT THEN VALIDATE THE DATA
             full_name = data.get('full_name', '').strip()
             email = data.get('email', '').strip().lower()
             phone_number = data.get('phone_number', '').strip()
             password = data.get('password', '').strip()
             role = data.get('role', '').strip()
             
-            # Validation
+            # INPUT VALIDATION
             if not full_name or len(full_name) < 2:
                 return JsonResponse({
                     'success': False,
                     'message': 'Full name must be at least 2 characters'
                 }, status=400)
             
-            if not email or '@' not in email:
+            if not email or ('@gmail.com' or '@outlook.com' or '@yahoo.com' or '@students.kcau.ac.ke') not in email:
                 return JsonResponse({
                     'success': False,
                     'message': 'Please provide a valid email address'
@@ -141,7 +138,7 @@ def register_view(request):
                     'message': 'Please select a role'
                 }, status=400)
             
-            # Check if email already exists
+            # CHECK WHETHER THE E-MAIL EXISTS
             if User.objects.filter(email=email).exists():
                 return JsonResponse({
                     'success': False,
@@ -191,7 +188,7 @@ def logout_view(request):
     return redirect('login')
 
 
-# ============= MAIN APPLICATION VIEWS =============
+# ================================== MAIN APPLICATION VIEWS ===============================================================================================
 
 @login_required(login_url='/login/')
 def index(request):
@@ -202,7 +199,7 @@ def index(request):
     return render(request, 'Index.html', context)
 
 
-# ============= DYNAMIC CONTENT VIEWS =============
+# ================================= DYNAMIC CONTENT VIEWS =================================================================================================
 
 @login_required(login_url='/login/')
 def dashboard_content(request):
@@ -284,10 +281,10 @@ def reports_content(request):
 
 
 @login_required(login_url='/login/')
-def forecasting_content(request):
-    """Load Forecasting content"""
+def sales_forecasting_content(request):
+    """Load Sales-forecasting content"""
     context = {}
-    return render(request, 'Forecasting.html', context)
+    return render(request, 'Sales-forecasting.html', context)
 
 
 @login_required(login_url='/login/')
@@ -4109,3 +4106,5 @@ def api_get_all_purchase_details(request):
             'success': False,
             'message': str(e)
         }, status=500)
+
+# ========================= SALES FORECASTING VIEWS ============================================================================================================================
