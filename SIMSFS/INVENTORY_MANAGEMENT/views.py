@@ -7,12 +7,30 @@ from django.contrib import messages                                          # I
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.hashers import make_password
 from django.contrib.auth import authenticate, login, logout
-from django.db.models import Q, Sum, Max, F                                  # IMPORTS FOR COMPLEX QUERIES
+from django.db.models import Q, Sum, Max, Min, F, Count,Avg                  # IMPORTS FOR COMPLEX QUERIES
 import json                                                                  # REMEMBER TO REVIEW THIS GUY AT THE ENDPOINTS
+import io
 from django.db import transaction
 from decimal import Decimal
-from datetime import datetime
+from datetime import datetime,timedelta
 import time
+from django.db.models.functions import TruncMonth, TruncDate
+
+from sklearn.ensemble import RandomForestRegressor
+import numpy as np
+
+# ReportLab imports for PDF generation
+from reportlab.lib.pagesizes import letter, A4
+from reportlab.lib import colors
+from reportlab.lib.units import inch
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.enums import TA_CENTER, TA_RIGHT, TA_LEFT
+
+# openpyxl imports for Excel generation
+from openpyxl import Workbook
+from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+from openpyxl.utils import get_column_letter
 
 from .models import ItemType,ItemCategory,ItemSubcategory,PaymentMode,County,Town,PaymentStatus,ReceiptStatus,ShippingStatus,UserRole
 from .models import Inventory,InventoryItem
@@ -4108,3 +4126,607 @@ def api_get_all_purchase_details(request):
         }, status=500)
 
 # ========================= SALES FORECASTING VIEWS ============================================================================================================================
+
+# Django backend endpoint
+def calculate_forecast_ensemble(historical_data, periods):
+    forecasts = {
+        'linear': linear_regression_forecast(),
+        'ema': exponential_smoothing_forecast(),
+        'arima': arima_forecast(),
+    }
+    # Weighted average of all models
+    ensemble = weighted_average(forecasts, weights={'linear': 0.3, 'ema': 0.4, 'arima': 0.3})
+    return ensemble
+
+def ml_forecast(sales_history, external_features):
+    # Features: previous 3 months, day of week, is_holiday, etc.
+    X = prepare_features(sales_history, external_features)
+    y = sales_history['revenue']
+    
+    model = RandomForestRegressor(n_estimators=100)
+    model.fit(X, y)
+    predictions = model.predict(future_features)
+    return predictions
+
+def calculate_accuracy_metrics(forecasts, actuals):
+    mape = np.mean(np.abs((actuals - forecasts) / actuals)) * 100
+    rmse = np.sqrt(np.mean((actuals - forecasts) ** 2))
+    return {'mape': mape, 'rmse': rmse, 'accuracy': 100 - mape}
+
+def calculate_eoq(annual_demand, ordering_cost, holding_cost):
+    """Economic Order Quantity"""
+    eoq = math.sqrt((2 * annual_demand * ordering_cost) / holding_cost)
+    return eoq
+
+def calculate_safety_stock(forecast_std, service_level=0.95):
+    """Safety stock for 95% service level"""
+    z_score = 1.65  # 95% service level
+    safety_stock = z_score * forecast_std
+    return safety_stock
+
+def forecast_profitability(sales_forecast, inventory_data):
+    revenue = sales_forecast['total_sales']
+    cogs = sum(item.quantity * item.purchase_price for item in inventory_data)
+    gross_profit = revenue - cogs
+    gross_margin = (gross_profit / revenue) * 100
+    
+    return {
+        'revenue': revenue,
+        'cogs': cogs,
+        'gross_profit': gross_profit,
+        'gross_margin': gross_margin
+    }
+    
+
+
+
+# ============================================ REPORTS VIEWS ==================================================================================================================
+
+# HELPER FUNCTIONS
+# ============================================
+
+def parse_date(date_str):
+    """Parse date from DD/MM/YYYY or YYYY-MM-DD format"""
+    if not date_str:
+        return None
+    
+    # Try DD/MM/YYYY format first
+    try:
+        return datetime.strptime(date_str, '%d/%m/%Y').date()
+    except:
+        pass
+    
+    # Try YYYY-MM-DD format
+    try:
+        return datetime.strptime(date_str, '%Y-%m-%d').date()
+    except:
+        return None
+
+
+def format_currency(amount):
+    """Format amount as currency string"""
+    if amount is None:
+        return "0.00"
+    return f"{float(amount):,.2f}"
+
+
+def get_date_range(range_type):
+    """
+    Get start and end dates for quick report ranges
+    Returns tuple: (start_date, end_date)
+    """
+    from datetime import date
+    today = date.today()
+    
+    if range_type == 'today':
+        return today, today
+    
+    elif range_type == 'week':
+        # Get start of current week (Monday)
+        start = today - timedelta(days=today.weekday())
+        return start, today
+    
+    elif range_type == 'month':
+        # Get start of current month
+        start = date(today.year, today.month, 1)
+        return start, today
+    
+    elif range_type == 'year':
+        # Get start of current year
+        start = date(today.year, 1, 1)
+        return start, today
+    
+    return None, None
+
+
+# ============================================
+# API ENDPOINTS FOR REPORT GENERATION
+# ============================================
+
+@login_required(login_url='/login/')
+def api_generate_sales_summary(request):
+    """
+    Generate Sales Summary Report
+    Returns: Aggregated sales data with charts
+    """
+    try:
+        # Get filter parameters
+        start_date_str = request.GET.get('start_date', '')
+        end_date_str = request.GET.get('end_date', '')
+        category = request.GET.get('category', '')
+        
+        # Parse dates
+        start_date = parse_date(start_date_str)
+        end_date = parse_date(end_date_str)
+        
+        # Build query
+        query = SalesOrder.objects.all()
+        
+        if start_date:
+            query = query.filter(date__gte=start_date)
+        if end_date:
+            query = query.filter(date__lte=end_date)
+        
+        # Get sales orders
+        sales_orders = query.select_related('customer_id', 'county', 'town')
+        
+        # Calculate KPIs
+        total_sales = sales_orders.aggregate(
+            total=Sum('total_amount')
+        )['total'] or Decimal('0.00')
+        
+        total_received = sales_orders.aggregate(
+            received=Sum('amount_received')
+        )['received'] or Decimal('0.00')
+        
+        total_orders = sales_orders.count()
+        
+        outstanding = total_sales - total_received
+        
+        # Sales by category
+        category_query = SalesDetail.objects.filter(
+            so_id__in=sales_orders
+        )
+        
+        if category:
+            category_query = category_query.filter(item_category=category)
+        
+        sales_by_category = category_query.values('item_category').annotate(
+            total=Sum('total_sales_price')
+        ).order_by('-total')[:10]
+        
+        # Sales trend (daily)
+        daily_sales = sales_orders.annotate(
+            sale_date=TruncDate('date')
+        ).values('sale_date').annotate(
+            total=Sum('total_amount')
+        ).order_by('sale_date')
+        
+        # Top customers
+        top_customers = sales_orders.values(
+            'customer_name'
+        ).annotate(
+            total=Sum('total_amount'),
+            orders=Count('so_id')
+        ).order_by('-total')[:5]
+        
+        # Sales by location
+        sales_by_location = sales_orders.values(
+            'county__county'
+        ).annotate(
+            total=Sum('total_amount')
+        ).order_by('-total')[:10]
+        
+        # Format data for response
+        report_data = {
+            'kpis': {
+                'total_sales': float(total_sales),
+                'total_received': float(total_received),
+                'outstanding': float(outstanding),
+                'total_orders': total_orders,
+                'avg_order_value': float(total_sales / total_orders) if total_orders > 0 else 0
+            },
+            'sales_by_category': [
+                {
+                    'category': item['item_category'],
+                    'total': float(item['total'])
+                }
+                for item in sales_by_category
+            ],
+            'daily_sales': [
+                {
+                    'date': item['sale_date'].strftime('%Y-%m-%d'),
+                    'total': float(item['total'])
+                }
+                for item in daily_sales
+            ],
+            'top_customers': [
+                {
+                    'name': item['customer_name'],
+                    'total': float(item['total']),
+                    'orders': item['orders']
+                }
+                for item in top_customers
+            ],
+            'sales_by_location': [
+                {
+                    'location': item['county__county'] or 'Unknown',
+                    'total': float(item['total'])
+                }
+                for item in sales_by_location
+            ],
+            'period': {
+                'start': start_date.strftime('%d/%m/%Y') if start_date else '',
+                'end': end_date.strftime('%d/%m/%Y') if end_date else ''
+            }
+        }
+        
+        return JsonResponse({
+            'success': True,
+            'data': report_data,
+            'report_type': 'Sales Summary Report'
+        })
+    
+    except Exception as e:
+        print(f"Error generating sales summary: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({
+            'success': False,
+            'message': str(e)
+        }, status=500)
+
+
+@login_required(login_url='/login/')
+def api_generate_inventory_status(request):
+    """
+    Generate Inventory Status Report
+    Returns: Current inventory levels and valuations
+    """
+    try:
+        category = request.GET.get('category', '')
+        
+        # Build query
+        query = Inventory.objects.select_related(
+            'item_type', 'item_category', 'item_subcategory'
+        )
+        
+        if category:
+            query = query.filter(item_category__item_category=category)
+        
+        inventory_items = query.all()
+        
+        # Calculate totals
+        total_cost_value = Decimal('0.00')
+        total_sale_value = Decimal('0.00')
+        total_items = 0
+        reorder_items = 0
+        
+        items_list = []
+        low_stock_items = []
+        
+        for item in inventory_items:
+            remaining_qty = item.quantity_purchased - item.quantity_sold
+            cost_value = remaining_qty * item.purchase_price
+            sale_value = remaining_qty * item.sale_price
+            
+            total_cost_value += cost_value
+            total_sale_value += sale_value
+            total_items += 1
+            
+            if item.reorder_required == 'YES':
+                reorder_items += 1
+                low_stock_items.append({
+                    'item_id': item.item_id,
+                    'name': item.item_name,
+                    'category': item.item_category.item_category,
+                    'remaining_qty': remaining_qty,
+                    'reorder_level': item.reorder_level
+                })
+            
+            items_list.append({
+                'item_id': item.item_id,
+                'name': item.item_name,
+                'type': item.item_type.item_type,
+                'category': item.item_category.item_category,
+                'subcategory': item.item_subcategory.item_subcategory,
+                'purchased_qty': item.quantity_purchased,
+                'sold_qty': item.quantity_sold,
+                'remaining_qty': remaining_qty,
+                'purchase_price': float(item.purchase_price),
+                'sale_price': float(item.sale_price),
+                'cost_value': float(cost_value),
+                'sale_value': float(sale_value),
+                'reorder_required': item.reorder_required
+            })
+        
+        potential_profit = total_sale_value - total_cost_value
+        
+        # Inventory by category
+        by_category = {}
+        for item_data in items_list:
+            cat = item_data['category']
+            if cat not in by_category:
+                by_category[cat] = {
+                    'cost_value': 0,
+                    'sale_value': 0,
+                    'items': 0
+                }
+            by_category[cat]['cost_value'] += item_data['cost_value']
+            by_category[cat]['sale_value'] += item_data['sale_value']
+            by_category[cat]['items'] += 1
+        
+        category_breakdown = [
+            {
+                'category': cat,
+                'cost_value': data['cost_value'],
+                'sale_value': data['sale_value'],
+                'items': data['items']
+            }
+            for cat, data in by_category.items()
+        ]
+        
+        report_data = {
+            'kpis': {
+                'total_cost_value': float(total_cost_value),
+                'total_sale_value': float(total_sale_value),
+                'potential_profit': float(potential_profit),
+                'total_items': total_items,
+                'reorder_items': reorder_items
+            },
+            'items': items_list,
+            'low_stock': low_stock_items,
+            'category_breakdown': category_breakdown
+        }
+        
+        return JsonResponse({
+            'success': True,
+            'data': report_data,
+            'report_type': 'Inventory Status Report'
+        })
+    
+    except Exception as e:
+        print(f"Error generating inventory status: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({
+            'success': False,
+            'message': str(e)
+        }, status=500)
+
+
+@login_required(login_url='/login/')
+def api_generate_profit_loss(request):
+    """
+    Generate Profit & Loss Report
+    Returns: Revenue, expenses, and profit calculations
+    """
+    try:
+        start_date_str = request.GET.get('start_date', '')
+        end_date_str = request.GET.get('end_date', '')
+        
+        start_date = parse_date(start_date_str)
+        end_date = parse_date(end_date_str)
+        
+        # Sales Revenue
+        sales_query = SalesOrder.objects.all()
+        if start_date:
+            sales_query = sales_query.filter(date__gte=start_date)
+        if end_date:
+            sales_query = sales_query.filter(date__lte=end_date)
+        
+        total_revenue = sales_query.aggregate(
+            total=Sum('total_amount')
+        )['total'] or Decimal('0.00')
+        
+        # Cost of Goods Sold (from purchase details)
+        sales_details = SalesDetail.objects.filter(so_id__in=sales_query)
+        
+        # Calculate COGS based on items sold and their purchase prices
+        cogs = Decimal('0.00')
+        for detail in sales_details:
+            item = detail.item_id
+            if item:
+                cogs += detail.quantity_sold * item.purchase_price
+        
+        # Gross Profit
+        gross_profit = total_revenue - cogs
+        gross_margin = (gross_profit / total_revenue * 100) if total_revenue > 0 else 0
+        
+        # Operating Expenses (simplified - you can add more categories)
+        # For now, we'll track shipping fees as an expense
+        shipping_expense = sales_details.aggregate(
+            total=Sum('shipping_fees')
+        )['total'] or Decimal('0.00')
+        
+        # Purchases in period
+        purchase_query = PurchaseOrder.objects.all()
+        if start_date:
+            purchase_query = purchase_query.filter(date__gte=start_date)
+        if end_date:
+            purchase_query = purchase_query.filter(date__lte=end_date)
+        
+        total_purchases = purchase_query.aggregate(
+            total=Sum('total_amount')
+        )['total'] or Decimal('0.00')
+        
+        # Net Profit (Revenue - COGS - Expenses)
+        total_expenses = shipping_expense
+        net_profit = gross_profit - total_expenses
+        net_margin = (net_profit / total_revenue * 100) if total_revenue > 0 else 0
+        
+        # Monthly breakdown
+        monthly_data = sales_query.annotate(
+            month=TruncMonth('date')
+        ).values('month').annotate(
+            revenue=Sum('total_amount')
+        ).order_by('month')
+        
+        report_data = {
+            'kpis': {
+                'total_revenue': float(total_revenue),
+                'cogs': float(cogs),
+                'gross_profit': float(gross_profit),
+                'gross_margin': float(gross_margin),
+                'operating_expenses': float(total_expenses),
+                'net_profit': float(net_profit),
+                'net_margin': float(net_margin)
+            },
+            'breakdown': {
+                'revenue': float(total_revenue),
+                'cogs': float(cogs),
+                'shipping_expense': float(shipping_expense),
+                'gross_profit': float(gross_profit),
+                'net_profit': float(net_profit)
+            },
+            'monthly_trend': [
+                {
+                    'month': item['month'].strftime('%b %Y'),
+                    'revenue': float(item['revenue'])
+                }
+                for item in monthly_data
+            ],
+            'period': {
+                'start': start_date.strftime('%d/%m/%Y') if start_date else '',
+                'end': end_date.strftime('%d/%m/%Y') if end_date else ''
+            }
+        }
+        
+        return JsonResponse({
+            'success': True,
+            'data': report_data,
+            'report_type': 'Profit & Loss Report'
+        })
+    
+    except Exception as e:
+        print(f"Error generating P&L report: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({
+            'success': False,
+            'message': str(e)
+        }, status=500)
+
+
+@login_required(login_url='/login/')
+def api_generate_purchase_summary(request):
+    """Generate Purchase Summary Report"""
+    try:
+        start_date_str = request.GET.get('start_date', '')
+        end_date_str = request.GET.get('end_date', '')
+        
+        start_date = parse_date(start_date_str)
+        end_date = parse_date(end_date_str)
+        
+        query = PurchaseOrder.objects.all()
+        
+        if start_date:
+            query = query.filter(date__gte=start_date)
+        if end_date:
+            query = query.filter(date__lte=end_date)
+        
+        purchase_orders = query.select_related('supplier_id', 'county', 'town')
+        
+        # KPIs
+        total_purchases = purchase_orders.aggregate(
+            total=Sum('total_amount')
+        )['total'] or Decimal('0.00')
+        
+        total_paid = purchase_orders.aggregate(
+            paid=Sum('amount_paid')
+        )['paid'] or Decimal('0.00')
+        
+        outstanding = total_purchases - total_paid
+        total_orders = purchase_orders.count()
+        
+        # Top suppliers
+        top_suppliers = purchase_orders.values(
+            'supplier_name'
+        ).annotate(
+            total=Sum('total_amount'),
+            orders=Count('po_id')
+        ).order_by('-total')[:5]
+        
+        report_data = {
+            'kpis': {
+                'total_purchases': float(total_purchases),
+                'total_paid': float(total_paid),
+                'outstanding': float(outstanding),
+                'total_orders': total_orders
+            },
+            'top_suppliers': [
+                {
+                    'name': item['supplier_name'],
+                    'total': float(item['total']),
+                    'orders': item['orders']
+                }
+                for item in top_suppliers
+            ]
+        }
+        
+        return JsonResponse({
+            'success': True,
+            'data': report_data,
+            'report_type': 'Purchase Summary Report'
+        })
+    
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
+@login_required(login_url='/login/')
+def api_generate_outstanding_balances(request):
+    """Generate Outstanding Balances Report"""
+    try:
+        # Customer balances
+        customers = Customer.objects.all()
+        customer_balances = []
+        total_receivable = Decimal('0.00')
+        
+        for customer in customers:
+            balance = customer.total_sales - customer.total_payments
+            if balance > 0:
+                total_receivable += balance
+                customer_balances.append({
+                    'id': customer.customer_id,
+                    'name': customer.customer_name,
+                    'total_sales': float(customer.total_sales),
+                    'total_payments': float(customer.total_payments),
+                    'balance': float(balance)
+                })
+        
+        # Supplier balances
+        suppliers = Supplier.objects.all()
+        supplier_balances = []
+        total_payable = Decimal('0.00')
+        
+        for supplier in suppliers:
+            balance = supplier.total_purchases - supplier.total_payments
+            if balance > 0:
+                total_payable += balance
+                supplier_balances.append({
+                    'id': supplier.supplier_id,
+                    'name': supplier.supplier_name,
+                    'total_purchases': float(supplier.total_purchases),
+                    'total_payments': float(supplier.total_payments),
+                    'balance': float(balance)
+                })
+        
+        report_data = {
+            'kpis': {
+                'total_receivable': float(total_receivable),
+                'total_payable': float(total_payable),
+                'net_position': float(total_receivable - total_payable)
+            },
+            'customer_balances': sorted(customer_balances, key=lambda x: x['balance'], reverse=True),
+            'supplier_balances': sorted(supplier_balances, key=lambda x: x['balance'], reverse=True)
+        }
+        
+        return JsonResponse({
+            'success': True,
+            'data': report_data,
+            'report_type': 'Outstanding Balances Report'
+        })
+    
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)

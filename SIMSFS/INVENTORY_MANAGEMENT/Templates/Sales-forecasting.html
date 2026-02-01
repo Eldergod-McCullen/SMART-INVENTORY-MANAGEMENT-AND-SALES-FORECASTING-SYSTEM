@@ -1325,6 +1325,23 @@
     function exportForecast() {
       alert('Export functionality: Generate a CSV/PDF report with forecast data, charts, and insights. This would be implemented as a backend endpoint.');
     }
+
+    // ADDITIONAL FUNCTION FOR SIMULATION
+    function simulateScenario(baselineForecast, scenario) {
+    let adjustment = 1.0;
+    
+    if (scenario.priceChange) {
+        // Price elasticity: -10% price = +15% demand
+        adjustment *= (1 + (scenario.priceChange * -1.5));
+    }
+    
+    if (scenario.marketingSpend) {
+        // Marketing ROI: +$1K spend = +5% sales
+        adjustment *= (1 + (scenario.marketingSpend / 1000) * 0.05);
+    }
+    
+    return baselineForecast.map(f => f * adjustment);
+}
     
     console.log('✅ Sales Forecasting Module Ready!');
   </script>

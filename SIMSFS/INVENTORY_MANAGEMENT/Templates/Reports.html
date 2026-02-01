@@ -1,0 +1,739 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  {% csrf_token %}
+  <meta name="csrf-token" content="{{ csrf_token }}">
+  
+  <title>{% block title %}REPORTS{% endblock %}</title>
+  
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Poppins:wght@400;500;600&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+  
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  
+  <!-- Flatpickr (Date Picker) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  
+  <style>
+    :root {
+      --primary: #1abc9c;
+      --primary-light: #d1f2eb;
+      --primary-dark: #16a085;
+      --secondary: #3498db;
+      --dark: #2c3e50;
+      --light-dark: #34495e;
+      --gray: #7f8c8d;
+      --light-gray: #ecf0f1;
+      --white: #ffffff;
+      --error: #e74c3c;
+      --warning: #f39c12;
+      --success: #2ecc71;
+      --purple: #9b59b6;
+      --orange: #e67e22;
+    }
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Roboto', sans-serif;
+      background-color: #f5f7fa;
+      color: var(--dark);
+    }
+    
+    .reports-container {
+      max-width: 1600px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    
+    .reports-header {
+      margin-bottom: 30px;
+    }
+    
+    .reports-header h1 {
+      font-family: 'Montserrat', sans-serif;
+      font-weight: 700;
+      color: var(--dark);
+      font-size: 2rem;
+      margin-bottom: 8px;
+    }
+    
+    .reports-header p {
+      color: var(--gray);
+      font-size: 1.05rem;
+    }
+    
+    /* Quick Reports Section */
+    .quick-reports {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      margin-bottom: 30px;
+    }
+    
+    .quick-report-btn {
+      background: var(--white);
+      border: 2px solid var(--light-gray);
+      border-radius: 8px;
+      padding: 20px;
+      cursor: pointer;
+      transition: all 0.3s;
+      text-align: center;
+    }
+    
+    .quick-report-btn:hover {
+      border-color: var(--primary);
+      transform: translateY(-3px);
+      box-shadow: 0 5px 15px rgba(26, 188, 156, 0.2);
+    }
+    
+    .quick-report-btn i {
+      font-size: 2rem;
+      color: var(--primary);
+      margin-bottom: 10px;
+      display: block;
+    }
+    
+    .quick-report-btn span {
+      font-weight: 600;
+      color: var(--dark);
+      display: block;
+    }
+    
+    /* Report Generator Section */
+    .report-generator {
+      background: var(--white);
+      border-radius: 10px;
+      padding: 25px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+      margin-bottom: 30px;
+    }
+    
+    .generator-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 25px;
+      padding-bottom: 15px;
+      border-bottom: 2px solid var(--light-gray);
+    }
+    
+    .generator-title {
+      font-family: 'Montserrat', sans-serif;
+      font-weight: 600;
+      color: var(--dark);
+      font-size: 1.4rem;
+    }
+    
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 20px;
+      margin-bottom: 25px;
+    }
+    
+    .form-group {
+      margin-bottom: 15px;
+    }
+    
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 500;
+      color: var(--dark);
+      font-size: 0.95rem;
+    }
+    
+    .form-control {
+      width: 100%;
+      padding: 11px;
+      border: 1px solid #bdc3c7;
+      border-radius: 4px;
+      font-family: 'Roboto', sans-serif;
+      font-size: 0.95rem;
+    }
+    
+    .form-control:focus {
+      border-color: var(--primary);
+      outline: none;
+      box-shadow: 0 0 0 2px rgba(26, 188, 156, 0.2);
+    }
+    
+    .btn-group {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+    
+    .btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 4px;
+      font-family: 'Poppins', sans-serif;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.3s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.95rem;
+    }
+    
+    .btn-primary {
+      background-color: var(--primary);
+      color: var(--white);
+    }
+    
+    .btn-primary:hover {
+      background-color: var(--primary-dark);
+    }
+    
+    .btn-secondary {
+      background-color: var(--secondary);
+      color: var(--white);
+    }
+    
+    .btn-secondary:hover {
+      background-color: #2980b9;
+    }
+    
+    .btn-outline {
+      background-color: transparent;
+      border: 1px solid #bdc3c7;
+      color: var(--light-dark);
+    }
+    
+    .btn-outline:hover {
+      background-color: var(--light-gray);
+    }
+    
+    .btn-success {
+      background-color: var(--success);
+      color: var(--white);
+    }
+    
+    .btn-success:hover {
+      background-color: #27ae60;
+    }
+    
+    .btn-warning {
+      background-color: var(--warning);
+      color: var(--white);
+    }
+    
+    .btn-warning:hover {
+      background-color: #d68910;
+    }
+    
+    /* Report Display Area */
+    .report-display {
+      background: var(--white);
+      border-radius: 10px;
+      padding: 25px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+      min-height: 400px;
+      display: none;
+    }
+    
+    .report-display.active {
+      display: block;
+    }
+    
+    .report-header {
+      text-align: center;
+      margin-bottom: 30px;
+      padding-bottom: 20px;
+      border-bottom: 2px solid var(--light-gray);
+    }
+    
+    .report-title {
+      font-family: 'Montserrat', sans-serif;
+      font-weight: 700;
+      font-size: 1.8rem;
+      color: var(--dark);
+      margin-bottom: 10px;
+    }
+    
+    .report-subtitle {
+      color: var(--gray);
+      font-size: 1rem;
+    }
+    
+    .report-period {
+      display: inline-block;
+      background: var(--primary-light);
+      color: var(--primary-dark);
+      padding: 5px 15px;
+      border-radius: 20px;
+      font-weight: 500;
+      font-size: 0.9rem;
+      margin-top: 10px;
+    }
+    
+    /* KPI Cards */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+    
+    .kpi-card {
+      background: linear-gradient(135deg, var(--primary-light) 0%, var(--white) 100%);
+      border-left: 4px solid var(--primary);
+      border-radius: 8px;
+      padding: 20px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    }
+    
+    .kpi-card.secondary {
+      background: linear-gradient(135deg, #e3f2fd 0%, var(--white) 100%);
+      border-left-color: var(--secondary);
+    }
+    
+    .kpi-card.success {
+      background: linear-gradient(135deg, #e8f5e9 0%, var(--white) 100%);
+      border-left-color: var(--success);
+    }
+    
+    .kpi-card.warning {
+      background: linear-gradient(135deg, #fff3e0 0%, var(--white) 100%);
+      border-left-color: var(--warning);
+    }
+    
+    .kpi-label {
+      font-size: 0.9rem;
+      color: var(--gray);
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-weight: 500;
+    }
+    
+    .kpi-value {
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: var(--dark);
+      font-family: 'Montserrat', sans-serif;
+    }
+    
+    .kpi-change {
+      font-size: 0.85rem;
+      margin-top: 5px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    
+    .kpi-change.positive {
+      color: var(--success);
+    }
+    
+    .kpi-change.negative {
+      color: var(--error);
+    }
+    
+    /* Charts */
+    .charts-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+    
+    .chart-card {
+      background: var(--white);
+      border-radius: 8px;
+      padding: 20px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    }
+    
+    .chart-card.wide {
+      grid-column: span 2;
+    }
+    
+    .chart-title {
+      font-family: 'Montserrat', sans-serif;
+      font-weight: 600;
+      color: var(--dark);
+      font-size: 1.1rem;
+      margin-bottom: 15px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--light-gray);
+    }
+    
+    .chart-container {
+      position: relative;
+      height: 300px;
+    }
+    
+    /* Data Tables */
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 20px;
+    }
+    
+    .data-table th {
+      background-color: var(--dark);
+      color: var(--white);
+      padding: 12px 15px;
+      text-align: left;
+      font-family: 'Poppins', sans-serif;
+      font-weight: 500;
+      font-size: 0.9rem;
+    }
+    
+    .data-table td {
+      padding: 12px 15px;
+      border-bottom: 1px solid var(--light-gray);
+      color: var(--dark);
+      font-size: 0.9rem;
+    }
+    
+    .data-table tr:hover {
+      background-color: rgba(26, 188, 156, 0.05);
+    }
+    
+    .data-table .text-right {
+      text-align: right;
+    }
+    
+    .data-table .text-center {
+      text-align: center;
+    }
+    
+    .data-table .total-row {
+      font-weight: 700;
+      background-color: var(--primary-light);
+    }
+    
+    /* Loading Overlay */
+    .loading-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(255, 255, 255, 0.9);
+      z-index: 2000;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+    }
+    
+    .loading-overlay.active {
+      display: flex;
+    }
+    
+    .spinner {
+      border: 5px solid var(--light-gray);
+      border-top: 5px solid var(--primary);
+      border-radius: 50%;
+      width: 60px;
+      height: 60px;
+      animation: spin 1s linear infinite;
+      margin-bottom: 20px;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    /* Print Styles */
+    @media print {
+      .reports-header,
+      .quick-reports,
+      .report-generator,
+      .btn-group {
+        display: none;
+      }
+      
+      .report-display {
+        box-shadow: none;
+      }
+    }
+    
+    /* Responsive */
+    @media (max-width: 768px) {
+      .reports-header h1 {
+        font-size: 1.5rem;
+      }
+      
+      .form-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .charts-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .chart-card.wide {
+        grid-column: span 1;
+      }
+      
+      .kpi-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="reports-container">
+    <!-- Header -->
+    <div class="reports-header">
+      <h1><i class="fas fa-chart-bar"></i> Business Reports & Analytics</h1>
+      <p>Generate comprehensive reports and gain insights into your business performance</p>
+    </div>
+    
+    <!-- Quick Reports -->
+    <div class="quick-reports">
+      <div class="quick-report-btn" onclick="generateQuickReport('today-sales')">
+        <i class="fas fa-calendar-day"></i>
+        <span>Today's Sales</span>
+      </div>
+      
+      <div class="quick-report-btn" onclick="generateQuickReport('week-sales')">
+        <i class="fas fa-calendar-week"></i>
+        <span>This Week</span>
+      </div>
+      
+      <div class="quick-report-btn" onclick="generateQuickReport('month-sales')">
+        <i class="fas fa-calendar-alt"></i>
+        <span>This Month</span>
+      </div>
+      
+      <div class="quick-report-btn" onclick="generateQuickReport('inventory-status')">
+        <i class="fas fa-boxes"></i>
+        <span>Inventory Status</span>
+      </div>
+      
+      <div class="quick-report-btn" onclick="generateQuickReport('outstanding-balances')">
+        <i class="fas fa-exclamation-circle"></i>
+        <span>Outstanding Balances</span>
+      </div>
+      
+      <div class="quick-report-btn" onclick="generateQuickReport('profit-loss')">
+        <i class="fas fa-chart-line"></i>
+        <span>P&L Report</span>
+      </div>
+    </div>
+    
+    <!-- Report Generator -->
+    <div class="report-generator">
+      <div class="generator-header">
+        <h2 class="generator-title">Generate Custom Report</h2>
+      </div>
+      
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Report Type</label>
+          <select id="reportType" class="form-control">
+            <option value="">Select Report Type</option>
+            <option value="sales-summary">Sales Summary Report</option>
+            <option value="inventory-status">Inventory Status Report</option>
+            <option value="profit-loss">Profit & Loss Report</option>
+            <option value="purchase-summary">Purchase Summary Report</option>
+            <option value="customer-analysis">Customer Analysis Report</option>
+            <option value="supplier-analysis">Supplier Analysis Report</option>
+            <option value="outstanding-balances">Outstanding Balances Report</option>
+            <option value="tax-summary">Tax Summary Report</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label>From Date</label>
+          <input type="text" id="fromDate" class="form-control date-picker" placeholder="DD/MM/YYYY">
+        </div>
+        
+        <div class="form-group">
+          <label>To Date</label>
+          <input type="text" id="toDate" class="form-control date-picker" placeholder="DD/MM/YYYY">
+        </div>
+      </div>
+      
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Filter by Category (Optional)</label>
+          <select id="filterCategory" class="form-control">
+            <option value="">All Categories</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label>Filter by County (Optional)</label>
+          <select id="filterCounty" class="form-control">
+            <option value="">All Counties</option>
+          </select>
+        </div>
+      </div>
+      
+      <div class="btn-group">
+        <button class="btn btn-outline" onclick="clearFilters()">
+          <i class="fas fa-eraser"></i> Clear
+        </button>
+        <button class="btn btn-primary" onclick="generateReport()">
+          <i class="fas fa-chart-bar"></i> Generate Report
+        </button>
+        <button class="btn btn-success" onclick="exportToPDF()" id="exportPDFBtn" style="display:none;">
+          <i class="fas fa-file-pdf"></i> Export PDF
+        </button>
+        <button class="btn btn-warning" onclick="exportToExcel()" id="exportExcelBtn" style="display:none;">
+          <i class="fas fa-file-excel"></i> Export Excel
+        </button>
+      </div>
+    </div>
+    
+    <!-- Report Display Area -->
+    <div class="report-display" id="reportDisplay">
+      <!-- Reports will be rendered here dynamically -->
+    </div>
+  </div>
+  
+  <!-- Loading Overlay -->
+  <div id="loadingOverlay" class="loading-overlay">
+    <div class="spinner"></div>
+    <p>Generating report...</p>
+  </div>
+
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+  
+  <script>
+    console.log('📊 Reports Module Loading...');
+    
+    let currentReportData = null;
+    let currentReportType = null;
+    let charts = {};
+    
+    // Get CSRF token
+    function getCSRFToken() {
+      const metaTag = document.querySelector('meta[name="csrf-token"]');
+      if (metaTag) return metaTag.getAttribute('content');
+      const cookies = document.cookie.split(';');
+      for (let cookie of cookies) {
+        const [name, value] = cookie.trim().split('=');
+        if (name === 'csrftoken') return value;
+      }
+      return null;
+    }
+    
+    // Initialize
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('📊 Initializing Reports Module...');
+      initializeDatePickers();
+      loadFilterOptions();
+    });
+    
+    // Initialize date pickers
+    function initializeDatePickers() {
+      flatpickr(".date-picker", {
+        dateFormat: "d/m/Y",
+        allowInput: true
+      });
+      
+      // Set default dates (current month)
+      const today = new Date();
+      const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+      
+      document.getElementById('fromDate').value = formatDate(firstDay);
+      document.getElementById('toDate').value = formatDate(today);
+    }
+    
+    function formatDate(date) {
+      const day = String(date.getDate()).padStart(2, '0');
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const year = date.getFullYear();
+      return `${day}/${month}/${year}`;
+    }
+    
+    // Load filter options
+    async function loadFilterOptions() {
+      try {
+        // Load categories
+        const categoriesResponse = await fetch('/api/inventory-items/categories/', {
+          headers: { 'X-CSRFToken': getCSRFToken() },
+          credentials: 'same-origin'
+        });
+        const categoriesData = await categoriesResponse.json();
+        
+        if (categoriesData.success) {
+          const categorySelect = document.getElementById('filterCategory');
+          categoriesData.data.forEach(category => {
+            const option = document.createElement('option');
+            option.value = category;
+            option.textContent = category;
+            categorySelect.appendChild(option);
+          });
+        }
+        
+        // Load counties
+        const countiesResponse = await fetch('/api/suppliers/counties/', {
+          headers: { 'X-CSRFToken': getCSRFToken() },
+          credentials: 'same-origin'
+        });
+        const countiesData = await countiesResponse.json();
+        
+        if (countiesData.success) {
+          const countySelect = document.getElementById('filterCounty');
+          countiesData.data.forEach(county => {
+            const option = document.createElement('option');
+            option.value = county;
+            option.textContent = county;
+            countySelect.appendChild(option);
+          });
+        }
+      } catch (error) {
+        console.error('Error loading filter options:', error);
+      }
+    }
+    
+    // Clear filters
+    function clearFilters() {
+      document.getElementById('reportType').value = '';
+      document.getElementById('filterCategory').value = '';
+      document.getElementById('filterCounty').value = '';
+      
+      const today = new Date();
+      const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+      document.getElementById('fromDate').value = formatDate(firstDay);
+      document.getElementById('toDate').value = formatDate(today);
+    }
+    
+    // Show/hide loading
+    function showLoading() {
+      document.getElementById('loadingOverlay').classList.add('active');
+    }
+    
+    function hideLoading() {
+      document.getElementById('loadingOverlay').classList.remove('active');
+    }
+    
+    // Format number
+    function formatNumber(num) {
+      if (isNaN(num)) return '0.00';
+      return parseFloat(num).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    }
+    
+    console.log('✅ Reports Module Ready!');
+  </script>
+</body>
+</html>
