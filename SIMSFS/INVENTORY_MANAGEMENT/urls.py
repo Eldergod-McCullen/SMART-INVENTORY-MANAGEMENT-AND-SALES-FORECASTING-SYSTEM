@@ -179,6 +179,16 @@ path('api/receipts/delete/', views.api_delete_receipt, name='api_delete_receipt'
 path('api/dashboard/sales-details/', views.api_get_all_sales_details, name='api_get_all_sales_details'),
 path('api/dashboard/purchase-details/', views.api_get_all_purchase_details, name='api_get_all_purchase_details'),
 
+# ============================ SALES-FORECASTING MODULE VIEWS =========================================================================================================================
+
+
+
+# ======================== REPORTS VIEWS ================================================================================================================================================
+path('api/reports/sales-summary/', views.api_generate_sales_summary, name='api_sales_summary'),
+path('api/reports/inventory-status/', views.api_generate_inventory_status, name='api_inventory_status'),
+path('api/reports/profit-loss/', views.api_generate_profit_loss, name='api_profit_loss'),
+path('api/reports/purchase-summary/', views.api_generate_purchase_summary, name='api_purchase_summary'),
+path('api/reports/outstanding-balances/', views.api_generate_outstanding_balances, name='api_outstanding_balances'),
 
 # ============= TEST URL ==========================================================================================================================================
 path('test/', views.test_page, name='test'),

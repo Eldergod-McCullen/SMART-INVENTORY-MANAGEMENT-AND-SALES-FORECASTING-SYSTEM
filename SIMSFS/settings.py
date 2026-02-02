@@ -38,6 +38,9 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'SIMSFS.INVENTORY_MANAGEMENT',
+    'numpy',
+    'reportlab',
+    'openpyxl',
 ]
 
 MIDDLEWARE = [

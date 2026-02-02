@@ -4238,11 +4238,11 @@ def get_date_range(range_type):
     
     return None, None
 
-
 # ============================================
-# API ENDPOINTS FOR REPORT GENERATION
+# 1. SALES SUMMARY REPORT
 # ============================================
 
+@csrf_exempt
 @login_required(login_url='/login/')
 def api_generate_sales_summary(request):
     """
@@ -4256,8 +4256,8 @@ def api_generate_sales_summary(request):
         category = request.GET.get('category', '')
         
         # Parse dates
-        start_date = parse_date(start_date_str)
-        end_date = parse_date(end_date_str)
+        start_date = parse_date(start_date_str) if start_date_str else None
+        end_date = parse_date(end_date_str) if end_date_str else None
         
         # Build query
         query = SalesOrder.objects.all()
@@ -4377,6 +4377,11 @@ def api_generate_sales_summary(request):
         }, status=500)
 
 
+# ============================================
+# 2. INVENTORY STATUS REPORT
+# ============================================
+
+@csrf_exempt
 @login_required(login_url='/login/')
 def api_generate_inventory_status(request):
     """
@@ -4495,6 +4500,11 @@ def api_generate_inventory_status(request):
         }, status=500)
 
 
+# ============================================
+# 3. PROFIT & LOSS REPORT
+# ============================================
+
+@csrf_exempt
 @login_required(login_url='/login/')
 def api_generate_profit_loss(request):
     """
@@ -4505,8 +4515,8 @@ def api_generate_profit_loss(request):
         start_date_str = request.GET.get('start_date', '')
         end_date_str = request.GET.get('end_date', '')
         
-        start_date = parse_date(start_date_str)
-        end_date = parse_date(end_date_str)
+        start_date = parse_date(start_date_str) if start_date_str else None
+        end_date = parse_date(end_date_str) if end_date_str else None
         
         # Sales Revenue
         sales_query = SalesOrder.objects.all()
@@ -4533,8 +4543,7 @@ def api_generate_profit_loss(request):
         gross_profit = total_revenue - cogs
         gross_margin = (gross_profit / total_revenue * 100) if total_revenue > 0 else 0
         
-        # Operating Expenses (simplified - you can add more categories)
-        # For now, we'll track shipping fees as an expense
+        # Operating Expenses
         shipping_expense = sales_details.aggregate(
             total=Sum('shipping_fees')
         )['total'] or Decimal('0.00')
@@ -4550,7 +4559,7 @@ def api_generate_profit_loss(request):
             total=Sum('total_amount')
         )['total'] or Decimal('0.00')
         
-        # Net Profit (Revenue - COGS - Expenses)
+        # Net Profit
         total_expenses = shipping_expense
         net_profit = gross_profit - total_expenses
         net_margin = (net_profit / total_revenue * 100) if total_revenue > 0 else 0
@@ -4608,6 +4617,11 @@ def api_generate_profit_loss(request):
         }, status=500)
 
 
+# ============================================
+# 4. PURCHASE SUMMARY REPORT
+# ============================================
+
+@csrf_exempt
 @login_required(login_url='/login/')
 def api_generate_purchase_summary(request):
     """Generate Purchase Summary Report"""
@@ -4615,8 +4629,8 @@ def api_generate_purchase_summary(request):
         start_date_str = request.GET.get('start_date', '')
         end_date_str = request.GET.get('end_date', '')
         
-        start_date = parse_date(start_date_str)
-        end_date = parse_date(end_date_str)
+        start_date = parse_date(start_date_str) if start_date_str else None
+        end_date = parse_date(end_date_str) if end_date_str else None
         
         query = PurchaseOrder.objects.all()
         
@@ -4639,6 +4653,15 @@ def api_generate_purchase_summary(request):
         outstanding = total_purchases - total_paid
         total_orders = purchase_orders.count()
         
+        # Purchases by category
+        purchase_details = PurchaseDetail.objects.filter(
+            po_id__in=purchase_orders
+        )
+        
+        purchases_by_category = purchase_details.values('item_category').annotate(
+            total=Sum('total_purchase_price')
+        ).order_by('-total')[:10]
+        
         # Top suppliers
         top_suppliers = purchase_orders.values(
             'supplier_name'
@@ -4647,13 +4670,28 @@ def api_generate_purchase_summary(request):
             orders=Count('po_id')
         ).order_by('-total')[:5]
         
+        # Daily purchases
+        daily_purchases = purchase_orders.annotate(
+            purchase_date=TruncDate('date')
+        ).values('purchase_date').annotate(
+            total=Sum('total_amount')
+        ).order_by('purchase_date')
+        
         report_data = {
             'kpis': {
                 'total_purchases': float(total_purchases),
                 'total_paid': float(total_paid),
                 'outstanding': float(outstanding),
-                'total_orders': total_orders
+                'total_orders': total_orders,
+                'avg_order_value': float(total_purchases / total_orders) if total_orders > 0 else 0
             },
+            'purchases_by_category': [
+                {
+                    'category': item['item_category'],
+                    'total': float(item['total'])
+                }
+                for item in purchases_by_category
+            ],
             'top_suppliers': [
                 {
                     'name': item['supplier_name'],
@@ -4661,7 +4699,18 @@ def api_generate_purchase_summary(request):
                     'orders': item['orders']
                 }
                 for item in top_suppliers
-            ]
+            ],
+            'daily_purchases': [
+                {
+                    'date': item['purchase_date'].strftime('%Y-%m-%d'),
+                    'total': float(item['total'])
+                }
+                for item in daily_purchases
+            ],
+            'period': {
+                'start': start_date.strftime('%d/%m/%Y') if start_date else '',
+                'end': end_date.strftime('%d/%m/%Y') if end_date else ''
+            }
         }
         
         return JsonResponse({
@@ -4674,6 +4723,11 @@ def api_generate_purchase_summary(request):
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
 
 
+# ============================================
+# 5. OUTSTANDING BALANCES REPORT
+# ============================================
+
+@csrf_exempt
 @login_required(login_url='/login/')
 def api_generate_outstanding_balances(request):
     """Generate Outstanding Balances Report"""
