@@ -29,7 +29,7 @@ ALLOWED_HOSTS = []
 
 
 # Application definition
-
+# NOT EVERY MODULE IS AN APPLICATION IN THIS PROGRAM
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -38,9 +38,6 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'SIMSFS.INVENTORY_MANAGEMENT',
-    'numpy',
-    'reportlab',
-    'openpyxl',
 ]
 
 MIDDLEWARE = [

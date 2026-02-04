@@ -1,4 +1,4 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse
 from django.http import HttpRequest                                          # IMPORTS FOR HTTP REQUESTS AND RESPONSES
 from django.http import HttpResponse
@@ -10,11 +10,14 @@ from django.contrib.auth import authenticate, login, logout
 from django.db.models import Q, Sum, Max, Min, F, Count,Avg                  # IMPORTS FOR COMPLEX QUERIES
 import json                                                                  # REMEMBER TO REVIEW THIS GUY AT THE ENDPOINTS
 import io
+import math
 from django.db import transaction
 from decimal import Decimal
 from datetime import datetime,timedelta
 import time
 from django.db.models.functions import TruncMonth, TruncDate
+from django.utils.timezone import now
+from django.db.models import F, ExpressionWrapper, DecimalField
 
 from sklearn.ensemble import RandomForestRegressor
 import numpy as np
@@ -4241,7 +4244,6 @@ def get_date_range(range_type):
 # ============================================
 # 1. SALES SUMMARY REPORT
 # ============================================
-
 @csrf_exempt
 @login_required(login_url='/login/')
 def api_generate_sales_summary(request):
@@ -4283,7 +4285,7 @@ def api_generate_sales_summary(request):
         
         outstanding = total_sales - total_received
         
-        # Sales by category
+        # Sales by category - FIXED: Calculate from detail records
         category_query = SalesDetail.objects.filter(
             so_id__in=sales_orders
         )
@@ -4291,9 +4293,26 @@ def api_generate_sales_summary(request):
         if category:
             category_query = category_query.filter(item_category=category)
         
-        sales_by_category = category_query.values('item_category').annotate(
-            total=Sum('total_sales_price')
-        ).order_by('-total')[:10]
+        # ✅ FIX: Calculate total manually instead of using @property
+        sales_by_category_raw = category_query.values('item_category').annotate(
+            quantity=Sum('quantity_sold'),
+            subtotal=Sum(F('quantity_sold') * F('unit_price')),
+            tax=Sum(F('quantity_sold') * F('unit_price') * F('tax_rate') / 100)
+        ).order_by('-subtotal')[:10]
+        
+        # Calculate final totals with shipping
+        sales_by_category = []
+        for item in sales_by_category_raw:
+            subtotal = item['subtotal'] or Decimal('0.00')
+            tax = item['tax'] or Decimal('0.00')
+            price_with_tax = subtotal + tax
+            shipping = price_with_tax * Decimal('0.02')  # 2% shipping
+            total = price_with_tax + shipping
+            
+            sales_by_category.append({
+                'category': item['item_category'],
+                'total': float(total)
+            })
         
         # Sales trend (daily)
         daily_sales = sales_orders.annotate(
@@ -4326,13 +4345,7 @@ def api_generate_sales_summary(request):
                 'total_orders': total_orders,
                 'avg_order_value': float(total_sales / total_orders) if total_orders > 0 else 0
             },
-            'sales_by_category': [
-                {
-                    'category': item['item_category'],
-                    'total': float(item['total'])
-                }
-                for item in sales_by_category
-            ],
+            'sales_by_category': sales_by_category,
             'daily_sales': [
                 {
                     'date': item['sale_date'].strftime('%Y-%m-%d'),
@@ -4375,7 +4388,6 @@ def api_generate_sales_summary(request):
             'success': False,
             'message': str(e)
         }, status=500)
-
 
 # ============================================
 # 2. INVENTORY STATUS REPORT
@@ -4503,7 +4515,6 @@ def api_generate_inventory_status(request):
 # ============================================
 # 3. PROFIT & LOSS REPORT
 # ============================================
-
 @csrf_exempt
 @login_required(login_url='/login/')
 def api_generate_profit_loss(request):
@@ -4529,7 +4540,7 @@ def api_generate_profit_loss(request):
             total=Sum('total_amount')
         )['total'] or Decimal('0.00')
         
-        # Cost of Goods Sold (from purchase details)
+        # Get sales details for COGS calculation
         sales_details = SalesDetail.objects.filter(so_id__in=sales_query)
         
         # Calculate COGS based on items sold and their purchase prices
@@ -4543,10 +4554,27 @@ def api_generate_profit_loss(request):
         gross_profit = total_revenue - cogs
         gross_margin = (gross_profit / total_revenue * 100) if total_revenue > 0 else 0
         
-        # Operating Expenses
-        shipping_expense = sales_details.aggregate(
-            total=Sum('shipping_fees')
-        )['total'] or Decimal('0.00')
+        # ✅ FIX: Calculate shipping expenses manually instead of aggregating @property
+        shipping_expense = Decimal('0.00')
+        for detail in sales_details:
+            # Calculate shipping for each detail: 2% of (price + tax)
+            subtotal = detail.quantity_sold * detail.unit_price
+            tax = subtotal * detail.tax_rate / 100
+            price_with_tax = subtotal + tax
+            shipping = price_with_tax * Decimal('0.02')  # 2% shipping
+            shipping_expense += shipping
+            
+        """     ALTERNATIVE FUNCTION/LOGIC FOR CALCULATING OVERALL SHIPPING FEES
+        shipping_data = sales_details.aggregate(
+            shipping_total=Sum(
+                ExpressionWrapper(
+                    (F('quantity_sold') * F('unit_price') * (1 + F('tax_rate') / 100)) * Decimal('0.02'),
+                    output_field=DecimalField(max_digits=12, decimal_places=2)
+                )
+            )
+        )
+        shipping_expense = shipping_data['shipping_total'] or Decimal('0.00') 
+        """   
         
         # Purchases in period
         purchase_query = PurchaseOrder.objects.all()
@@ -4608,19 +4636,17 @@ def api_generate_profit_loss(request):
         })
     
     except Exception as e:
-        print(f"Error generating P&L report: {str(e)}")
+        print(f"❌ Error generating P&L report: {str(e)}")
         import traceback
         traceback.print_exc()
         return JsonResponse({
             'success': False,
             'message': str(e)
         }, status=500)
-
-
+        
 # ============================================
 # 4. PURCHASE SUMMARY REPORT
 # ============================================
-
 @csrf_exempt
 @login_required(login_url='/login/')
 def api_generate_purchase_summary(request):
@@ -4653,14 +4679,31 @@ def api_generate_purchase_summary(request):
         outstanding = total_purchases - total_paid
         total_orders = purchase_orders.count()
         
-        # Purchases by category
+        # Purchases by category - FIXED
         purchase_details = PurchaseDetail.objects.filter(
             po_id__in=purchase_orders
         )
         
-        purchases_by_category = purchase_details.values('item_category').annotate(
-            total=Sum('total_purchase_price')
-        ).order_by('-total')[:10]
+        # ✅ FIX: Calculate total manually
+        purchases_by_category_raw = purchase_details.values('item_category').annotate(
+            quantity=Sum('quantity_purchased'),
+            subtotal=Sum(F('quantity_purchased') * F('unit_cost')),
+            tax=Sum(F('quantity_purchased') * F('unit_cost') * F('tax_rate') / 100)
+        ).order_by('-subtotal')[:10]
+        
+        # Calculate final totals with shipping
+        purchases_by_category = []
+        for item in purchases_by_category_raw:
+            subtotal = item['subtotal'] or Decimal('0.00')
+            tax = item['tax'] or Decimal('0.00')
+            cost_with_tax = subtotal + tax
+            shipping = cost_with_tax * Decimal('0.01')  # 1% shipping
+            total = cost_with_tax + shipping
+            
+            purchases_by_category.append({
+                'category': item['item_category'],
+                'total': float(total)
+            })
         
         # Top suppliers
         top_suppliers = purchase_orders.values(
@@ -4685,13 +4728,7 @@ def api_generate_purchase_summary(request):
                 'total_orders': total_orders,
                 'avg_order_value': float(total_purchases / total_orders) if total_orders > 0 else 0
             },
-            'purchases_by_category': [
-                {
-                    'category': item['item_category'],
-                    'total': float(item['total'])
-                }
-                for item in purchases_by_category
-            ],
+            'purchases_by_category': purchases_by_category,
             'top_suppliers': [
                 {
                     'name': item['supplier_name'],
@@ -4720,9 +4757,11 @@ def api_generate_purchase_summary(request):
         })
     
     except Exception as e:
+        print(f"❌ Error generating purchase summary: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
-
-
+    
 # ============================================
 # 5. OUTSTANDING BALANCES REPORT
 # ============================================

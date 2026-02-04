@@ -530,7 +530,7 @@
       
       <div class="quick-report-btn" onclick="generateQuickReport('profit-loss')">
         <i class="fas fa-chart-line"></i>
-        <span>P&L Report</span>
+        <span>Profit & Loss Report</span>
       </div>
     </div>
     
@@ -734,6 +734,1240 @@
     }
     
     console.log('✅ Reports Module Ready!');
+
+    // Quick Report Generation
+async function generateQuickReport(reportType) {
+  showLoading();
+  
+  const today = new Date();
+  let fromDate, toDate;
+  
+  switch(reportType) {
+    case 'today-sales':
+      fromDate = toDate = formatDate(today);
+      await generateSalesReport(fromDate, toDate, 'Today\'s Sales Report');
+      break;
+      
+    case 'week-sales':
+      const weekStart = new Date(today);
+      weekStart.setDate(today.getDate() - today.getDay());
+      fromDate = formatDate(weekStart);
+      toDate = formatDate(today);
+      await generateSalesReport(fromDate, toDate, 'This Week\'s Sales Report');
+      break;
+      
+    case 'month-sales':
+      const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+      fromDate = formatDate(monthStart);
+      toDate = formatDate(today);
+      await generateSalesReport(fromDate, toDate, 'This Month\'s Sales Report');
+      break;
+      
+    case 'inventory-status':
+      await generateInventoryReport();
+      break;
+      
+    case 'outstanding-balances':
+      await generateOutstandingBalancesReport();
+      break;
+      
+    case 'profit-loss':
+      const yearStart = new Date(today.getFullYear(), 0, 1);
+      fromDate = formatDate(yearStart);
+      toDate = formatDate(today);
+      await generateProfitLossReport(fromDate, toDate);
+      break;
+  }
+  
+  hideLoading();
+}
+
+// Main Report Generation Function
+async function generateReport() {
+  const reportType = document.getElementById('reportType').value;
+  const fromDate = document.getElementById('fromDate').value;
+  const toDate = document.getElementById('toDate').value;
+  const category = document.getElementById('filterCategory').value;
+  const county = document.getElementById('filterCounty').value;
+  
+  if (!reportType) {
+    alert('Please select a report type');
+    return;
+  }
+  
+  if (!fromDate || !toDate) {
+    alert('Please select date range');
+    return;
+  }
+  
+  showLoading();
+  currentReportType = reportType;
+  
+  try {
+    switch(reportType) {
+      case 'sales-summary':
+        await generateSalesReport(fromDate, toDate, 'Sales Summary Report', category, county);
+        break;
+        
+      case 'inventory-status':
+        await generateInventoryReport(category);
+        break;
+        
+      case 'profit-loss':
+        await generateProfitLossReport(fromDate, toDate);
+        break;
+        
+      case 'purchase-summary':
+        await generatePurchaseReport(fromDate, toDate, category, county);
+        break;
+        
+      case 'customer-analysis':
+        await generateCustomerAnalysisReport(fromDate, toDate, county);
+        break;
+        
+      case 'supplier-analysis':
+        await generateSupplierAnalysisReport(fromDate, toDate, county);
+        break;
+        
+      case 'outstanding-balances':
+        await generateOutstandingBalancesReport();
+        break;
+        
+      case 'tax-summary':
+        await generateTaxSummaryReport(fromDate, toDate);
+        break;
+        
+      default:
+        alert('Report type not implemented yet');
+    }
+  } catch (error) {
+    console.error('Error generating report:', error);
+    alert('Error generating report: ' + error.message);
+  } finally {
+    hideLoading();
+  }
+}
+
+// 1. SALES SUMMARY REPORT
+async function generateSalesReport(fromDate, toDate, title = 'Sales Summary Report', category = '', county = '') {
+  try {
+    const params = new URLSearchParams({
+      start_date: fromDate,
+      end_date: toDate
+    });
+    
+    if (category) params.append('category', category);
+    if (county) params.append('county', county);
+    
+    const response = await fetch(`/api/reports/sales-summary/?${params}`, {
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': getCSRFToken()
+      },
+      credentials: 'same-origin'
+    });
+    
+    const result = await response.json();
+    
+    if (!result.success) {
+      throw new Error(result.message || 'Failed to generate report');
+    }
+    
+    currentReportData = result.data;
+    renderSalesReport(result.data, title, fromDate, toDate);
+    showExportButtons();
+    
+  } catch (error) {
+    console.error('Error generating sales report:', error);
+    throw error;
+  }
+}
+
+function renderSalesReport(data, title, fromDate, toDate) {
+  const reportDisplay = document.getElementById('reportDisplay');
+  reportDisplay.classList.add('active');
+  
+  // Destroy existing charts
+  Object.values(charts).forEach(chart => chart.destroy());
+  charts = {};
+  
+  reportDisplay.innerHTML = `
+    <div class="report-header">
+      <h2 class="report-title">${title}</h2>
+      <p class="report-subtitle">Comprehensive sales analysis and performance metrics</p>
+      <span class="report-period">Period: ${fromDate} - ${toDate}</span>
+    </div>
+    
+    <!-- KPI Cards -->
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-label">Total Sales</div>
+        <div class="kpi-value">KSH ${formatNumber(data.kpis.total_sales)}</div>
+        <div class="kpi-change neutral">${data.kpis.total_orders} orders</div>
+      </div>
+      
+      <div class="kpi-card success">
+        <div class="kpi-label">Amount Received</div>
+        <div class="kpi-value">KSH ${formatNumber(data.kpis.total_received)}</div>
+        <div class="kpi-change positive">
+          <i class="fas fa-check-circle"></i>
+          ${((data.kpis.total_received / data.kpis.total_sales) * 100).toFixed(1)}% collected
+        </div>
+      </div>
+      
+      <div class="kpi-card warning">
+        <div class="kpi-label">Outstanding</div>
+        <div class="kpi-value">KSH ${formatNumber(data.kpis.outstanding)}</div>
+        <div class="kpi-change negative">
+          <i class="fas fa-exclamation-circle"></i>
+          Pending collection
+        </div>
+      </div>
+      
+      <div class="kpi-card secondary">
+        <div class="kpi-label">Avg Order Value</div>
+        <div class="kpi-value">KSH ${formatNumber(data.kpis.avg_order_value)}</div>
+        <div class="kpi-change neutral">Per transaction</div>
+      </div>
+    </div>
+    
+    <!-- Charts -->
+    <div class="charts-grid">
+      <div class="chart-card wide">
+        <h3 class="chart-title">Sales Trend - Daily Performance</h3>
+        <div class="chart-container">
+          <canvas id="dailySalesChart"></canvas>
+        </div>
+      </div>
+      
+      <div class="chart-card">
+        <h3 class="chart-title">Sales by Category</h3>
+        <div class="chart-container">
+          <canvas id="categoryChart"></canvas>
+        </div>
+      </div>
+      
+      <div class="chart-card">
+        <h3 class="chart-title">Top 5 Customers</h3>
+        <div class="chart-container">
+          <canvas id="topCustomersChart"></canvas>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Top Customers Table -->
+    <div style="margin-top: 30px;">
+      <h3 class="chart-title">Top Customers by Revenue</h3>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Customer Name</th>
+            <th class="text-right">Total Sales</th>
+            <th class="text-center">Orders</th>
+            <th class="text-right">Avg Order Value</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${data.top_customers.map(customer => `
+            <tr>
+              <td>${customer.name}</td>
+              <td class="text-right">KSH ${formatNumber(customer.total)}</td>
+              <td class="text-center">${customer.orders}</td>
+              <td class="text-right">KSH ${formatNumber(customer.total / customer.orders)}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+    
+    <!-- Sales by Location Table -->
+    <div style="margin-top: 30px;">
+      <h3 class="chart-title">Sales by Location</h3>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>County</th>
+            <th class="text-right">Total Sales</th>
+            <th class="text-right">% of Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${data.sales_by_location.map(loc => `
+            <tr>
+              <td>${loc.location}</td>
+              <td class="text-right">KSH ${formatNumber(loc.total)}</td>
+              <td class="text-right">${((loc.total / data.kpis.total_sales) * 100).toFixed(1)}%</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+  
+  // Render charts
+  renderDailySalesChart(data.daily_sales);
+  renderCategoryPieChart(data.sales_by_category, 'categoryChart');
+  renderTopCustomersChart(data.top_customers);
+}
+
+// 2. INVENTORY STATUS REPORT
+async function generateInventoryReport(category = '') {
+  try {
+    const params = new URLSearchParams();
+    if (category) params.append('category', category);
+    
+    const response = await fetch(`/api/reports/inventory-status/?${params}`, {
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': getCSRFToken()
+      },
+      credentials: 'same-origin'
+    });
+    
+    const result = await response.json();
+    
+    if (!result.success) {
+      throw new Error(result.message || 'Failed to generate report');
+    }
+    
+    currentReportData = result.data;
+    renderInventoryReport(result.data);
+    showExportButtons();
+    
+  } catch (error) {
+    console.error('Error generating inventory report:', error);
+    throw error;
+  }
+}
+
+function renderInventoryReport(data) {
+  const reportDisplay = document.getElementById('reportDisplay');
+  reportDisplay.classList.add('active');
+  
+  // Destroy existing charts
+  Object.values(charts).forEach(chart => chart.destroy());
+  charts = {};
+  
+  reportDisplay.innerHTML = `
+    <div class="report-header">
+      <h2 class="report-title">Inventory Status Report</h2>
+      <p class="report-subtitle">Current stock levels and inventory valuation</p>
+      <span class="report-period">Generated: ${formatDate(new Date())}</span>
+    </div>
+    
+    <!-- KPI Cards -->
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-label">Total Cost Value</div>
+        <div class="kpi-value">KSH ${formatNumber(data.kpis.total_cost_value)}</div>
+        <div class="kpi-change neutral">At purchase price</div>
+      </div>
+      
+      <div class="kpi-card success">
+        <div class="kpi-label">Total Sale Value</div>
+        <div class="kpi-value">KSH ${formatNumber(data.kpis.total_sale_value)}</div>
+        <div class="kpi-change positive">
+          <i class="fas fa-arrow-up"></i>
+          Potential revenue
+        </div>
+      </div>
+      
+      <div class="kpi-card secondary">
+        <div class="kpi-label">Potential Profit</div>
+        <div class="kpi-value">KSH ${formatNumber(data.kpis.potential_profit)}</div>
+        <div class="kpi-change positive">
+          ${((data.kpis.potential_profit / data.kpis.total_cost_value) * 100).toFixed(1)}% margin
+        </div>
+      </div>
+      
+      <div class="kpi-card warning">
+        <div class="kpi-label">Items Requiring Reorder</div>
+        <div class="kpi-value">${data.kpis.reorder_items}</div>
+        <div class="kpi-change ${data.kpis.reorder_items > 0 ? 'negative' : 'positive'}">
+          <i class="fas ${data.kpis.reorder_items > 0 ? 'fa-exclamation-triangle' : 'fa-check-circle'}"></i>
+          ${data.kpis.reorder_items > 0 ? 'Action required' : 'Stock sufficient'}
+        </div>
+      </div>
+    </div>
+    
+    <!-- Charts -->
+    <div class="charts-grid">
+      <div class="chart-card">
+        <h3 class="chart-title">Inventory Value by Category</h3>
+        <div class="chart-container">
+          <canvas id="categoryValueChart"></canvas>
+        </div>
+      </div>
+      
+      <div class="chart-card">
+        <h3 class="chart-title">Stock Status Overview</h3>
+        <div class="chart-container">
+          <canvas id="stockStatusChart"></canvas>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Low Stock Items -->
+    ${data.low_stock.length > 0 ? `
+      <div style="margin-top: 30px;">
+        <h3 class="chart-title" style="color: var(--error);">
+          <i class="fas fa-exclamation-triangle"></i>
+          Items Requiring Immediate Reorder
+        </h3>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Item ID</th>
+              <th>Item Name</th>
+              <th>Category</th>
+              <th class="text-center">Current Stock</th>
+              <th class="text-center">Reorder Level</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${data.low_stock.map(item => `
+              <tr>
+                <td>${item.item_id}</td>
+                <td>${item.name}</td>
+                <td>${item.category}</td>
+                <td class="text-center" style="color: var(--error); font-weight: 600;">${item.remaining_qty}</td>
+                <td class="text-center">${item.reorder_level}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    ` : ''}
+    
+    <!-- Full Inventory Table -->
+    <div style="margin-top: 30px;">
+      <h3 class="chart-title">Complete Inventory List</h3>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Item ID</th>
+            <th>Item Name</th>
+            <th>Category</th>
+            <th class="text-center">Purchased</th>
+            <th class="text-center">Sold</th>
+            <th class="text-center">Remaining</th>
+            <th class="text-right">Cost Value</th>
+            <th class="text-right">Sale Value</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${data.items.map(item => `
+            <tr>
+              <td>${item.item_id}</td>
+              <td>${item.name}</td>
+              <td>${item.category}</td>
+              <td class="text-center">${item.purchased_qty}</td>
+              <td class="text-center">${item.sold_qty}</td>
+              <td class="text-center ${item.reorder_required === 'YES' ? 'style="color: var(--error); font-weight: 600;"' : ''}">${item.remaining_qty}</td>
+              <td class="text-right">KSH ${formatNumber(item.cost_value)}</td>
+              <td class="text-right">KSH ${formatNumber(item.sale_value)}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+  
+  // Render charts
+  renderCategoryValueChart(data.category_breakdown);
+  renderStockStatusChart(data.kpis);
+}
+
+// 3. PROFIT & LOSS REPORT
+async function generateProfitLossReport(fromDate, toDate) {
+  try {
+    const params = new URLSearchParams({
+      start_date: fromDate,
+      end_date: toDate
+    });
+    
+    const response = await fetch(`/api/reports/profit-loss/?${params}`, {
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': getCSRFToken()
+      },
+      credentials: 'same-origin'
+    });
+    
+    const result = await response.json();
+    
+    if (!result.success) {
+      throw new Error(result.message || 'Failed to generate report');
+    }
+    
+    currentReportData = result.data;
+    renderProfitLossReport(result.data, fromDate, toDate);
+    showExportButtons();
+    
+  } catch (error) {
+    console.error('Error generating P&L report:', error);
+    throw error;
+  }
+}
+
+function renderProfitLossReport(data, fromDate, toDate) {
+  const reportDisplay = document.getElementById('reportDisplay');
+  reportDisplay.classList.add('active');
+  
+  // Destroy existing charts
+  Object.values(charts).forEach(chart => chart.destroy());
+  charts = {};
+  
+  const isProfit = data.kpis.net_profit >= 0;
+  
+  reportDisplay.innerHTML = `
+    <div class="report-header">
+      <h2 class="report-title">Profit & Loss Statement</h2>
+      <p class="report-subtitle">Financial performance summary</p>
+      <span class="report-period">Period: ${fromDate} - ${toDate}</span>
+    </div>
+    
+    <!-- P&L Summary -->
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-label">Total Revenue</div>
+        <div class="kpi-value">KSH ${formatNumber(data.kpis.total_revenue)}</div>
+        <div class="kpi-change positive">
+          <i class="fas fa-dollar-sign"></i>
+          Sales income
+        </div>
+      </div>
+      
+      <div class="kpi-card warning">
+        <div class="kpi-label">Cost of Goods Sold</div>
+        <div class="kpi-value">KSH ${formatNumber(data.kpis.cogs)}</div>
+        <div class="kpi-change neutral">
+          Direct costs
+        </div>
+      </div>
+      
+      <div class="kpi-card ${isProfit ? 'success' : 'warning'}">
+        <div class="kpi-label">Gross Profit</div>
+        <div class="kpi-value">KSH ${formatNumber(data.kpis.gross_profit)}</div>
+        <div class="kpi-change ${isProfit ? 'positive' : 'negative'}">
+          <i class="fas fa-${isProfit ? 'arrow-up' : 'arrow-down'}"></i>
+          ${data.kpis.gross_margin.toFixed(1)}% margin
+        </div>
+      </div>
+      
+      <div class="kpi-card ${isProfit ? 'success' : 'warning'}">
+        <div class="kpi-label">Net Profit</div>
+        <div class="kpi-value">KSH ${formatNumber(data.kpis.net_profit)}</div>
+        <div class="kpi-change ${isProfit ? 'positive' : 'negative'}">
+          <i class="fas fa-${isProfit ? 'check-circle' : 'exclamation-circle'}"></i>
+          ${data.kpis.net_margin.toFixed(1)}% margin
+        </div>
+      </div>
+    </div>
+    
+    <!-- Detailed P&L Statement -->
+    <div style="margin-top: 30px;">
+      <h3 class="chart-title">Profit & Loss Statement Details</h3>
+      <table class="data-table">
+        <tbody>
+          <tr>
+            <td><strong>Revenue</strong></td>
+            <td class="text-right"><strong>KSH ${formatNumber(data.breakdown.revenue)}</strong></td>
+          </tr>
+          <tr>
+            <td style="padding-left: 30px;">Cost of Goods Sold</td>
+            <td class="text-right" style="color: var(--error);">(KSH ${formatNumber(data.breakdown.cogs)})</td>
+          </tr>
+          <tr style="background-color: var(--light-gray);">
+            <td><strong>Gross Profit</strong></td>
+            <td class="text-right"><strong>KSH ${formatNumber(data.breakdown.gross_profit)}</strong></td>
+          </tr>
+          <tr>
+            <td><strong>Operating Expenses</strong></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td style="padding-left: 30px;">Shipping Expenses</td>
+            <td class="text-right" style="color: var(--error);">(KSH ${formatNumber(data.breakdown.shipping_expense)})</td>
+          </tr>
+          <tr class="total-row">
+            <td><strong>Net Profit</strong></td>
+            <td class="text-right"><strong>KSH ${formatNumber(data.breakdown.net_profit)}</strong></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    
+    <!-- Monthly Trend -->
+    ${data.monthly_trend.length > 0 ? `
+      <div style="margin-top: 30px;">
+        <h3 class="chart-title">Monthly Revenue Trend</h3>
+        <div class="chart-container" style="height: 300px;">
+          <canvas id="monthlyTrendChart"></canvas>
+        </div>
+      </div>
+    ` : ''}
+  `;
+  
+  // Render monthly trend chart if data exists
+  if (data.monthly_trend.length > 0) {
+    renderMonthlyTrendChart(data.monthly_trend);
+  }
+}
+
+// 4. PURCHASE SUMMARY REPORT
+async function generatePurchaseReport(fromDate, toDate, category = '', county = '') {
+  try {
+    const params = new URLSearchParams({
+      start_date: fromDate,
+      end_date: toDate
+    });
+    
+    if (category) params.append('category', category);
+    if (county) params.append('county', county);
+    
+    const response = await fetch(`/api/reports/purchase-summary/?${params}`, {
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': getCSRFToken()
+      },
+      credentials: 'same-origin'
+    });
+    
+    const result = await response.json();
+    
+    if (!result.success) {
+      throw new Error(result.message || 'Failed to generate report');
+    }
+    
+    currentReportData = result.data;
+    renderPurchaseReport(result.data, fromDate, toDate);
+    showExportButtons();
+    
+  } catch (error) {
+    console.error('Error generating purchase report:', error);
+    throw error;
+  }
+}
+
+function renderPurchaseReport(data, fromDate, toDate) {
+  const reportDisplay = document.getElementById('reportDisplay');
+  reportDisplay.classList.add('active');
+  
+  // Destroy existing charts
+  Object.values(charts).forEach(chart => chart.destroy());
+  charts = {};
+  
+  reportDisplay.innerHTML = `
+    <div class="report-header">
+      <h2 class="report-title">Purchase Summary Report</h2>
+      <p class="report-subtitle">Procurement analysis and supplier performance</p>
+      <span class="report-period">Period: ${fromDate} - ${toDate}</span>
+    </div>
+    
+    <!-- KPI Cards -->
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-label">Total Purchases</div>
+        <div class="kpi-value">KSH ${formatNumber(data.kpis.total_purchases)}</div>
+        <div class="kpi-change neutral">${data.kpis.total_orders} orders</div>
+      </div>
+      
+      <div class="kpi-card success">
+        <div class="kpi-label">Amount Paid</div>
+        <div class="kpi-value">KSH ${formatNumber(data.kpis.total_paid)}</div>
+        <div class="kpi-change positive">
+          ${((data.kpis.total_paid / data.kpis.total_purchases) * 100).toFixed(1)}% settled
+        </div>
+      </div>
+      
+      <div class="kpi-card warning">
+        <div class="kpi-label">Outstanding Payable</div>
+        <div class="kpi-value">KSH ${formatNumber(data.kpis.outstanding)}</div>
+        <div class="kpi-change negative">Pending payment</div>
+      </div>
+      
+      <div class="kpi-card secondary">
+        <div class="kpi-label">Avg Purchase Value</div>
+        <div class="kpi-value">KSH ${formatNumber(data.kpis.avg_order_value)}</div>
+        <div class="kpi-change neutral">Per order</div>
+      </div>
+    </div>
+    
+    <!-- Charts -->
+    <div class="charts-grid">
+      <div class="chart-card wide">
+        <h3 class="chart-title">Daily Purchase Trend</h3>
+        <div class="chart-container">
+          <canvas id="dailyPurchasesChart"></canvas>
+        </div>
+      </div>
+      
+      <div class="chart-card">
+        <h3 class="chart-title">Purchases by Category</h3>
+        <div class="chart-container">
+          <canvas id="purchaseCategoryChart"></canvas>
+        </div>
+      </div>
+      
+      <div class="chart-card">
+        <h3 class="chart-title">Top 5 Suppliers</h3>
+        <div class="chart-container">
+          <canvas id="topSuppliersChart"></canvas>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Top Suppliers Table -->
+    <div style="margin-top: 30px;">
+      <h3 class="chart-title">Top Suppliers by Purchase Volume</h3>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Supplier Name</th>
+            <th class="text-right">Total Purchases</th>
+            <th class="text-center">Orders</th>
+            <th class="text-right">Avg Order Value</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${data.top_suppliers.map(supplier => `
+            <tr>
+              <td>${supplier.name}</td>
+              <td class="text-right">KSH ${formatNumber(supplier.total)}</td>
+              <td class="text-center">${supplier.orders}</td>
+              <td class="text-right">KSH ${formatNumber(supplier.total / supplier.orders)}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+  
+  // Render charts
+  renderDailyPurchasesChart(data.daily_purchases);
+  renderCategoryPieChart(data.purchases_by_category, 'purchaseCategoryChart');
+  renderTopSuppliersChart(data.top_suppliers);
+}
+
+// 5. OUTSTANDING BALANCES REPORT
+async function generateOutstandingBalancesReport() {
+  try {
+    const response = await fetch('/api/reports/outstanding-balances/', {
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': getCSRFToken()
+      },
+      credentials: 'same-origin'
+    });
+    
+    const result = await response.json();
+    
+    if (!result.success) {
+      throw new Error(result.message || 'Failed to generate report');
+    }
+    
+    currentReportData = result.data;
+    renderOutstandingBalancesReport(result.data);
+    showExportButtons();
+    
+  } catch (error) {
+    console.error('Error generating outstanding balances report:', error);
+    throw error;
+  }
+}
+
+function renderOutstandingBalancesReport(data) {
+  const reportDisplay = document.getElementById('reportDisplay');
+  reportDisplay.classList.add('active');
+  
+  // Destroy existing charts
+  Object.values(charts).forEach(chart => chart.destroy());
+  charts = {};
+  
+  reportDisplay.innerHTML = `
+    <div class="report-header">
+      <h2 class="report-title">Outstanding Balances Report</h2>
+      <p class="report-subtitle">Accounts receivable and payable summary</p>
+      <span class="report-period">Generated: ${formatDate(new Date())}</span>
+    </div>
+    
+    <!-- KPI Cards -->
+    <div class="kpi-grid">
+      <div class="kpi-card success">
+        <div class="kpi-label">Total Receivable</div>
+        <div class="kpi-value">KSH ${formatNumber(data.kpis.total_receivable)}</div>
+        <div class="kpi-change positive">
+          <i class="fas fa-arrow-down"></i>
+          From customers
+        </div>
+      </div>
+      
+      <div class="kpi-card warning">
+        <div class="kpi-label">Total Payable</div>
+        <div class="kpi-value">KSH ${formatNumber(data.kpis.total_payable)}</div>
+        <div class="kpi-change negative">
+          <i class="fas fa-arrow-up"></i>
+          To suppliers
+        </div>
+      </div>
+      
+      <div class="kpi-card ${data.kpis.net_position >= 0 ? 'success' : 'warning'}">
+        <div class="kpi-label">Net Position</div>
+        <div class="kpi-value">KSH ${formatNumber(data.kpis.net_position)}</div>
+        <div class="kpi-change ${data.kpis.net_position >= 0 ? 'positive' : 'negative'}">
+          <i class="fas fa-${data.kpis.net_position >= 0 ? 'check-circle' : 'exclamation-circle'}"></i>
+          ${data.kpis.net_position >= 0 ? 'Healthy' : 'Review needed'}
+        </div>
+      </div>
+    </div>
+    
+    <!-- Customer Balances -->
+    ${data.customer_balances.length > 0 ? `
+      <div style="margin-top: 30px;">
+        <h3 class="chart-title">
+          <i class="fas fa-users"></i>
+          Outstanding Customer Balances (Receivable)
+        </h3>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Customer ID</th>
+              <th>Customer Name</th>
+              <th class="text-right">Total Sales</th>
+              <th class="text-right">Payments Received</th>
+              <th class="text-right">Balance Due</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${data.customer_balances.map(customer => `
+              <tr>
+                <td>${customer.id}</td>
+                <td>${customer.name}</td>
+                <td class="text-right">KSH ${formatNumber(customer.total_sales)}</td>
+                <td class="text-right">KSH ${formatNumber(customer.total_payments)}</td>
+                <td class="text-right" style="color: var(--success); font-weight: 600;">KSH ${formatNumber(customer.balance)}</td>
+              </tr>
+            `).join('')}
+            <tr class="total-row">
+              <td colspan="4"><strong>Total Receivable</strong></td>
+              <td class="text-right"><strong>KSH ${formatNumber(data.kpis.total_receivable)}</strong></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    ` : `
+      <div style="margin-top: 30px; text-align: center; padding: 40px; background: var(--light-gray); border-radius: 8px;">
+        <i class="fas fa-check-circle" style="font-size: 3rem; color: var(--success); margin-bottom: 15px;"></i>
+        <h3 style="color: var(--success);">No Outstanding Customer Balances</h3>
+        <p style="color: var(--gray);">All customers have settled their accounts</p>
+      </div>
+    `}
+    
+    <!-- Supplier Balances -->
+    ${data.supplier_balances.length > 0 ? `
+      <div style="margin-top: 30px;">
+        <h3 class="chart-title">
+          <i class="fas fa-truck"></i>
+          Outstanding Supplier Balances (Payable)
+        </h3>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Supplier ID</th>
+              <th>Supplier Name</th>
+              <th class="text-right">Total Purchases</th>
+              <th class="text-right">Payments Made</th>
+              <th class="text-right">Balance Due</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${data.supplier_balances.map(supplier => `
+              <tr>
+                <td>${supplier.id}</td>
+                <td>${supplier.name}</td>
+                <td class="text-right">KSH ${formatNumber(supplier.total_purchases)}</td>
+                <td class="text-right">KSH ${formatNumber(supplier.total_payments)}</td>
+                <td class="text-right" style="color: var(--error); font-weight: 600;">KSH ${formatNumber(supplier.balance)}</td>
+              </tr>
+            `).join('')}
+            <tr class="total-row">
+              <td colspan="4"><strong>Total Payable</strong></td>
+              <td class="text-right"><strong>KSH ${formatNumber(data.kpis.total_payable)}</strong></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    ` : `
+      <div style="margin-top: 30px; text-align: center; padding: 40px; background: var(--light-gray); border-radius: 8px;">
+        <i class="fas fa-check-circle" style="font-size: 3rem; color: var(--success); margin-bottom: 15px;"></i>
+        <h3 style="color: var(--success);">No Outstanding Supplier Balances</h3>
+        <p style="color: var(--gray);">All suppliers have been paid</p>
+      </div>
+    `}
+  `;
+}
+
+// CHART RENDERING FUNCTIONS
+
+function renderDailySalesChart(dailyData) {
+  const ctx = document.getElementById('dailySalesChart');
+  
+  charts.dailySales = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: dailyData.map(d => d.date),
+      datasets: [{
+        label: 'Daily Sales',
+        data: dailyData.map(d => d.total),
+        borderColor: 'rgba(26, 188, 156, 1)',
+        backgroundColor: 'rgba(26, 188, 156, 0.1)',
+        borderWidth: 3,
+        fill: true,
+        tension: 0.4,
+        pointRadius: 4,
+        pointHoverRadius: 6
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: (context) => 'Sales: KSH ' + formatNumber(context.parsed.y)
+          }
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: {
+            callback: (value) => 'KSH ' + (value / 1000).toFixed(0) + 'K'
+          }
+        }
+      }
+    }
+  });
+}
+
+function renderCategoryPieChart(categoryData, canvasId) {
+  const ctx = document.getElementById(canvasId);
+  
+  charts[canvasId] = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: categoryData.map(c => c.category),
+      datasets: [{
+        data: categoryData.map(c => c.total),
+        backgroundColor: [
+          'rgba(26, 188, 156, 0.8)',
+          'rgba(52, 152, 219, 0.8)',
+          'rgba(155, 89, 182, 0.8)',
+          'rgba(230, 126, 34, 0.8)',
+          'rgba(231, 76, 60, 0.8)',
+          'rgba(243, 156, 18, 0.8)',
+          'rgba(46, 204, 113, 0.8)',
+          'rgba(52, 73, 94, 0.8)'
+        ],
+        borderWidth: 2,
+        borderColor: '#ffffff'
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom' },
+        tooltip: {
+          callbacks: {
+            label: (context) => {
+              const total = context.dataset.data.reduce((a, b) => a + b, 0);
+              const percentage = ((context.parsed / total) * 100).toFixed(1);
+              return `${context.label}: KSH ${formatNumber(context.parsed)} (${percentage}%)`;
+            }
+          }
+        }
+      }
+    }
+  });
+}
+
+function renderTopCustomersChart(customersData) {
+  const ctx = document.getElementById('topCustomersChart');
+  
+  charts.topCustomers = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: customersData.map(c => c.name),
+      datasets: [{
+        label: 'Total Sales',
+        data: customersData.map(c => c.total),
+        backgroundColor: 'rgba(52, 152, 219, 0.7)',
+        borderColor: 'rgba(52, 152, 219, 1)',
+        borderWidth: 2
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: (context) => 'Sales: KSH ' + formatNumber(context.parsed.x)
+          }
+        }
+      },
+      scales: {
+        x: {
+          beginAtZero: true,
+          ticks: {
+            callback: (value) => 'KSH ' + (value / 1000).toFixed(0) + 'K'
+          }
+        }
+      }
+    }
+  });
+}
+
+function renderCategoryValueChart(categoryData) {
+  const ctx = document.getElementById('categoryValueChart');
+  
+  charts.categoryValue = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: categoryData.map(c => c.category),
+      datasets: [{
+        label: 'Cost Value',
+        data: categoryData.map(c => c.cost_value),
+        backgroundColor: 'rgba(230, 126, 34, 0.7)',
+        borderColor: 'rgba(230, 126, 34, 1)',
+        borderWidth: 2
+      }, {
+        label: 'Sale Value',
+        data: categoryData.map(c => c.sale_value),
+        backgroundColor: 'rgba(46, 204, 113, 0.7)',
+        borderColor: 'rgba(46, 204, 113, 1)',
+        borderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'top' },
+        tooltip: {
+          callbacks: {
+            label: (context) => context.dataset.label + ': KSH ' + formatNumber(context.parsed.y)
+          }
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: {
+            callback: (value) => 'KSH ' + (value / 1000).toFixed(0) + 'K'
+          }
+        }
+      }
+    }
+  });
+}
+
+function renderStockStatusChart(kpis) {
+  const ctx = document.getElementById('stockStatusChart');
+  
+  charts.stockStatus = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: ['In Stock', 'Needs Reorder'],
+      datasets: [{
+        data: [kpis.total_items - kpis.reorder_items, kpis.reorder_items],
+        backgroundColor: [
+          'rgba(46, 204, 113, 0.8)',
+          'rgba(231, 76, 60, 0.8)'
+        ],
+        borderWidth: 2,
+        borderColor: '#ffffff'
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom' }
+      }
+    }
+  });
+}
+
+function renderMonthlyTrendChart(monthlyData) {
+  const ctx = document.getElementById('monthlyTrendChart');
+  
+  charts.monthlyTrend = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: monthlyData.map(m => m.month),
+      datasets: [{
+        label: 'Monthly Revenue',
+        data: monthlyData.map(m => m.revenue),
+        borderColor: 'rgba(155, 89, 182, 1)',
+        backgroundColor: 'rgba(155, 89, 182, 0.1)',
+        borderWidth: 3,
+        fill: true,
+        tension: 0.4
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: (context) => 'Revenue: KSH ' + formatNumber(context.parsed.y)
+          }
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: {
+            callback: (value) => 'KSH ' + (value / 1000).toFixed(0) + 'K'
+          }
+        }
+      }
+    }
+  });
+}
+
+function renderDailyPurchasesChart(dailyData) {
+  const ctx = document.getElementById('dailyPurchasesChart');
+  
+  charts.dailyPurchases = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: dailyData.map(d => d.date),
+      datasets: [{
+        label: 'Daily Purchases',
+        data: dailyData.map(d => d.total),
+        borderColor: 'rgba(230, 126, 34, 1)',
+        backgroundColor: 'rgba(230, 126, 34, 0.1)',
+        borderWidth: 3,
+        fill: true,
+        tension: 0.4,
+        pointRadius: 4,
+        pointHoverRadius: 6
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: (context) => 'Purchases: KSH ' + formatNumber(context.parsed.y)
+          }
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: {
+            callback: (value) => 'KSH ' + (value / 1000).toFixed(0) + 'K'
+          }
+        }
+      }
+    }
+  });
+}
+
+function renderTopSuppliersChart(suppliersData) {
+  const ctx = document.getElementById('topSuppliersChart');
+  
+  charts.topSuppliers = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: suppliersData.map(s => s.name),
+      datasets: [{
+        label: 'Total Purchases',
+        data: suppliersData.map(s => s.total),
+        backgroundColor: 'rgba(155, 89, 182, 0.7)',
+        borderColor: 'rgba(155, 89, 182, 1)',
+        borderWidth: 2
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: (context) => 'Purchases: KSH ' + formatNumber(context.parsed.x)
+          }
+        }
+      },
+      scales: {
+        x: {
+          beginAtZero: true,
+          ticks: {
+            callback: (value) => 'KSH ' + (value / 1000).toFixed(0) + 'K'
+          }
+        }
+      }
+    }
+  });
+}
+
+// EXPORT FUNCTIONS
+
+function showExportButtons() {
+  document.getElementById('exportPDFBtn').style.display = 'flex';
+  document.getElementById('exportExcelBtn').style.display = 'flex';
+}
+
+function exportToPDF() {
+  alert('PDF Export: This functionality would generate a PDF version of the current report using jsPDF library. Implementation requires backend integration for production-quality reports.');
+  
+  // Basic implementation example:
+  /*
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  
+  doc.text('Report Title', 20, 20);
+  // Add report content...
+  
+  doc.save('report.pdf');
+  */
+}
+
+function exportToExcel() {
+  alert('Excel Export: This functionality would generate an Excel file with the current report data. Implementation requires backend integration using openpyxl or similar library.');
+  
+  // This would typically call a backend endpoint that generates the Excel file
+  /*
+  window.location.href = '/api/reports/export-excel/?type=' + currentReportType;
+  */
+}
+
+// Additional helper functions for other report types can be added here
+async function generateCustomerAnalysisReport(fromDate, toDate, county = '') {
+  alert('Customer Analysis Report: This report would analyze customer purchase patterns, frequency, and value. Implementation follows the same pattern as Sales Summary.');
+}
+
+async function generateSupplierAnalysisReport(fromDate, toDate, county = '') {
+  alert('Supplier Analysis Report: This report would analyze supplier performance, delivery times, and purchase volumes. Implementation follows the same pattern as Purchase Summary.');
+}
+
+async function generateTaxSummaryReport(fromDate, toDate) {
+  alert('Tax Summary Report: This report would summarize tax collected on sales and paid on purchases. Implementation requires aggregating tax data from SalesDetail and PurchaseDetail tables.');
+}
   </script>
 </body>
 </html>
