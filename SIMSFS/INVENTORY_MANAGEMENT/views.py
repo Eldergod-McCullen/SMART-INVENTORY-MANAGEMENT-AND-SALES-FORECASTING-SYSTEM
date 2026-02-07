@@ -4823,3 +4823,1210 @@ def api_generate_outstanding_balances(request):
     
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
+    
+# ============================================
+# CUSTOMER ANALYSIS REPORT
+# ============================================
+@csrf_exempt
+@login_required(login_url='/login/')
+def api_generate_customer_analysis(request):
+    """
+    Generate Customer Analysis Report
+    Returns: Customer purchasing behavior, value segmentation, and trends
+    """
+    try:
+        start_date_str = request.GET.get('start_date', '')
+        end_date_str = request.GET.get('end_date', '')
+        county = request.GET.get('county', '')
+        
+        start_date = parse_date(start_date_str) if start_date_str else None
+        end_date = parse_date(end_date_str) if end_date_str else None
+        
+        # Build query
+        sales_query = SalesOrder.objects.all()
+        
+        if start_date:
+            sales_query = sales_query.filter(date__gte=start_date)
+        if end_date:
+            sales_query = sales_query.filter(date__lte=end_date)
+        
+        # Filter by county if specified
+        if county:
+            sales_query = sales_query.filter(county__county=county)
+        
+        # Get all customers
+        all_customers = Customer.objects.all()
+        if county:
+            all_customers = all_customers.filter(county__county=county)
+        
+        # Customer metrics
+        customer_data = []
+        total_customers = all_customers.count()
+        active_customers = 0
+        total_customer_value = Decimal('0.00')
+        total_customer_orders = 0
+        
+        for customer in all_customers:
+            # Get sales for this customer in the period
+            customer_sales = sales_query.filter(customer_id=customer)
+            
+            sales_total = customer_sales.aggregate(
+                total=Sum('total_amount')
+            )['total'] or Decimal('0.00')
+            
+            orders_count = customer_sales.count()
+            
+            # Calculate payment ratio
+            payments_total = customer.total_payments
+            payment_ratio = (payments_total / customer.total_sales * 100) if customer.total_sales > 0 else 0
+            
+            # Outstanding balance
+            outstanding = customer.total_sales - customer.total_payments
+            
+            if sales_total > 0:
+                active_customers += 1
+                total_customer_value += sales_total
+                total_customer_orders += orders_count
+                
+                # Get first and last order dates
+                first_order = customer_sales.order_by('date').first()
+                last_order = customer_sales.order_by('-date').first()
+                
+                # Calculate average days between orders
+                if orders_count > 1 and first_order and last_order:
+                    days_span = (last_order.date - first_order.date).days
+                    avg_days_between = days_span / (orders_count - 1) if orders_count > 1 else 0
+                else:
+                    avg_days_between = 0
+                
+                customer_data.append({
+                    'customer_id': customer.customer_id,
+                    'customer_name': customer.customer_name,
+                    'phone': customer.phone_number or '',
+                    'email': customer.email or '',
+                    'county': customer.county.county if customer.county else '',
+                    'town': customer.town.town if customer.town else '',
+                    'total_sales': float(sales_total),
+                    'total_orders': orders_count,
+                    'avg_order_value': float(sales_total / orders_count) if orders_count > 0 else 0,
+                    'lifetime_value': float(customer.total_sales),
+                    'total_payments': float(payments_total),
+                    'outstanding_balance': float(outstanding),
+                    'payment_ratio': float(payment_ratio),
+                    'first_order_date': first_order.date.strftime('%d/%m/%Y') if first_order else '',
+                    'last_order_date': last_order.date.strftime('%d/%m/%Y') if last_order else '',
+                    'avg_days_between_orders': int(avg_days_between)
+                })
+        
+        # Sort by total sales
+        customer_data.sort(key=lambda x: x['total_sales'], reverse=True)
+        
+        # Customer segmentation (RFM-like analysis)
+        # Recency, Frequency, Monetary
+        if customer_data:
+            # Top 20% by value = VIP customers
+            vip_threshold_index = max(1, int(len(customer_data) * 0.2))
+            vip_customers = customer_data[:vip_threshold_index]
+            
+            # Next 30% = High-value customers
+            high_value_threshold_index = max(vip_threshold_index + 1, int(len(customer_data) * 0.5))
+            high_value_customers = customer_data[vip_threshold_index:high_value_threshold_index]
+            
+            # Remaining = Regular customers
+            regular_customers = customer_data[high_value_threshold_index:]
+            
+            segmentation = {
+                'vip': {
+                    'count': len(vip_customers),
+                    'total_value': sum(c['total_sales'] for c in vip_customers),
+                    'percentage': (len(vip_customers) / len(customer_data) * 100) if customer_data else 0
+                },
+                'high_value': {
+                    'count': len(high_value_customers),
+                    'total_value': sum(c['total_sales'] for c in high_value_customers),
+                    'percentage': (len(high_value_customers) / len(customer_data) * 100) if customer_data else 0
+                },
+                'regular': {
+                    'count': len(regular_customers),
+                    'total_value': sum(c['total_sales'] for c in regular_customers),
+                    'percentage': (len(regular_customers) / len(customer_data) * 100) if customer_data else 0
+                }
+            }
+        else:
+            segmentation = {
+                'vip': {'count': 0, 'total_value': 0, 'percentage': 0},
+                'high_value': {'count': 0, 'total_value': 0, 'percentage': 0},
+                'regular': {'count': 0, 'total_value': 0, 'percentage': 0}
+            }
+        
+        # Geographic distribution
+        geographic_data = all_customers.values('county__county').annotate(
+            customer_count=Count('customer_id'),
+            total_sales=Sum('total_sales')
+        ).order_by('-total_sales')[:10]
+        
+        # Payment behavior analysis
+        payment_analysis = {
+            'excellent': 0,  # >90% payment ratio
+            'good': 0,       # 70-90%
+            'fair': 0,       # 50-70%
+            'poor': 0        # <50%
+        }
+        
+        for customer in customer_data:
+            ratio = customer['payment_ratio']
+            if ratio >= 90:
+                payment_analysis['excellent'] += 1
+            elif ratio >= 70:
+                payment_analysis['good'] += 1
+            elif ratio >= 50:
+                payment_analysis['fair'] += 1
+            else:
+                payment_analysis['poor'] += 1
+        
+        # ✅ FIXED: Customer acquisition trend (new customers over time)
+        # Calculate based on first order date since we don't have a customer created_date
+        customer_first_orders = []
+        for customer in all_customers:
+            first_order = SalesOrder.objects.filter(customer_id=customer).order_by('date').first()
+            if first_order:
+                customer_first_orders.append({
+                    'customer_id': customer.customer_id,
+                    'first_order_date': first_order.date
+                })
+        
+        # Group by month
+        from collections import defaultdict
+        acquisition_by_month = defaultdict(int)
+        
+        for item in customer_first_orders:
+            month_key = item['first_order_date'].strftime('%Y-%m')
+            acquisition_by_month[month_key] += 1
+        
+        # Sort and take last 12 months
+        acquisition_trend = sorted(
+            [{'month': k, 'new_customers': v} for k, v in acquisition_by_month.items()],
+            key=lambda x: x['month']
+        )[-12:]
+        
+        # Format response
+        report_data = {
+            'kpis': {
+                'total_customers': total_customers,
+                'active_customers': active_customers,
+                'inactive_customers': total_customers - active_customers,
+                'total_revenue': float(total_customer_value),
+                'total_orders': total_customer_orders,
+                'avg_customer_value': float(total_customer_value / active_customers) if active_customers > 0 else 0,
+                'avg_orders_per_customer': float(total_customer_orders / active_customers) if active_customers > 0 else 0
+            },
+            'top_customers': customer_data[:10],  # Top 10 customers
+            'all_customers': customer_data,  # All customer data
+            'segmentation': segmentation,
+            'geographic_distribution': [
+                {
+                    'county': item['county__county'] or 'Unknown',
+                    'customer_count': item['customer_count'],
+                    'total_sales': float(item['total_sales'] or 0)
+                }
+                for item in geographic_data
+            ],
+            'payment_behavior': payment_analysis,
+            'acquisition_trend': acquisition_trend,  # Added acquisition trend data
+            'period': {
+                'start': start_date.strftime('%d/%m/%Y') if start_date else '',
+                'end': end_date.strftime('%d/%m/%Y') if end_date else ''
+            }
+        }
+        
+        return JsonResponse({
+            'success': True,
+            'data': report_data,
+            'report_type': 'Customer Analysis Report'
+        })
+    
+    except Exception as e:
+        print(f"❌ Error generating customer analysis: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({
+            'success': False,
+            'message': str(e)
+        }, status=500)
+            
+# ============================================
+# SUPPLIER ANALYSIS REPORT
+# ============================================
+
+@csrf_exempt
+@login_required(login_url='/login/')
+def api_generate_supplier_analysis(request):
+    """
+    Generate Supplier Analysis Report
+    Returns: Supplier performance, reliability, and cost analysis
+    """
+    try:
+        start_date_str = request.GET.get('start_date', '')
+        end_date_str = request.GET.get('end_date', '')
+        county = request.GET.get('county', '')
+        
+        start_date = parse_date(start_date_str) if start_date_str else None
+        end_date = parse_date(end_date_str) if end_date_str else None
+        
+        # Build query
+        purchase_query = PurchaseOrder.objects.all()
+        
+        if start_date:
+            purchase_query = purchase_query.filter(date__gte=start_date)
+        if end_date:
+            purchase_query = purchase_query.filter(date__lte=end_date)
+        
+        # Filter by county if specified
+        if county:
+            purchase_query = purchase_query.filter(county__county=county)
+        
+        # Get all suppliers
+        all_suppliers = Supplier.objects.all()
+        if county:
+            all_suppliers = all_suppliers.filter(county__county=county)
+        
+        # Supplier metrics
+        supplier_data = []
+        total_suppliers = all_suppliers.count()
+        active_suppliers = 0
+        total_purchase_value = Decimal('0.00')
+        total_purchase_orders = 0
+        
+        for supplier in all_suppliers:
+            # Get purchases for this supplier in the period
+            supplier_purchases = purchase_query.filter(supplier_id=supplier)
+            
+            purchase_total = supplier_purchases.aggregate(
+                total=Sum('total_amount')
+            )['total'] or Decimal('0.00')
+            
+            orders_count = supplier_purchases.count()
+            
+            # Calculate payment ratio
+            payments_total = supplier.total_payments
+            payment_ratio = (payments_total / supplier.total_purchases * 100) if supplier.total_purchases > 0 else 0
+            
+            # Outstanding balance
+            outstanding = supplier.total_purchases - supplier.total_payments
+            
+            # Get purchase details for this supplier
+            supplier_details = PurchaseDetail.objects.filter(
+                po_id__in=supplier_purchases
+            )
+            
+            # Calculate delivery reliability (based on shipping status)
+            delivered_orders = supplier_purchases.filter(
+                shipping_status__shipping_status='DELIVERED'
+            ).count()
+            delivery_rate = (delivered_orders / orders_count * 100) if orders_count > 0 else 0
+            
+            # Calculate average lead time (days from order to delivery)
+            # This is a simplified calculation
+            avg_lead_time = 0
+            if orders_count > 0:
+                # You can enhance this based on your actual delivery tracking
+                avg_lead_time = 7  # Placeholder
+            
+            # Categories supplied
+            categories_supplied = supplier_details.values('item_category').distinct().count()
+            
+            # Items supplied
+            items_supplied = supplier_details.values('item_id').distinct().count()
+            
+            if purchase_total > 0:
+                active_suppliers += 1
+                total_purchase_value += purchase_total
+                total_purchase_orders += orders_count
+                
+                # Get first and last order dates
+                first_order = supplier_purchases.order_by('date').first()
+                last_order = supplier_purchases.order_by('-date').first()
+                
+                # Calculate average days between orders
+                if orders_count > 1 and first_order and last_order:
+                    days_span = (last_order.date - first_order.date).days
+                    avg_days_between = days_span / (orders_count - 1) if orders_count > 1 else 0
+                else:
+                    avg_days_between = 0
+                
+                supplier_data.append({
+                    'supplier_id': supplier.supplier_id,
+                    'supplier_name': supplier.supplier_name,
+                    'phone': supplier.phone_number or '',
+                    'email': supplier.email or '',
+                    'county': supplier.county.county if supplier.county else '',
+                    'town': supplier.town.town if supplier.town else '',
+                    'total_purchases': float(purchase_total),
+                    'total_orders': orders_count,
+                    'avg_order_value': float(purchase_total / orders_count) if orders_count > 0 else 0,
+                    'lifetime_value': float(supplier.total_purchases),
+                    'total_payments': float(payments_total),
+                    'outstanding_balance': float(outstanding),
+                    'payment_ratio': float(payment_ratio),
+                    'delivery_rate': float(delivery_rate),
+                    'avg_lead_time': avg_lead_time,
+                    'categories_supplied': categories_supplied,
+                    'items_supplied': items_supplied,
+                    'first_order_date': first_order.date.strftime('%d/%m/%Y') if first_order else '',
+                    'last_order_date': last_order.date.strftime('%d/%m/%Y') if last_order else '',
+                    'avg_days_between_orders': int(avg_days_between)
+                })
+        
+        # Sort by total purchases
+        supplier_data.sort(key=lambda x: x['total_purchases'], reverse=True)
+        
+        # Supplier segmentation
+        if supplier_data:
+            # Top 20% by value = Strategic suppliers
+            strategic_threshold_index = max(1, int(len(supplier_data) * 0.2))
+            strategic_suppliers = supplier_data[:strategic_threshold_index]
+            
+            # Next 30% = Preferred suppliers
+            preferred_threshold_index = max(strategic_threshold_index + 1, int(len(supplier_data) * 0.5))
+            preferred_suppliers = supplier_data[strategic_threshold_index:preferred_threshold_index]
+            
+            # Remaining = Standard suppliers
+            standard_suppliers = supplier_data[preferred_threshold_index:]
+            
+            segmentation = {
+                'strategic': {
+                    'count': len(strategic_suppliers),
+                    'total_value': sum(s['total_purchases'] for s in strategic_suppliers),
+                    'percentage': (len(strategic_suppliers) / len(supplier_data) * 100) if supplier_data else 0
+                },
+                'preferred': {
+                    'count': len(preferred_suppliers),
+                    'total_value': sum(s['total_purchases'] for s in preferred_suppliers),
+                    'percentage': (len(preferred_suppliers) / len(supplier_data) * 100) if supplier_data else 0
+                },
+                'standard': {
+                    'count': len(standard_suppliers),
+                    'total_value': sum(s['total_purchases'] for s in standard_suppliers),
+                    'percentage': (len(standard_suppliers) / len(supplier_data) * 100) if supplier_data else 0
+                }
+            }
+        else:
+            segmentation = {
+                'strategic': {'count': 0, 'total_value': 0, 'percentage': 0},
+                'preferred': {'count': 0, 'total_value': 0, 'percentage': 0},
+                'standard': {'count': 0, 'total_value': 0, 'percentage': 0}
+            }
+        
+        # Geographic distribution
+        geographic_data = all_suppliers.values('county__county').annotate(
+            supplier_count=Count('supplier_id'),
+            total_purchases=Sum('total_purchases')
+        ).order_by('-total_purchases')[:10]
+        
+        # Performance rating analysis
+        performance_analysis = {
+            'excellent': 0,  # >95% delivery rate AND >90% payment ratio
+            'good': 0,       # >85% delivery rate AND >70% payment ratio
+            'fair': 0,       # >70% delivery rate
+            'poor': 0        # <70% delivery rate
+        }
+        
+        for supplier in supplier_data:
+            delivery = supplier['delivery_rate']
+            payment = supplier['payment_ratio']
+            
+            if delivery >= 95 and payment >= 90:
+                performance_analysis['excellent'] += 1
+            elif delivery >= 85 and payment >= 70:
+                performance_analysis['good'] += 1
+            elif delivery >= 70:
+                performance_analysis['fair'] += 1
+            else:
+                performance_analysis['poor'] += 1
+        
+        # Format response
+        report_data = {
+            'kpis': {
+                'total_suppliers': total_suppliers,
+                'active_suppliers': active_suppliers,
+                'inactive_suppliers': total_suppliers - active_suppliers,
+                'total_purchases': float(total_purchase_value),
+                'total_orders': total_purchase_orders,
+                'avg_supplier_value': float(total_purchase_value / active_suppliers) if active_suppliers > 0 else 0,
+                'avg_orders_per_supplier': float(total_purchase_orders / active_suppliers) if active_suppliers > 0 else 0
+            },
+            'top_suppliers': supplier_data[:10],  # Top 10 suppliers
+            'all_suppliers': supplier_data,  # All supplier data
+            'segmentation': segmentation,
+            'geographic_distribution': [
+                {
+                    'county': item['county__county'] or 'Unknown',
+                    'supplier_count': item['supplier_count'],
+                    'total_purchases': float(item['total_purchases'] or 0)
+                }
+                for item in geographic_data
+            ],
+            'performance_rating': performance_analysis,
+            'period': {
+                'start': start_date.strftime('%d/%m/%Y') if start_date else '',
+                'end': end_date.strftime('%d/%m/%Y') if end_date else ''
+            }
+        }
+        
+        return JsonResponse({
+            'success': True,
+            'data': report_data,
+            'report_type': 'Supplier Analysis Report'
+        })
+    
+    except Exception as e:
+        print(f"Error generating supplier analysis: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({
+            'success': False,
+            'message': str(e)
+        }, status=500)
+        
+# ============================================
+# 6. TAX SUMMARY REPORT
+# ============================================
+
+@csrf_exempt
+@login_required(login_url='/login/')
+def api_generate_tax_summary(request):
+    """
+    Generate Tax Summary Report
+    Returns: Tax collected on sales and paid on purchases
+    """
+    try:
+        start_date_str = request.GET.get('start_date', '')
+        end_date_str = request.GET.get('end_date', '')
+        
+        start_date = parse_date(start_date_str) if start_date_str else None
+        end_date = parse_date(end_date_str) if end_date_str else None
+        
+        # Get Sales Orders in period
+        sales_query = SalesOrder.objects.all()
+        if start_date:
+            sales_query = sales_query.filter(date__gte=start_date)
+        if end_date:
+            sales_query = sales_query.filter(date__lte=end_date)
+        
+        # Get Purchase Orders in period
+        purchase_query = PurchaseOrder.objects.all()
+        if start_date:
+            purchase_query = purchase_query.filter(date__gte=start_date)
+        if end_date:
+            purchase_query = purchase_query.filter(date__lte=end_date)
+        
+        # Calculate Sales Tax Collected
+        sales_details = SalesDetail.objects.filter(so_id__in=sales_query)
+        
+        total_sales_tax = Decimal('0.00')
+        sales_by_rate = {}
+        sales_transactions = []
+        
+        for detail in sales_details:
+            # Calculate tax for this detail
+            subtotal = detail.quantity_sold * detail.unit_price
+            tax_amount = subtotal * detail.tax_rate / 100
+            total_sales_tax += tax_amount
+            
+            # Group by tax rate
+            rate_key = float(detail.tax_rate)
+            if rate_key not in sales_by_rate:
+                sales_by_rate[rate_key] = {
+                    'tax_rate': rate_key,
+                    'taxable_amount': Decimal('0.00'),
+                    'tax_collected': Decimal('0.00'),
+                    'transactions': 0
+                }
+            
+            sales_by_rate[rate_key]['taxable_amount'] += subtotal
+            sales_by_rate[rate_key]['tax_collected'] += tax_amount
+            sales_by_rate[rate_key]['transactions'] += 1
+            
+            # Add to transactions list
+            sales_transactions.append({
+                'date': detail.date.strftime('%d/%m/%Y') if detail.date else '',
+                'invoice': detail.invoice_number,
+                'customer': detail.customer_name,
+                'item': detail.item_name,
+                'amount': float(subtotal),
+                'tax_rate': float(detail.tax_rate),
+                'tax': float(tax_amount)
+            })
+        
+        # Calculate Purchase Tax Paid
+        purchase_details = PurchaseDetail.objects.filter(po_id__in=purchase_query)
+        
+        total_purchase_tax = Decimal('0.00')
+        purchase_by_rate = {}
+        purchase_transactions = []
+        
+        for detail in purchase_details:
+            # Calculate tax for this detail
+            subtotal = detail.quantity_purchased * detail.unit_cost
+            tax_amount = subtotal * detail.tax_rate / 100
+            total_purchase_tax += tax_amount
+            
+            # Group by tax rate
+            rate_key = float(detail.tax_rate)
+            if rate_key not in purchase_by_rate:
+                purchase_by_rate[rate_key] = {
+                    'tax_rate': rate_key,
+                    'taxable_amount': Decimal('0.00'),
+                    'tax_paid': Decimal('0.00'),
+                    'transactions': 0
+                }
+            
+            purchase_by_rate[rate_key]['taxable_amount'] += subtotal
+            purchase_by_rate[rate_key]['tax_paid'] += tax_amount
+            purchase_by_rate[rate_key]['transactions'] += 1
+            
+            # Add to transactions list
+            purchase_transactions.append({
+                'date': detail.date.strftime('%d/%m/%Y') if detail.date else '',
+                'bill': detail.bill_number,
+                'supplier': detail.supplier_name,
+                'item': detail.item_name,
+                'amount': float(subtotal),
+                'tax_rate': float(detail.tax_rate),
+                'tax': float(tax_amount)
+            })
+        
+        # Net Tax Position (Tax Collected - Tax Paid)
+        net_tax = total_sales_tax - total_purchase_tax
+        
+        # Convert to list for JSON
+        sales_by_rate_list = [
+            {
+                'tax_rate': data['tax_rate'],
+                'taxable_amount': float(data['taxable_amount']),
+                'tax_collected': float(data['tax_collected']),
+                'transactions': data['transactions']
+            }
+            for data in sorted(sales_by_rate.values(), key=lambda x: x['tax_rate'])
+        ]
+        
+        purchase_by_rate_list = [
+            {
+                'tax_rate': data['tax_rate'],
+                'taxable_amount': float(data['taxable_amount']),
+                'tax_paid': float(data['tax_paid']),
+                'transactions': data['transactions']
+            }
+            for data in sorted(purchase_by_rate.values(), key=lambda x: x['tax_rate'])
+        ]
+        
+        report_data = {
+            'kpis': {
+                'total_sales_tax': float(total_sales_tax),
+                'total_purchase_tax': float(total_purchase_tax),
+                'net_tax': float(net_tax),
+                'sales_transactions': len(sales_transactions),
+                'purchase_transactions': len(purchase_transactions)
+            },
+            'sales_by_rate': sales_by_rate_list,
+            'purchase_by_rate': purchase_by_rate_list,
+            'sales_transactions': sorted(sales_transactions, key=lambda x: x['date'], reverse=True)[:50],
+            'purchase_transactions': sorted(purchase_transactions, key=lambda x: x['date'], reverse=True)[:50],
+            'period': {
+                'start': start_date.strftime('%d/%m/%Y') if start_date else '',
+                'end': end_date.strftime('%d/%m/%Y') if end_date else ''
+            }
+        }
+        
+        return JsonResponse({
+            'success': True,
+            'data': report_data,
+            'report_type': 'Tax Summary Report'
+        })
+    
+    except Exception as e:
+        print(f"❌ Error generating tax summary: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({
+            'success': False,
+            'message': str(e)
+        }, status=500)
+        
+# ============================================
+# EXPORT TO PDF
+# ============================================
+
+@csrf_exempt
+@login_required(login_url='/login/')
+def api_export_report_pdf(request):
+    """
+    Export any report to PDF
+    Accepts: report_type, report_data (JSON)
+    Returns: PDF file download
+    """
+    try:
+        if request.method != 'POST':
+            return JsonResponse({'success': False, 'message': 'Invalid request method'}, status=405)
+        
+        data = json.loads(request.body)
+        report_type = data.get('report_type', 'Report')
+        report_data = data.get('report_data', {})
+        period = data.get('period', {})
+        
+        # Create PDF buffer
+        from io import BytesIO
+        buffer = BytesIO()
+        
+        # Create PDF document
+        doc = SimpleDocTemplate(
+            buffer,
+            pagesize=A4,
+            rightMargin=30,
+            leftMargin=30,
+            topMargin=50,
+            bottomMargin=50
+        )
+        
+        # Container for PDF elements
+        elements = []
+        
+        # Styles
+        styles = getSampleStyleSheet()
+        title_style = ParagraphStyle(
+            'CustomTitle',
+            parent=styles['Heading1'],
+            fontSize=28,
+            textColor=colors.HexColor('#2c3e50'),
+            spaceAfter=12,
+            alignment=TA_CENTER,
+            underlineColor=colors.HexColor('#2c3e50')
+        )
+        
+        heading_style = ParagraphStyle(
+            'CustomHeading',
+            parent=styles['Heading2'],
+            fontSize=16,
+            textColor=colors.HexColor('#1abc9c'),
+            spaceAfter=10,
+            spaceBefore=20
+        )
+        
+        # Title
+        title = Paragraph(report_type, title_style)
+        elements.append(title)
+        elements.append(Spacer(1, 12))
+        
+        # Period
+        if period.get('start') and period.get('end'):
+            period_text = f"Period: {period['start']} - {period['end']}"
+            period_para = Paragraph(period_text, styles['Normal'])
+            elements.append(period_para)
+            elements.append(Spacer(1, 20))
+        
+        # KPIs Section
+        if 'kpis' in report_data:
+            elements.append(Paragraph('Key Performance Indicators', heading_style))
+            
+            kpi_data = []
+            for key, value in report_data['kpis'].items():
+                label = key.replace('_', ' ').title()
+                if isinstance(value, (int, float)):
+                    formatted_value = f"KSH {value:,.2f}" if 'total' in key or 'amount' in key or 'balance' in key else str(value)
+                else:
+                    formatted_value = str(value)
+                kpi_data.append([label, formatted_value])
+            
+            kpi_table = Table(kpi_data, colWidths=[3*inch, 2*inch])
+            kpi_table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#f8f9fa')),
+                ('TEXTCOLOR', (0, 0), (-1, -1), colors.HexColor('#2c3e50')),
+                ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                ('ALIGN', (1, 0), (-1, -1), 'RIGHT'),
+                ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+                ('FONTSIZE', (0, 0), (-1, -1), 10),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+                ('GRID', (0, 0), (-1, -1), 1, colors.HexColor('#ecf0f1'))
+            ]))
+            elements.append(kpi_table)
+            elements.append(Spacer(1, 20))
+        
+        # Add specific report sections based on report_type
+        if 'sales' in report_type.lower():
+            _add_sales_sections(elements, report_data, heading_style, styles)
+        elif 'inventory' in report_type.lower():
+            _add_inventory_sections(elements, report_data, heading_style, styles)
+        elif 'profit' in report_type.lower():
+            _add_profit_loss_sections(elements, report_data, heading_style, styles)
+        elif 'purchase' in report_type.lower():
+            _add_purchase_sections(elements, report_data, heading_style, styles)
+        elif 'outstanding' in report_type.lower():
+            _add_outstanding_sections(elements, report_data, heading_style, styles)
+        elif 'tax' in report_type.lower():
+            _add_tax_sections(elements, report_data, heading_style, styles)
+        
+        # Build PDF
+        doc.build(elements)
+        
+        # Return PDF as download
+        buffer.seek(0)
+        response = HttpResponse(buffer.getvalue(), content_type='application/pdf')
+        filename = f"{report_type.replace(' ', '_')}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        
+        return response
+    
+    except Exception as e:
+        print(f"❌ Error exporting to PDF: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
+# Helper functions for PDF sections
+def _add_sales_sections(elements, report_data, heading_style, styles):
+    """Add sales-specific sections to PDF"""
+    # Top Customers
+    if 'top_customers' in report_data:
+        elements.append(Paragraph('Top Customers', heading_style))
+        
+        customer_data = [['Customer Name', 'Total Sales', 'Orders', 'Avg Order']]
+        for customer in report_data['top_customers'][:10]:
+            customer_data.append([
+                customer['name'],
+                f"KSH {customer['total']:,.2f}",
+                str(customer['orders']),
+                f"KSH {(customer['total'] / customer['orders']):,.2f}"
+            ])
+        
+        table = Table(customer_data, colWidths=[2*inch, 1.5*inch, 1*inch, 1.5*inch])
+        table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#2c3e50')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('ALIGN', (1, 0), (-1, -1), 'RIGHT'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 10),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.white),
+            ('GRID', (0, 0), (-1, -1), 1, colors.grey)
+        ]))
+        elements.append(table)
+
+
+def _add_inventory_sections(elements, report_data, heading_style, styles):
+    """Add inventory-specific sections to PDF"""
+    # Low Stock Items
+    if 'low_stock' in report_data and report_data['low_stock']:
+        elements.append(Paragraph('⚠️ Items Requiring Reorder', heading_style))
+        
+        stock_data = [['Item ID', 'Item Name', 'Current Stock', 'Reorder Level']]
+        for item in report_data['low_stock'][:15]:
+            stock_data.append([
+                item['item_id'],
+                item['name'],
+                str(item['remaining_qty']),
+                str(item['reorder_level'])
+            ])
+        
+        table = Table(stock_data, colWidths=[1.5*inch, 2.5*inch, 1.5*inch, 1.5*inch])
+        table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#e74c3c')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('ALIGN', (2, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 10),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.white),
+            ('GRID', (0, 0), (-1, -1), 1, colors.grey)
+        ]))
+        elements.append(table)
+
+
+def _add_profit_loss_sections(elements, report_data, heading_style, styles):
+    """Add P&L-specific sections to PDF"""
+    if 'breakdown' in report_data:
+        elements.append(Paragraph('Income Statement', heading_style))
+        
+        pl_data = [
+            ['Revenue', f"KSH {report_data['breakdown']['revenue']:,.2f}"],
+            ['Less: Cost of Goods Sold', f"(KSH {report_data['breakdown']['cogs']:,.2f})"],
+            ['Gross Profit', f"KSH {report_data['breakdown']['gross_profit']:,.2f}"],
+            ['Less: Operating Expenses', f"(KSH {report_data['breakdown']['shipping_expense']:,.2f})"],
+            ['Net Profit', f"KSH {report_data['breakdown']['net_profit']:,.2f}"]
+        ]
+        
+        table = Table(pl_data, colWidths=[3*inch, 2*inch])
+        table.setStyle(TableStyle([
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('ALIGN', (1, 0), (-1, -1), 'RIGHT'),
+            ('FONTNAME', (0, 0), (0, -1), 'Helvetica'),
+            ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 10),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+            ('LINEABOVE', (0, -1), (-1, -1), 2, colors.HexColor('#2c3e50')),
+            ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor('#d1f2eb'))
+        ]))
+        elements.append(table)
+
+
+def _add_purchase_sections(elements, report_data, heading_style, styles):
+    """Add purchase-specific sections to PDF"""
+    if 'top_suppliers' in report_data:
+        elements.append(Paragraph('Top Suppliers', heading_style))
+        
+        supplier_data = [['Supplier Name', 'Total Purchases', 'Orders', 'Avg Order']]
+        for supplier in report_data['top_suppliers'][:10]:
+            supplier_data.append([
+                supplier['name'],
+                f"KSH {supplier['total']:,.2f}",
+                str(supplier['orders']),
+                f"KSH {(supplier['total'] / supplier['orders']):,.2f}"
+            ])
+        
+        table = Table(supplier_data, colWidths=[2*inch, 1.5*inch, 1*inch, 1.5*inch])
+        table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#2c3e50')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('ALIGN', (1, 0), (-1, -1), 'RIGHT'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 10),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.white),
+            ('GRID', (0, 0), (-1, -1), 1, colors.grey)
+        ]))
+        elements.append(table)
+
+
+def _add_outstanding_sections(elements, report_data, heading_style, styles):
+    """Add outstanding balances sections to PDF"""
+    if 'customer_balances' in report_data and report_data['customer_balances']:
+        elements.append(Paragraph('Customer Balances (Receivable)', heading_style))
+        
+        customer_data = [['Customer ID', 'Customer Name', 'Total Sales', 'Payments', 'Balance']]
+        for customer in report_data['customer_balances'][:15]:
+            customer_data.append([
+                customer['id'],
+                customer['name'],
+                f"KSH {customer['total_sales']:,.2f}",
+                f"KSH {customer['total_payments']:,.2f}",
+                f"KSH {customer['balance']:,.2f}"
+            ])
+        
+        table = Table(customer_data, colWidths=[1*inch, 1.8*inch, 1.4*inch, 1.4*inch, 1.4*inch])
+        table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#2ecc71')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('ALIGN', (2, 0), (-1, -1), 'RIGHT'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 9),
+            ('FONTSIZE', (0, 1), (-1, -1), 8),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.white),
+            ('GRID', (0, 0), (-1, -1), 1, colors.grey)
+        ]))
+        elements.append(table)
+        elements.append(Spacer(1, 20))
+    
+    if 'supplier_balances' in report_data and report_data['supplier_balances']:
+        elements.append(Paragraph('Supplier Balances (Payable)', heading_style))
+        
+        supplier_data = [['Supplier ID', 'Supplier Name', 'Total Purchases', 'Payments', 'Balance']]
+        for supplier in report_data['supplier_balances'][:15]:
+            supplier_data.append([
+                supplier['id'],
+                supplier['name'],
+                f"KSH {supplier['total_purchases']:,.2f}",
+                f"KSH {supplier['total_payments']:,.2f}",
+                f"KSH {supplier['balance']:,.2f}"
+            ])
+        
+        table = Table(supplier_data, colWidths=[1*inch, 1.8*inch, 1.4*inch, 1.4*inch, 1.4*inch])
+        table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#f39c12')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('ALIGN', (2, 0), (-1, -1), 'RIGHT'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 9),
+            ('FONTSIZE', (0, 1), (-1, -1), 8),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.white),
+            ('GRID', (0, 0), (-1, -1), 1, colors.grey)
+        ]))
+        elements.append(table)
+
+
+def _add_tax_sections(elements, report_data, heading_style, styles):
+    """Add tax summary sections to PDF"""
+    if 'sales_by_rate' in report_data:
+        elements.append(Paragraph('Sales Tax by Rate', heading_style))
+        
+        tax_data = [['Tax Rate', 'Taxable Amount', 'Tax Collected', 'Transactions']]
+        for rate in report_data['sales_by_rate']:
+            tax_data.append([
+                f"{rate['tax_rate']}%",
+                f"KSH {rate['taxable_amount']:,.2f}",
+                f"KSH {rate['tax_collected']:,.2f}",
+                str(rate['transactions'])
+            ])
+        
+        table = Table(tax_data, colWidths=[1.5*inch, 2*inch, 2*inch, 1.5*inch])
+        table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#2c3e50')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('ALIGN', (1, 0), (-1, -1), 'RIGHT'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 10),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.white),
+            ('GRID', (0, 0), (-1, -1), 1, colors.grey)
+        ]))
+        elements.append(table)
+        
+# ============================================
+# EXPORT TO EXCEL
+# ============================================
+
+@csrf_exempt
+@login_required(login_url='/login/')
+def api_export_report_excel(request):
+    """
+    Export any report to Excel
+    Accepts: report_type, report_data (JSON)
+    Returns: Excel file download
+    """
+    try:
+        if request.method != 'POST':
+            return JsonResponse({'success': False, 'message': 'Invalid request method'}, status=405)
+        
+        data = json.loads(request.body)
+        report_type = data.get('report_type', 'Report')
+        report_data = data.get('report_data', {})
+        period = data.get('period', {})
+        
+        # Create workbook
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Report"
+        
+        # Styles
+        header_fill = PatternFill(start_color="2C3E50", end_color="2C3E50", fill_type="solid")
+        header_font = Font(bold=True, color="FFFFFF", size=12)
+        title_font = Font(bold=True, size=16, color="1ABC9C")
+        
+        # Title
+        ws['A1'] = report_type
+        ws['A1'].font = title_font
+        ws.merge_cells('A1:E1')
+        
+        # Period
+        if period.get('start') and period.get('end'):
+            ws['A2'] = f"Period: {period['start']} - {period['end']}"
+            ws.merge_cells('A2:E2')
+        
+        current_row = 4
+        
+        # KPIs Section
+        if 'kpis' in report_data:
+            ws[f'A{current_row}'] = 'KEY PERFORMANCE INDICATORS'
+            ws[f'A{current_row}'].font = Font(bold=True, size=12)
+            current_row += 1
+            
+            for key, value in report_data['kpis'].items():
+                label = key.replace('_', ' ').title()
+                ws[f'A{current_row}'] = label
+                if isinstance(value, (int, float)):
+                    ws[f'B{current_row}'] = value
+                    ws[f'B{current_row}'].number_format = '#,##0.00'
+                else:
+                    ws[f'B{current_row}'] = str(value)
+                current_row += 1
+            
+            current_row += 2
+        
+        # Add specific sections based on report type
+        if 'sales' in report_type.lower():
+            _add_excel_sales_sections(ws, report_data, current_row, header_fill, header_font)
+        elif 'inventory' in report_type.lower():
+            _add_excel_inventory_sections(ws, report_data, current_row, header_fill, header_font)
+        elif 'profit' in report_type.lower():
+            _add_excel_profit_loss_sections(ws, report_data, current_row, header_fill, header_font)
+        elif 'purchase' in report_type.lower():
+            _add_excel_purchase_sections(ws, report_data, current_row, header_fill, header_font)
+        elif 'outstanding' in report_type.lower():
+            _add_excel_outstanding_sections(ws, report_data, current_row, header_fill, header_font)
+        elif 'tax' in report_type.lower():
+            _add_excel_tax_sections(ws, report_data, current_row, header_fill, header_font)
+        
+        # Adjust column widths
+        for col in ws.columns:
+            max_length = 0
+            column = col[0].column_letter
+            for cell in col:
+                try:
+                    if len(str(cell.value)) > max_length:
+                        max_length = len(cell.value)
+                except:
+                    pass
+            adjusted_width = (max_length + 2)
+            ws.column_dimensions[column].width = adjusted_width
+        
+        # Save to buffer
+        buffer = io.BytesIO()
+        wb.save(buffer)
+        buffer.seek(0)
+        
+        # Return as download
+        response = HttpResponse(
+            buffer.getvalue(),
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        filename = f"{report_type.replace(' ', '_')}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        
+        return response
+    
+    except Exception as e:
+        print(f"❌ Error exporting to Excel: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
+# Helper functions for Excel sections
+def _add_excel_sales_sections(ws, report_data, start_row, header_fill, header_font):
+    """Add sales data to Excel"""
+    if 'top_customers' in report_data:
+        ws[f'A{start_row}'] = 'TOP CUSTOMERS'
+        ws[f'A{start_row}'].font = Font(bold=True, size=12)
+        start_row += 1
+        
+        headers = ['Customer Name', 'Total Sales', 'Orders', 'Avg Order Value']
+        for col_num, header in enumerate(headers, 1):
+            cell = ws.cell(row=start_row, column=col_num, value=header)
+            cell.fill = header_fill
+            cell.font = header_font
+        
+        start_row += 1
+        for customer in report_data['top_customers']:
+            ws.cell(row=start_row, column=1, value=customer['name'])
+            ws.cell(row=start_row, column=2, value=customer['total']).number_format = '#,##0.00'
+            ws.cell(row=start_row, column=3, value=customer['orders'])
+            ws.cell(row=start_row, column=4, value=customer['total'] / customer['orders']).number_format = '#,##0.00'
+            start_row += 1
+
+
+def _add_excel_inventory_sections(ws, report_data, start_row, header_fill, header_font):
+    """Add inventory data to Excel"""
+    if 'low_stock' in report_data and report_data['low_stock']:
+        ws[f'A{start_row}'] = 'ITEMS REQUIRING REORDER'
+        ws[f'A{start_row}'].font = Font(bold=True, size=12, color="E74C3C")
+        start_row += 1
+        
+        headers = ['Item ID', 'Item Name', 'Category', 'Current Stock', 'Reorder Level']
+        for col_num, header in enumerate(headers, 1):
+            cell = ws.cell(row=start_row, column=col_num, value=header)
+            cell.fill = header_fill
+            cell.font = header_font
+        
+        start_row += 1
+        for item in report_data['low_stock']:
+            ws.cell(row=start_row, column=1, value=item['item_id'])
+            ws.cell(row=start_row, column=2, value=item['name'])
+            ws.cell(row=start_row, column=3, value=item['category'])
+            ws.cell(row=start_row, column=4, value=item['remaining_qty'])
+            ws.cell(row=start_row, column=5, value=item['reorder_level'])
+            start_row += 1
+
+
+def _add_excel_profit_loss_sections(ws, report_data, start_row, header_fill, header_font):
+    """Add P&L data to Excel"""
+    if 'breakdown' in report_data:
+        ws[f'A{start_row}'] = 'INCOME STATEMENT'
+        ws[f'A{start_row}'].font = Font(bold=True, size=12)
+        start_row += 1
+        
+        pl_items = [
+            ('Revenue', report_data['breakdown']['revenue']),
+            ('Cost of Goods Sold', -report_data['breakdown']['cogs']),
+            ('Gross Profit', report_data['breakdown']['gross_profit']),
+            ('Operating Expenses', -report_data['breakdown']['shipping_expense']),
+            ('Net Profit', report_data['breakdown']['net_profit'])
+        ]
+        
+        for label, value in pl_items:
+            ws.cell(row=start_row, column=1, value=label)
+            ws.cell(row=start_row, column=2, value=value).number_format = '#,##0.00'
+            start_row += 1
+
+
+def _add_excel_purchase_sections(ws, report_data, start_row, header_fill, header_font):
+    """Add purchase data to Excel"""
+    if 'top_suppliers' in report_data:
+        ws[f'A{start_row}'] = 'TOP SUPPLIERS'
+        ws[f'A{start_row}'].font = Font(bold=True, size=12)
+        start_row += 1
+        
+        headers = ['Supplier Name', 'Total Purchases', 'Orders', 'Avg Order Value']
+        for col_num, header in enumerate(headers, 1):
+            cell = ws.cell(row=start_row, column=col_num, value=header)
+            cell.fill = header_fill
+            cell.font = header_font
+        
+        start_row += 1
+        for supplier in report_data['top_suppliers']:
+            ws.cell(row=start_row, column=1, value=supplier['name'])
+            ws.cell(row=start_row, column=2, value=supplier['total']).number_format = '#,##0.00'
+            ws.cell(row=start_row, column=3, value=supplier['orders'])
+            ws.cell(row=start_row, column=4, value=supplier['total'] / supplier['orders']).number_format = '#,##0.00'
+            start_row += 1
+
+
+def _add_excel_outstanding_sections(ws, report_data, start_row, header_fill, header_font):
+    """Add outstanding balances to Excel"""
+    if 'customer_balances' in report_data and report_data['customer_balances']:
+        ws[f'A{start_row}'] = 'CUSTOMER BALANCES (RECEIVABLE)'
+        ws[f'A{start_row}'].font = Font(bold=True, size=12)
+        start_row += 1
+        
+        headers = ['Customer ID', 'Customer Name', 'Total Sales', 'Payments', 'Balance']
+        for col_num, header in enumerate(headers, 1):
+            cell = ws.cell(row=start_row, column=col_num, value=header)
+            cell.fill = header_fill
+            cell.font = header_font
+        
+        start_row += 1
+        for customer in report_data['customer_balances']:
+            ws.cell(row=start_row, column=1, value=customer['id'])
+            ws.cell(row=start_row, column=2, value=customer['name'])
+            ws.cell(row=start_row, column=3, value=customer['total_sales']).number_format = '#,##0.00'
+            ws.cell(row=start_row, column=4, value=customer['total_payments']).number_format = '#,##0.00'
+            ws.cell(row=start_row, column=5, value=customer['balance']).number_format = '#,##0.00'
+            start_row += 1
+
+
+def _add_excel_tax_sections(ws, report_data, start_row, header_fill, header_font):
+    """Add tax summary to Excel"""
+    if 'sales_by_rate' in report_data:
+        ws[f'A{start_row}'] = 'SALES TAX BY RATE'
+        ws[f'A{start_row}'].font = Font(bold=True, size=12)
+        start_row += 1
+        
+        headers = ['Tax Rate', 'Taxable Amount', 'Tax Collected', 'Transactions']
+        for col_num, header in enumerate(headers, 1):
+            cell = ws.cell(row=start_row, column=col_num, value=header)
+            cell.fill = header_fill
+            cell.font = header_font
+        
+        start_row += 1
+        for rate in report_data['sales_by_rate']:
+            ws.cell(row=start_row, column=1, value=f"{rate['tax_rate']}%")
+            ws.cell(row=start_row, column=2, value=rate['taxable_amount']).number_format = '#,##0.00'
+            ws.cell(row=start_row, column=3, value=rate['tax_collected']).number_format = '#,##0.00'
+            ws.cell(row=start_row, column=4, value=rate['transactions'])
+            start_row += 1  

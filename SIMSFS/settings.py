@@ -133,6 +133,8 @@ STATIC_URL = '/static/'
 
 STATICFILES_DIRS = [
     BASE_DIR / 'SIMSFS' / 'INVENTORY_MANAGEMENT' / 'Templates',
+    BASE_DIR / 'SIMSFS' / 'INVENTORY_MANAGEMENT' / 'Templates' / 'CSS' , 
+    BASE_DIR / 'SIMSFS' / 'INVENTORY_MANAGEMENT' / 'Templates' / 'JavaScript', 
 ]
 
 # Default primary key field type

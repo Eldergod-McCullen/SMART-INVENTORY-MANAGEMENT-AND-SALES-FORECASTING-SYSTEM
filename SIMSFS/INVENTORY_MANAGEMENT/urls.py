@@ -189,6 +189,11 @@ path('api/reports/inventory-status/', views.api_generate_inventory_status, name=
 path('api/reports/profit-loss/', views.api_generate_profit_loss, name='api_profit_loss'),
 path('api/reports/purchase-summary/', views.api_generate_purchase_summary, name='api_purchase_summary'),
 path('api/reports/outstanding-balances/', views.api_generate_outstanding_balances, name='api_outstanding_balances'),
+path('api/reports/customer-analysis/', views.api_generate_customer_analysis, name='api_customer_analysis'),
+path('api/reports/supplier-analysis/', views.api_generate_supplier_analysis, name='api_supplier_analysis'),
+path('api/reports/tax-summary/', views.api_generate_tax_summary, name='api_tax_summary'),
+path('api/reports/export-pdf/', views.api_export_report_pdf, name='api_export_pdf'),
+path('api/reports/export-excel/', views.api_export_report_excel, name='api_export_excel'),
 
 # ============= TEST URL ==========================================================================================================================================
 path('test/', views.test_page, name='test'),
