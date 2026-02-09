@@ -1,5 +1,1175 @@
 {% load static %}
-<div class="settings-container">
-  <h1>Settings</h1>
-  <!-- Your settings content -->
-</div>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  {% csrf_token %}
+  <meta name="csrf-token" content="{{ csrf_token }}">
+  
+  <title>{% block title %} SETTINGS {% endblock %}</title>
+  
+  <!-- Google Fonts -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Poppins:wght@400;500;600&family=Roboto:wght@400;500&display=swap">
+  
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <style>
+    :root {
+      --primary: #1abc9c;
+      --primary-light: #d1f2eb;
+      --primary-dark: #16a085;
+      --secondary: #3498db;
+      --dark: #2c3e50;
+      --light-dark: #34495e;
+      --gray: #7f8c8d;
+      --light-gray: #ecf0f1;
+      --white: #ffffff;
+      --error: #e74c3c;
+      --warning: #f39c12;
+      --success: #2ecc71;
+    }
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Roboto', sans-serif;
+      background-color: #f5f7fa;
+      color: var(--dark);
+    }
+    
+    .settings-container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    
+    .settings-header {
+      margin-bottom: 30px;
+    }
+    
+    .settings-header h1 {
+      font-family: 'Montserrat', sans-serif;
+      font-weight: 700;
+      color: var(--dark);
+      font-size: 2rem;
+      margin-bottom: 8px;
+    }
+    
+    .settings-header p {
+      color: var(--gray);
+      font-size: 1.05rem;
+    }
+    
+    .settings-layout {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      gap: 25px;
+    }
+    
+    /* Sidebar Navigation */
+    .settings-sidebar {
+      background: var(--white);
+      border-radius: 10px;
+      padding: 20px 0;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+      height: fit-content;
+      position: sticky;
+      top: 20px;
+    }
+    
+    .settings-nav-item {
+      display: flex;
+      align-items: center;
+      padding: 15px 25px;
+      color: var(--dark);
+      text-decoration: none;
+      font-family: 'Poppins', sans-serif;
+      font-size: 0.95rem;
+      transition: all 0.3s;
+      border-left: 4px solid transparent;
+      cursor: pointer;
+    }
+    
+    .settings-nav-item:hover {
+      background: var(--primary-light);
+      border-left-color: var(--primary);
+    }
+    
+    .settings-nav-item.active {
+      background: var(--primary-light);
+      border-left-color: var(--primary);
+      color: var(--primary-dark);
+      font-weight: 600;
+    }
+    
+    .settings-nav-item i {
+      width: 24px;
+      margin-right: 12px;
+      text-align: center;
+    }
+    
+    /* Content Area */
+    .settings-content {
+      background: var(--white);
+      border-radius: 10px;
+      padding: 30px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+      min-height: 600px;
+    }
+    
+    .settings-section {
+      display: none;
+    }
+    
+    .settings-section.active {
+      display: block;
+    }
+    
+    .section-header {
+      margin-bottom: 25px;
+      padding-bottom: 15px;
+      border-bottom: 2px solid var(--light-gray);
+    }
+    
+    .section-title {
+      font-family: 'Montserrat', sans-serif;
+      font-weight: 600;
+      color: var(--dark);
+      font-size: 1.5rem;
+      margin-bottom: 8px;
+    }
+    
+    .section-subtitle {
+      color: var(--gray);
+      font-size: 0.95rem;
+    }
+    
+    /* Form Styles */
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+      margin-bottom: 25px;
+    }
+    
+    .form-group {
+      margin-bottom: 20px;
+    }
+    
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 500;
+      color: var(--dark);
+      font-size: 0.95rem;
+    }
+    
+    .form-control {
+      width: 100%;
+      padding: 11px;
+      border: 1px solid #bdc3c7;
+      border-radius: 4px;
+      font-family: 'Roboto', sans-serif;
+      font-size: 0.95rem;
+    }
+    
+    .form-control:focus {
+      border-color: var(--primary);
+      outline: none;
+      box-shadow: 0 0 0 2px rgba(26, 188, 156, 0.2);
+    }
+    
+    .form-control:disabled {
+      background-color: var(--light-gray);
+      cursor: not-allowed;
+    }
+    
+    /* Buttons */
+    .btn-group {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 20px;
+    }
+    
+    .btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 4px;
+      font-family: 'Poppins', sans-serif;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.3s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.95rem;
+    }
+    
+    .btn-primary {
+      background-color: var(--primary);
+      color: var(--white);
+    }
+    
+    .btn-primary:hover {
+      background-color: var(--primary-dark);
+    }
+    
+    .btn-secondary {
+      background-color: var(--secondary);
+      color: var(--white);
+    }
+    
+    .btn-secondary:hover {
+      background-color: #2980b9;
+    }
+    
+    .btn-danger {
+      background-color: var(--error);
+      color: var(--white);
+    }
+    
+    .btn-danger:hover {
+      background-color: #c0392b;
+    }
+    
+    .btn-outline {
+      background-color: transparent;
+      border: 1px solid #bdc3c7;
+      color: var(--light-dark);
+    }
+    
+    .btn-outline:hover {
+      background-color: var(--light-gray);
+    }
+    
+    /* Info Box */
+    .info-box {
+      background: var(--primary-light);
+      border-left: 4px solid var(--primary);
+      padding: 15px 20px;
+      border-radius: 4px;
+      margin-bottom: 20px;
+    }
+    
+    .info-box i {
+      color: var(--primary);
+      margin-right: 10px;
+    }
+    
+    .warning-box {
+      background: #fff3cd;
+      border-left: 4px solid var(--warning);
+      padding: 15px 20px;
+      border-radius: 4px;
+      margin-bottom: 20px;
+    }
+    
+    .warning-box i {
+      color: var(--warning);
+      margin-right: 10px;
+    }
+    
+    /* Card */
+    .settings-card {
+      background: var(--white);
+      border: 1px solid var(--light-gray);
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    
+    .settings-card-header {
+      font-family: 'Montserrat', sans-serif;
+      font-weight: 600;
+      color: var(--dark);
+      font-size: 1.1rem;
+      margin-bottom: 15px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--light-gray);
+    }
+    
+    /* Loading Overlay */
+    .loading-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(255, 255, 255, 0.9);
+      z-index: 2000;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+    }
+    
+    .loading-overlay.active {
+      display: flex;
+    }
+    
+    .spinner {
+      border: 5px solid var(--light-gray);
+      border-top: 5px solid var(--primary);
+      border-radius: 50%;
+      width: 60px;
+      height: 60px;
+      animation: spin 1s linear infinite;
+      margin-bottom: 20px;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    /* Profile Photo */
+    .profile-photo-section {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+    
+    .profile-photo {
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      background: var(--light-gray);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 3rem;
+      color: var(--gray);
+      border: 4px solid var(--primary-light);
+    }
+    
+    .profile-photo img {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+    
+    /* Responsive */
+    @media (max-width: 768px) {
+      .settings-layout {
+        grid-template-columns: 1fr;
+      }
+      
+      .settings-sidebar {
+        position: static;
+      }
+      
+      .form-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="settings-container">
+    <!-- Header -->
+    <div class="settings-header">
+      <h1><i class="fas fa-cogs"></i> Settings</h1>
+      <p>Manage your account, preferences, and system configuration</p>
+    </div>
+    
+    <div class="settings-layout">
+      <!-- Sidebar Navigation -->
+      <div class="settings-sidebar">
+        <a class="settings-nav-item active" data-section="profile">
+          <i class="fas fa-user"></i> <span>My Profile</span>
+        </a>
+        
+        <a class="settings-nav-item" data-section="password">
+          <i class="fas fa-lock"></i> <span>Change Password</span>
+        </a>
+        
+        <a class="settings-nav-item" data-section="business">
+          <i class="fas fa-building"></i> <span>Business Info</span>
+        </a>
+        
+        <a class="settings-nav-item" data-section="system">
+          <i class="fas fa-sliders-h"></i> <span>System Preferences</span>
+        </a>
+        
+        <a class="settings-nav-item" data-section="inventory">
+          <i class="fas fa-boxes"></i> <span>Inventory Settings</span>
+        </a>
+        
+        <a class="settings-nav-item" data-section="backup">
+          <i class="fas fa-database"></i> <span>Backup & Data</span>
+        </a>
+      </div>
+      
+      <!-- Content Area -->
+      <div class="settings-content">
+        <!-- Profile Section -->
+        <div class="settings-section active" id="profile-section">
+          <div class="section-header">
+            <h2 class="section-title">My Profile</h2>
+            <p class="section-subtitle">Manage your personal information</p>
+          </div>
+          
+          <div class="profile-photo-section">
+            <div class="profile-photo" id="profilePhoto">
+              <i class="fas fa-user"></i>
+            </div>
+            <div>
+              <h3 id="userName">Loading...</h3>
+              <p style="color: var(--gray); margin-bottom: 10px;" id="userEmail">Loading...</p>
+              <button class="btn btn-outline" onclick="uploadPhoto()">
+                <i class="fas fa-camera"></i> Change Photo
+              </button>
+              <input type="file" id="photoInput" accept="image/*" style="display: none;">
+            </div>
+          </div>
+          
+          <form id="profileForm">
+            <div class="form-grid">
+              <div class="form-group">
+                <label>Full Name</label>
+                <input type="text" id="profileName" class="form-control" required>
+              </div>
+              
+              <div class="form-group">
+                <label>Email Address</label>
+                <input type="email" id="profileEmail" class="form-control" disabled>
+              </div>
+              
+              <div class="form-group">
+                <label>Phone Number</label>
+                <input type="tel" id="profilePhone" class="form-control" required>
+              </div>
+              
+              <div class="form-group">
+                <label>User Role</label>
+                <input type="text" id="profileRole" class="form-control" disabled>
+              </div>
+            </div>
+            
+            <div class="btn-group">
+              <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save"></i> Save Changes
+              </button>
+              <button type="button" class="btn btn-outline" onclick="loadUserProfile()">
+                <i class="fas fa-undo"></i> Reset
+              </button>
+            </div>
+          </form>
+        </div>
+        
+        <!-- Password Section -->
+        <div class="settings-section" id="password-section">
+          <div class="section-header">
+            <h2 class="section-title">Change Password</h2>
+            <p class="section-subtitle">Update your account password</p>
+          </div>
+          
+          <div class="warning-box">
+            <i class="fas fa-exclamation-triangle"></i>
+            <strong>Password Requirements:</strong> Minimum 6 characters. Use a strong, unique password.
+          </div>
+          
+          <form id="passwordForm" style="max-width: 500px;">
+            <div class="form-group">
+              <label>Current Password</label>
+              <input type="password" id="currentPassword" class="form-control" required>
+            </div>
+            
+            <div class="form-group">
+              <label>New Password</label>
+              <input type="password" id="newPassword" class="form-control" required minlength="6">
+            </div>
+            
+            <div class="form-group">
+              <label>Confirm New Password</label>
+              <input type="password" id="confirmPassword" class="form-control" required minlength="6">
+            </div>
+            
+            <div class="btn-group">
+              <button type="submit" class="btn btn-primary">
+                <i class="fas fa-key"></i> Update Password
+              </button>
+              <button type="reset" class="btn btn-outline">
+                <i class="fas fa-times"></i> Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+        
+        <!-- Business Info Section -->
+        <div class="settings-section" id="business-section">
+          <div class="section-header">
+            <h2 class="section-title">Business Information</h2>
+            <p class="section-subtitle">Configure your business details</p>
+          </div>
+          
+          <form id="businessForm">
+            <div class="form-grid">
+              <div class="form-group">
+                <label>Business Name</label>
+                <input type="text" id="businessName" class="form-control" placeholder="Your Business Name">
+              </div>
+              
+              <div class="form-group">
+                <label>Registration Number</label>
+                <input type="text" id="businessReg" class="form-control" placeholder="REG-123456">
+              </div>
+              
+              <div class="form-group">
+                <label>Business Phone</label>
+                <input type="tel" id="businessPhone" class="form-control" placeholder="+254 700 000 000">
+              </div>
+              
+              <div class="form-group">
+                <label>Business Email</label>
+                <input type="email" id="businessEmail" class="form-control" placeholder="info@business.com">
+              </div>
+              
+              <div class="form-group">
+                <label>Default County</label>
+                <select id="businessCounty" class="form-control">
+                  <option value="">Select County</option>
+                </select>
+              </div>
+              
+              <div class="form-group">
+                <label>Default Town</label>
+                <select id="businessTown" class="form-control">
+                  <option value="">Select Town</option>
+                </select>
+              </div>
+            </div>
+            
+            <div class="form-group">
+              <label>Business Address</label>
+              <textarea id="businessAddress" class="form-control" rows="3" placeholder="Full business address"></textarea>
+            </div>
+            
+            <div class="btn-group">
+              <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save"></i> Save Business Info
+              </button>
+              <button type="button" class="btn btn-outline" onclick="loadBusinessInfo()">
+                <i class="fas fa-undo"></i> Reset
+              </button>
+            </div>
+          </form>
+        </div>
+        
+        <!-- System Preferences Section -->
+        <div class="settings-section" id="system-section">
+          <div class="section-header">
+            <h2 class="section-title">System Preferences</h2>
+            <p class="section-subtitle">Configure default system settings</p>
+          </div>
+          
+          <form id="systemForm">
+            <div class="settings-card">
+              <div class="settings-card-header">Tax Settings</div>
+              <div class="form-grid">
+                <div class="form-group">
+                  <label>Default Sales Tax Rate (%)</label>
+                  <input type="number" id="salesTaxRate" class="form-control" step="0.01" min="0" max="100" value="16">
+                </div>
+                
+                <div class="form-group">
+                  <label>Default Purchase Tax Rate (%)</label>
+                  <input type="number" id="purchaseTaxRate" class="form-control" step="0.01" min="0" max="100" value="16">
+                </div>
+              </div>
+            </div>
+            
+            <div class="settings-card">
+              <div class="settings-card-header">Payment Settings</div>
+              <div class="form-grid">
+                <div class="form-group">
+                  <label>Default Payment Terms (Days)</label>
+                  <input type="number" id="paymentTerms" class="form-control" min="0" value="30">
+                </div>
+                
+                <div class="form-group">
+                  <label>Currency</label>
+                  <select id="currency" class="form-control">
+                    <option value="KSH" selected>KSH - Kenyan Shilling</option>
+                    <option value="USD">USD - US Dollar</option>
+                    <option value="EUR">EUR - Euro</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            
+            <div class="settings-card">
+              <div class="settings-card-header">Display Preferences</div>
+              <div class="form-grid">
+                <div class="form-group">
+                  <label>Date Format</label>
+                  <select id="dateFormat" class="form-control">
+                    <option value="DD/MM/YYYY" selected>DD/MM/YYYY</option>
+                    <option value="MM/DD/YYYY">MM/DD/YYYY</option>
+                    <option value="YYYY-MM-DD">YYYY-MM-DD</option>
+                  </select>
+                </div>
+                
+                <div class="form-group">
+                  <label>Records Per Page</label>
+                  <select id="recordsPerPage" class="form-control">
+                    <option value="10">10</option>
+                    <option value="25" selected>25</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            
+            <div class="btn-group">
+              <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save"></i> Save Preferences
+              </button>
+              <button type="button" class="btn btn-outline" onclick="loadSystemPreferences()">
+                <i class="fas fa-undo"></i> Reset to Defaults
+              </button>
+            </div>
+          </form>
+        </div>
+        
+        <!-- Inventory Settings Section -->
+        <div class="settings-section" id="inventory-section">
+          <div class="section-header">
+            <h2 class="section-title">Inventory Settings</h2>
+            <p class="section-subtitle">Configure inventory management preferences</p>
+          </div>
+          
+          <form id="inventoryForm">
+            <div class="settings-card">
+              <div class="settings-card-header">Stock Alerts</div>
+              <div class="form-grid">
+                <div class="form-group">
+                  <label>Default Reorder Level</label>
+                  <input type="number" id="defaultReorderLevel" class="form-control" min="0" value="10">
+                  <small style="color: var(--gray);">Applied to new items if not specified</small>
+                </div>
+                
+                <div class="form-group">
+                  <label>Low Stock Alert Threshold (%)</label>
+                  <input type="number" id="lowStockThreshold" class="form-control" min="0" max="100" value="20">
+                  <small style="color: var(--gray);">Alert when stock falls below this percentage</small>
+                </div>
+              </div>
+            </div>
+            
+            <div class="settings-card">
+              <div class="settings-card-header">Item ID Configuration</div>
+              <div class="form-grid">
+                <div class="form-group">
+                  <label>Item ID Prefix</label>
+                  <input type="text" id="itemIdPrefix" class="form-control" value="IT" maxlength="3">
+                  <small style="color: var(--gray);">New items will use this prefix (e.g., IT00001)</small>
+                </div>
+                
+                <div class="form-group">
+                  <label>Auto-generate Item IDs</label>
+                  <select id="autoGenerateIds" class="form-control">
+                    <option value="yes" selected>Yes</option>
+                    <option value="no">No - Manual Entry</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            
+            <div class="btn-group">
+              <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save"></i> Save Inventory Settings
+              </button>
+              <button type="button" class="btn btn-outline" onclick="loadInventorySettings()">
+                <i class="fas fa-undo"></i> Reset
+              </button>
+            </div>
+          </form>
+        </div>
+        
+        <!-- Backup & Data Section -->
+        <div class="settings-section" id="backup-section">
+          <div class="section-header">
+            <h2 class="section-title">Backup & Data Management</h2>
+            <p class="section-subtitle">Protect and manage your business data</p>
+          </div>
+          
+          <div class="info-box">
+            <i class="fas fa-info-circle"></i>
+            <strong>Regular backups are essential!</strong> Create backups regularly to protect your data from loss.
+          </div>
+          
+          <div class="settings-card">
+            <div class="settings-card-header">Database Backup</div>
+            <p style="color: var(--gray); margin-bottom: 20px;">
+              Create a complete backup of your database including all inventory, sales, purchases, and customer data.
+            </p>
+            
+            <div class="btn-group">
+              <button class="btn btn-primary" onclick="createBackup()">
+                <i class="fas fa-download"></i> Create Backup Now
+              </button>
+              <button class="btn btn-secondary" onclick="restoreBackup()">
+                <i class="fas fa-upload"></i> Restore from Backup
+              </button>
+            </div>
+          </div>
+          
+          <div class="settings-card">
+            <div class="settings-card-header">Export Data</div>
+            <p style="color: var(--gray); margin-bottom: 20px;">
+              Export your data in various formats for analysis or migration.
+            </p>
+            
+            <div class="btn-group">
+              <button class="btn btn-outline" onclick="exportData('inventory')">
+                <i class="fas fa-file-excel"></i> Export Inventory
+              </button>
+              <button class="btn btn-outline" onclick="exportData('sales')">
+                <i class="fas fa-file-excel"></i> Export Sales
+              </button>
+              <button class="btn btn-outline" onclick="exportData('purchases')">
+                <i class="fas fa-file-excel"></i> Export Purchases
+              </button>
+              <button class="btn btn-outline" onclick="exportData('all')">
+                <i class="fas fa-file-archive"></i> Export All Data
+              </button>
+            </div>
+          </div>
+          
+          <div class="settings-card">
+            <div class="settings-card-header">Danger Zone</div>
+            <div class="warning-box">
+              <i class="fas fa-exclamation-triangle"></i>
+              <strong>Warning:</strong> The actions below are irreversible. Proceed with extreme caution.
+            </div>
+            
+            <div class="btn-group">
+              <button class="btn btn-danger" onclick="clearAllData()">
+                <i class="fas fa-trash"></i> Clear All Data
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Loading Overlay -->
+  <div id="loadingOverlay" class="loading-overlay">
+    <div class="spinner"></div>
+    <p>Processing...</p>
+  </div>
+
+  <script>
+    console.log('⚙️ Settings Module Loading...');
+    
+    let currentUser = null;
+    
+    // Get CSRF token
+    function getCSRFToken() {
+      const metaTag = document.querySelector('meta[name="csrf-token"]');
+      if (metaTag) return metaTag.getAttribute('content');
+      const cookies = document.cookie.split(';');
+      for (let cookie of cookies) {
+        const [name, value] = cookie.trim().split('=');
+        if (name === 'csrftoken') return value;
+      }
+      return null;
+    }
+    
+    // Show/hide loading
+    function showLoading() {
+      document.getElementById('loadingOverlay').classList.add('active');
+    }
+    
+    function hideLoading() {
+      document.getElementById('loadingOverlay').classList.remove('active');
+    }
+    
+    // Initialize
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('⚙️ Initializing Settings Module...');
+      
+      // Setup navigation
+      setupNavigation();
+      
+      // Load user profile
+      loadUserProfile();
+      
+      // Load business info
+      loadBusinessInfo();
+      
+      // Load system preferences
+      loadSystemPreferences();
+      
+      // Load inventory settings
+      loadInventorySettings();
+      
+      // Setup form handlers
+      setupFormHandlers();
+    });
+    
+    // Navigation
+    function setupNavigation() {
+      const navItems = document.querySelectorAll('.settings-nav-item');
+      const sections = document.querySelectorAll('.settings-section');
+      
+      navItems.forEach(item => {
+        item.addEventListener('click', function() {
+          const sectionId = this.getAttribute('data-section');
+          
+          // Update active nav
+          navItems.forEach(nav => nav.classList.remove('active'));
+          this.classList.add('active');
+          
+          // Show section
+          sections.forEach(section => section.classList.remove('active'));
+          document.getElementById(`${sectionId}-section`).classList.add('active');
+        });
+      });
+    }
+    
+    // Load User Profile
+    async function loadUserProfile() {
+      try {
+        showLoading();
+        
+        // Get current user info from session/API
+        const response = await fetch('/api/user/profile/', {
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCSRFToken()
+          },
+          credentials: 'same-origin'
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+          currentUser = result.data;
+          
+          // Update UI
+          document.getElementById('userName').textContent = currentUser.full_name;
+          document.getElementById('userEmail').textContent = currentUser.email;
+          document.getElementById('profileName').value = currentUser.full_name;
+          document.getElementById('profileEmail').value = currentUser.email;
+          document.getElementById('profilePhone').value = currentUser.phone_number || '';
+          document.getElementById('profileRole').value = currentUser.user_role || 'User';
+          
+          // Update profile photo initial
+          const photoDiv = document.getElementById('profilePhoto');
+          photoDiv.innerHTML = `<span style="font-size: 3rem;">${currentUser.full_name.charAt(0).toUpperCase()}</span>`;
+        }
+      } catch (error) {
+        console.error('Error loading profile:', error);
+      } finally {
+        hideLoading();
+      }
+    }
+    
+    // Load Business Info
+    async function loadBusinessInfo() {
+      try {
+        // Load counties
+        const countiesResponse = await fetch('/api/suppliers/counties/', {
+          headers: { 'X-CSRFToken': getCSRFToken() },
+          credentials: 'same-origin'
+        });
+        const countiesData = await countiesResponse.json();
+        
+        if (countiesData.success) {
+          const countySelect = document.getElementById('businessCounty');
+          countiesData.data.forEach(county => {
+            const option = document.createElement('option');
+            option.value = county;
+            option.textContent = county;
+            countySelect.appendChild(option);
+          });
+        }
+        
+        // Load towns
+        const townsResponse = await fetch('/api/suppliers/towns/', {
+          headers: { 'X-CSRFToken': getCSRFToken() },
+          credentials: 'same-origin'
+        });
+        const townsData = await townsResponse.json();
+        
+        if (townsData.success) {
+          const townSelect = document.getElementById('businessTown');
+          townsData.data.forEach(town => {
+            const option = document.createElement('option');
+            option.value = town;
+            option.textContent = town;
+            townSelect.appendChild(option);
+          });
+        }
+        
+        // Load saved business info from localStorage
+        const savedBusinessInfo = localStorage.getItem('businessInfo');
+        if (savedBusinessInfo) {
+          const businessInfo = JSON.parse(savedBusinessInfo);
+          document.getElementById('businessName').value = businessInfo.name || '';
+          document.getElementById('businessReg').value = businessInfo.registration || '';
+          document.getElementById('businessPhone').value = businessInfo.phone || '';
+          document.getElementById('businessEmail').value = businessInfo.email || '';
+          document.getElementById('businessCounty').value = businessInfo.county || '';
+          document.getElementById('businessTown').value = businessInfo.town || '';
+          document.getElementById('businessAddress').value = businessInfo.address || '';
+        }
+      } catch (error) {
+        console.error('Error loading business info:', error);
+      }
+    }
+    
+    // Load System Preferences
+    function loadSystemPreferences() {
+      const savedPrefs = localStorage.getItem('systemPreferences');
+      if (savedPrefs) {
+        const prefs = JSON.parse(savedPrefs);
+        document.getElementById('salesTaxRate').value = prefs.salesTaxRate || 16;
+        document.getElementById('purchaseTaxRate').value = prefs.purchaseTaxRate || 16;
+        document.getElementById('paymentTerms').value = prefs.paymentTerms || 30;
+        document.getElementById('currency').value = prefs.currency || 'KSH';
+        document.getElementById('dateFormat').value = prefs.dateFormat || 'DD/MM/YYYY';
+        document.getElementById('recordsPerPage').value = prefs.recordsPerPage || 25;
+      }
+    }
+    
+    // Load Inventory Settings
+    function loadInventorySettings() {
+      const savedSettings = localStorage.getItem('inventorySettings');
+      if (savedSettings) {
+        const settings = JSON.parse(savedSettings);
+        document.getElementById('defaultReorderLevel').value = settings.defaultReorderLevel || 10;
+        document.getElementById('lowStockThreshold').value = settings.lowStockThreshold || 20;
+        document.getElementById('itemIdPrefix').value = settings.itemIdPrefix || 'IT';
+        document.getElementById('autoGenerateIds').value = settings.autoGenerateIds || 'yes';
+      }
+    }
+    
+    // Setup Form Handlers
+    function setupFormHandlers() {
+      // Profile Form
+      document.getElementById('profileForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const formData = {
+          full_name: document.getElementById('profileName').value.trim(),
+          phone_number: document.getElementById('profilePhone').value.trim()
+        };
+        
+        try {
+          showLoading();
+          
+          const response = await fetch('/api/user/update-profile/', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-CSRFToken': getCSRFToken()
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify(formData)
+          });
+          
+          const result = await response.json();
+          
+          if (result.success) {
+            alert('Profile updated successfully!');
+            loadUserProfile();
+          } else {
+            alert('Error: ' + result.message);
+          }
+        } catch (error) {
+          console.error('Error updating profile:', error);
+          alert('Failed to update profile');
+        } finally {
+          hideLoading();
+        }
+      });
+      
+      // Password Form
+      document.getElementById('passwordForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const currentPassword = document.getElementById('currentPassword').value;
+        const newPassword = document.getElementById('newPassword').value;
+        const confirmPassword = document.getElementById('confirmPassword').value;
+        
+        if (newPassword !== confirmPassword) {
+          alert('New passwords do not match!');
+          return;
+        }
+        
+        if (newPassword.length < 6) {
+          alert('Password must be at least 6 characters long');
+          return;
+        }
+        
+        try {
+          showLoading();
+          
+          const response = await fetch('/api/user/change-password/', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-CSRFToken': getCSRFToken()
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify({
+              current_password: currentPassword,
+              new_password: newPassword
+            })
+          });
+          
+          const result = await response.json();
+          
+          if (result.success) {
+            alert('Password changed successfully!');
+            this.reset();
+          } else {
+            alert('Error: ' + result.message);
+          }
+        } catch (error) {
+          console.error('Error changing password:', error);
+          alert('Failed to change password');
+        } finally {
+          hideLoading();
+        }
+      });
+      
+      // Business Form
+      document.getElementById('businessForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const businessInfo = {
+          name: document.getElementById('businessName').value.trim(),
+          registration: document.getElementById('businessReg').value.trim(),
+          phone: document.getElementById('businessPhone').value.trim(),
+          email: document.getElementById('businessEmail').value.trim(),
+          county: document.getElementById('businessCounty').value,
+          town: document.getElementById('businessTown').value,
+          address: document.getElementById('businessAddress').value.trim()
+        };
+        
+        localStorage.setItem('businessInfo', JSON.stringify(businessInfo));
+        alert('Business information saved successfully!');
+      });
+      
+      // System Form
+      document.getElementById('systemForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const prefs = {
+          salesTaxRate: parseFloat(document.getElementById('salesTaxRate').value),
+          purchaseTaxRate: parseFloat(document.getElementById('purchaseTaxRate').value),
+          paymentTerms: parseInt(document.getElementById('paymentTerms').value),
+          currency: document.getElementById('currency').value,
+          dateFormat: document.getElementById('dateFormat').value,
+          recordsPerPage: parseInt(document.getElementById('recordsPerPage').value)
+        };
+        
+        localStorage.setItem('systemPreferences', JSON.stringify(prefs));
+        alert('System preferences saved successfully!');
+      });
+      
+      // Inventory Form
+      document.getElementById('inventoryForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const settings = {
+          defaultReorderLevel: parseInt(document.getElementById('defaultReorderLevel').value),
+          lowStockThreshold: parseFloat(document.getElementById('lowStockThreshold').value),
+          itemIdPrefix: document.getElementById('itemIdPrefix').value.trim().toUpperCase(),
+          autoGenerateIds: document.getElementById('autoGenerateIds').value
+        };
+        
+        localStorage.setItem('inventorySettings', JSON.stringify(settings));
+        alert('Inventory settings saved successfully!');
+      });
+    }
+    
+    // Photo Upload
+    function uploadPhoto() {
+      document.getElementById('photoInput').click();
+    }
+    
+    document.getElementById('photoInput')?.addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function(event) {
+          const photoDiv = document.getElementById('profilePhoto');
+          photoDiv.innerHTML = `<img src="${event.target.result}" alt="Profile Photo">`;
+          
+          // Save to localStorage (in production, upload to server)
+          localStorage.setItem('profilePhoto', event.target.result);
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+    
+    // Load saved photo on init
+    const savedPhoto = localStorage.getItem('profilePhoto');
+    if (savedPhoto) {
+      const photoDiv = document.getElementById('profilePhoto');
+      photoDiv.innerHTML = `<img src="${savedPhoto}" alt="Profile Photo">`;
+    }
+    
+    // Backup Functions
+    function createBackup() {
+      if (confirm('Create a complete database backup? This may take a few moments.')) {
+        showLoading();
+        
+        setTimeout(() => {
+          hideLoading();
+          alert('Backup created successfully!\n\nBackup file: backup_' + new Date().toISOString().split('T')[0] + '.sql\n\nNote: In production, this would create an actual database backup.');
+        }, 2000);
+      }
+    }
+    
+    function restoreBackup() {
+      alert('Restore from Backup\n\nThis feature allows you to restore your database from a previous backup file.\n\nIn production, you would upload a .sql backup file here.');
+    }
+    
+    function exportData(type) {
+      showLoading();
+      
+      setTimeout(() => {
+        hideLoading();
+        alert(`Exporting ${type} data...\n\nIn production, this would generate and download an Excel file with your ${type} data.`);
+      }, 1000);
+    }
+    
+    function clearAllData() {
+      const confirmation = prompt('⚠️ DANGER: This will DELETE ALL DATA permanently!\n\nType "DELETE ALL DATA" to confirm:');
+      
+      if (confirmation === 'DELETE ALL DATA') {
+        if (confirm('Are you ABSOLUTELY SURE? This action CANNOT be undone!')) {
+          showLoading();
+          
+          setTimeout(() => {
+            hideLoading();
+            alert('In production, this would permanently delete all data from the database.\n\nThis is a destructive operation and should require additional authentication.');
+          }, 1500);
+        }
+      } else {
+        alert('Confirmation text did not match. Action cancelled.');
+      }
+    }
+    
+    console.log('✅ Settings Module Ready!');
+  </script>
+</body>
+</html>

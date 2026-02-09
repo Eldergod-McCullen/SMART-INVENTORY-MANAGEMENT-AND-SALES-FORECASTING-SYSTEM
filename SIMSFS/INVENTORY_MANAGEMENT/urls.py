@@ -195,6 +195,11 @@ path('api/reports/tax-summary/', views.api_generate_tax_summary, name='api_tax_s
 path('api/reports/export-pdf/', views.api_export_report_pdf, name='api_export_pdf'),
 path('api/reports/export-excel/', views.api_export_report_excel, name='api_export_excel'),
 
+# ======================== SETTINGS MODULE URLs ========================================================================================================
+path('api/user/profile/', views.api_get_user_profile, name='api_get_user_profile'),
+path('api/user/update-profile/', views.api_update_user_profile, name='api_update_user_profile'),
+path('api/user/change-password/', views.api_change_password, name='api_change_password'),
+
 # ============= TEST URL ==========================================================================================================================================
 path('test/', views.test_page, name='test'),
 

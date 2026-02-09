@@ -34,6 +34,7 @@ from reportlab.lib.enums import TA_CENTER, TA_RIGHT, TA_LEFT
 from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 from openpyxl.utils import get_column_letter
+from openpyxl.cell.cell import MergedCell
 
 from .models import ItemType,ItemCategory,ItemSubcategory,PaymentMode,County,Town,PaymentStatus,ReceiptStatus,ShippingStatus,UserRole
 from .models import Inventory,InventoryItem
@@ -5791,7 +5792,6 @@ def _add_tax_sections(elements, report_data, heading_style, styles):
 # ============================================
 # EXPORT TO EXCEL
 # ============================================
-
 @csrf_exempt
 @login_required(login_url='/login/')
 def api_export_report_excel(request):
@@ -5850,31 +5850,54 @@ def api_export_report_excel(request):
             current_row += 2
         
         # Add specific sections based on report type
-        if 'sales' in report_type.lower():
-            _add_excel_sales_sections(ws, report_data, current_row, header_fill, header_font)
-        elif 'inventory' in report_type.lower():
-            _add_excel_inventory_sections(ws, report_data, current_row, header_fill, header_font)
-        elif 'profit' in report_type.lower():
-            _add_excel_profit_loss_sections(ws, report_data, current_row, header_fill, header_font)
-        elif 'purchase' in report_type.lower():
-            _add_excel_purchase_sections(ws, report_data, current_row, header_fill, header_font)
-        elif 'outstanding' in report_type.lower():
-            _add_excel_outstanding_sections(ws, report_data, current_row, header_fill, header_font)
-        elif 'tax' in report_type.lower():
-            _add_excel_tax_sections(ws, report_data, current_row, header_fill, header_font)
+        report_type_lower = report_type.lower()
         
-        # Adjust column widths
+        if 'sales' in report_type_lower and 'summary' in report_type_lower:
+            current_row = _add_excel_sales_sections(ws, report_data, current_row, header_fill, header_font)
+        elif 'inventory' in report_type_lower:
+            current_row = _add_excel_inventory_sections(ws, report_data, current_row, header_fill, header_font)
+        elif 'profit' in report_type_lower or 'loss' in report_type_lower:
+            current_row = _add_excel_profit_loss_sections(ws, report_data, current_row, header_fill, header_font)
+        elif 'purchase' in report_type_lower:
+            current_row = _add_excel_purchase_sections(ws, report_data, current_row, header_fill, header_font)
+        elif 'outstanding' in report_type_lower:
+            current_row = _add_excel_outstanding_sections(ws, report_data, current_row, header_fill, header_font)
+        elif 'customer' in report_type_lower and 'analysis' in report_type_lower:
+            current_row = _add_excel_customer_analysis_sections(ws, report_data, current_row, header_fill, header_font)
+        elif 'supplier' in report_type_lower and 'analysis' in report_type_lower:
+            current_row = _add_excel_supplier_analysis_sections(ws, report_data, current_row, header_fill, header_font)
+        elif 'tax' in report_type_lower:
+            current_row = _add_excel_tax_sections(ws, report_data, current_row, header_fill, header_font)
+        
+        # Adjust column widths (CORRECTED INDENTATION)
+        from openpyxl.cell.cell import MergedCell
+        
         for col in ws.columns:
             max_length = 0
-            column = col[0].column_letter
+            column_letter = None
+            
             for cell in col:
+                # Skip merged cells
+                if isinstance(cell, MergedCell):
+                    continue
+                
+                # Get column letter from first non-merged cell
+                if column_letter is None:
+                    column_letter = cell.column_letter
+                
+                # Calculate max length
                 try:
-                    if len(str(cell.value)) > max_length:
-                        max_length = len(cell.value)
+                    if cell.value:
+                        cell_length = len(str(cell.value))
+                        if cell_length > max_length:
+                            max_length = cell_length
                 except:
                     pass
-            adjusted_width = (max_length + 2)
-            ws.column_dimensions[column].width = adjusted_width
+            
+            # Set column width if we found a valid column letter
+            if column_letter:
+                adjusted_width = min(max_length + 2, 50)  # Cap at 50 characters
+                ws.column_dimensions[column_letter].width = adjusted_width
         
         # Save to buffer
         buffer = io.BytesIO()
@@ -5896,8 +5919,7 @@ def api_export_report_excel(request):
         import traceback
         traceback.print_exc()
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
-
-
+    
 # Helper functions for Excel sections
 def _add_excel_sales_sections(ws, report_data, start_row, header_fill, header_font):
     """Add sales data to Excel"""
@@ -5919,7 +5941,8 @@ def _add_excel_sales_sections(ws, report_data, start_row, header_fill, header_fo
             ws.cell(row=start_row, column=3, value=customer['orders'])
             ws.cell(row=start_row, column=4, value=customer['total'] / customer['orders']).number_format = '#,##0.00'
             start_row += 1
-
+    
+    return start_row
 
 def _add_excel_inventory_sections(ws, report_data, start_row, header_fill, header_font):
     """Add inventory data to Excel"""
@@ -5942,7 +5965,8 @@ def _add_excel_inventory_sections(ws, report_data, start_row, header_fill, heade
             ws.cell(row=start_row, column=4, value=item['remaining_qty'])
             ws.cell(row=start_row, column=5, value=item['reorder_level'])
             start_row += 1
-
+    
+    return start_row
 
 def _add_excel_profit_loss_sections(ws, report_data, start_row, header_fill, header_font):
     """Add P&L data to Excel"""
@@ -5963,7 +5987,8 @@ def _add_excel_profit_loss_sections(ws, report_data, start_row, header_fill, hea
             ws.cell(row=start_row, column=1, value=label)
             ws.cell(row=start_row, column=2, value=value).number_format = '#,##0.00'
             start_row += 1
-
+    
+    return start_row
 
 def _add_excel_purchase_sections(ws, report_data, start_row, header_fill, header_font):
     """Add purchase data to Excel"""
@@ -5985,7 +6010,8 @@ def _add_excel_purchase_sections(ws, report_data, start_row, header_fill, header
             ws.cell(row=start_row, column=3, value=supplier['orders'])
             ws.cell(row=start_row, column=4, value=supplier['total'] / supplier['orders']).number_format = '#,##0.00'
             start_row += 1
-
+    
+    return start_row
 
 def _add_excel_outstanding_sections(ws, report_data, start_row, header_fill, header_font):
     """Add outstanding balances to Excel"""
@@ -6008,7 +6034,30 @@ def _add_excel_outstanding_sections(ws, report_data, start_row, header_fill, hea
             ws.cell(row=start_row, column=4, value=customer['total_payments']).number_format = '#,##0.00'
             ws.cell(row=start_row, column=5, value=customer['balance']).number_format = '#,##0.00'
             start_row += 1
-
+        
+        start_row += 2
+    
+    if 'supplier_balances' in report_data and report_data['supplier_balances']:
+        ws[f'A{start_row}'] = 'SUPPLIER BALANCES (PAYABLE)'
+        ws[f'A{start_row}'].font = Font(bold=True, size=12)
+        start_row += 1
+        
+        headers = ['Supplier ID', 'Supplier Name', 'Total Purchases', 'Payments', 'Balance']
+        for col_num, header in enumerate(headers, 1):
+            cell = ws.cell(row=start_row, column=col_num, value=header)
+            cell.fill = header_fill
+            cell.font = header_font
+        
+        start_row += 1
+        for supplier in report_data['supplier_balances']:
+            ws.cell(row=start_row, column=1, value=supplier['id'])
+            ws.cell(row=start_row, column=2, value=supplier['name'])
+            ws.cell(row=start_row, column=3, value=supplier['total_purchases']).number_format = '#,##0.00'
+            ws.cell(row=start_row, column=4, value=supplier['total_payments']).number_format = '#,##0.00'
+            ws.cell(row=start_row, column=5, value=supplier['balance']).number_format = '#,##0.00'
+            start_row += 1
+    
+    return start_row
 
 def _add_excel_tax_sections(ws, report_data, start_row, header_fill, header_font):
     """Add tax summary to Excel"""
@@ -6029,4 +6078,192 @@ def _add_excel_tax_sections(ws, report_data, start_row, header_fill, header_font
             ws.cell(row=start_row, column=2, value=rate['taxable_amount']).number_format = '#,##0.00'
             ws.cell(row=start_row, column=3, value=rate['tax_collected']).number_format = '#,##0.00'
             ws.cell(row=start_row, column=4, value=rate['transactions'])
-            start_row += 1  
+            start_row += 1
+        
+        start_row += 2
+    
+    if 'purchase_by_rate' in report_data:
+        ws[f'A{start_row}'] = 'PURCHASE TAX BY RATE'
+        ws[f'A{start_row}'].font = Font(bold=True, size=12)
+        start_row += 1
+        
+        headers = ['Tax Rate', 'Taxable Amount', 'Tax Paid', 'Transactions']
+        for col_num, header in enumerate(headers, 1):
+            cell = ws.cell(row=start_row, column=col_num, value=header)
+            cell.fill = header_fill
+            cell.font = header_font
+        
+        start_row += 1
+        for rate in report_data['purchase_by_rate']:
+            ws.cell(row=start_row, column=1, value=f"{rate['tax_rate']}%")
+            ws.cell(row=start_row, column=2, value=rate['taxable_amount']).number_format = '#,##0.00'
+            ws.cell(row=start_row, column=3, value=rate['tax_paid']).number_format = '#,##0.00'
+            ws.cell(row=start_row, column=4, value=rate['transactions'])
+            start_row += 1
+        
+        start_row += 2
+    
+    if 'kpis' in report_data:
+        ws[f'A{start_row}'] = 'NET TAX POSITION'
+        ws[f'A{start_row}'].font = Font(bold=True, size=12)
+        start_row += 1
+        
+        ws.cell(row=start_row, column=1, value='Tax Collected (Sales)')
+        ws.cell(row=start_row, column=2, value=report_data['kpis']['total_sales_tax']).number_format = '#,##0.00'
+        start_row += 1
+        
+        ws.cell(row=start_row, column=1, value='Tax Paid (Purchases)')
+        ws.cell(row=start_row, column=2, value=-report_data['kpis']['total_purchase_tax']).number_format = '#,##0.00'
+        start_row += 1
+        
+        ws.cell(row=start_row, column=1, value='Net Tax Position').font = Font(bold=True)
+        ws.cell(row=start_row, column=2, value=report_data['kpis']['net_tax']).number_format = '#,##0.00'
+        ws.cell(row=start_row, column=2).font = Font(bold=True)
+        start_row += 1
+    
+    return start_row
+
+def _add_excel_customer_analysis_sections(ws, report_data, start_row, header_fill, header_font):
+    """Add customer analysis data to Excel"""
+    if 'top_customers' in report_data:
+        ws[f'A{start_row}'] = 'TOP CUSTOMERS'
+        ws[f'A{start_row}'].font = Font(bold=True, size=12)
+        start_row += 1
+        
+        headers = ['Customer Name', 'Total Sales', 'Orders', 'Avg Order', 'Outstanding', 'Payment Ratio']
+        for col_num, header in enumerate(headers, 1):
+            cell = ws.cell(row=start_row, column=col_num, value=header)
+            cell.fill = header_fill
+            cell.font = header_font
+        
+        start_row += 1
+        for customer in report_data['top_customers']:
+            ws.cell(row=start_row, column=1, value=customer['customer_name'])
+            ws.cell(row=start_row, column=2, value=customer['total_sales']).number_format = '#,##0.00'
+            ws.cell(row=start_row, column=3, value=customer['total_orders'])
+            ws.cell(row=start_row, column=4, value=customer['avg_order_value']).number_format = '#,##0.00'
+            ws.cell(row=start_row, column=5, value=customer['outstanding_balance']).number_format = '#,##0.00'
+            ws.cell(row=start_row, column=6, value=customer['payment_ratio']).number_format = '0.0"%"'
+            start_row += 1
+    
+    return start_row
+
+def _add_excel_supplier_analysis_sections(ws, report_data, start_row, header_fill, header_font):
+    """Add supplier analysis data to Excel"""
+    if 'top_suppliers' in report_data:
+        ws[f'A{start_row}'] = 'TOP SUPPLIERS'
+        ws[f'A{start_row}'].font = Font(bold=True, size=12)
+        start_row += 1
+        
+        headers = ['Supplier Name', 'Total Purchases', 'Orders', 'Avg Order', 'Outstanding', 'Delivery Rate']
+        for col_num, header in enumerate(headers, 1):
+            cell = ws.cell(row=start_row, column=col_num, value=header)
+            cell.fill = header_fill
+            cell.font = header_font
+        
+        start_row += 1
+        for supplier in report_data['top_suppliers']:
+            ws.cell(row=start_row, column=1, value=supplier['supplier_name'])
+            ws.cell(row=start_row, column=2, value=supplier['total_purchases']).number_format = '#,##0.00'
+            ws.cell(row=start_row, column=3, value=supplier['total_orders'])
+            ws.cell(row=start_row, column=4, value=supplier['avg_order_value']).number_format = '#,##0.00'
+            ws.cell(row=start_row, column=5, value=supplier['outstanding_balance']).number_format = '#,##0.00'
+            ws.cell(row=start_row, column=6, value=supplier['delivery_rate']).number_format = '0.0"%"'
+            start_row += 1
+    
+    return start_row
+
+# ====================================== SETTINGS MODULE VIEWS ==================================================================================================
+
+@csrf_exempt
+@login_required(login_url='/login/')
+def api_get_user_profile(request):
+    """Get current user profile"""
+    try:
+        user = request.user
+        
+        profile_data = {
+            'full_name': user.full_name,
+            'email': user.email,
+            'phone_number': user.phone_number or '',
+            'user_role': user.user_role.user_role if user.user_role else 'User',
+            'is_admin': user.is_admin
+        }
+        
+        return JsonResponse({
+            'success': True,
+            'data': profile_data
+        })
+    
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+@login_required(login_url='/login/')
+def api_update_user_profile(request):
+    """Update user profile"""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Invalid request method'}, status=405)
+    
+    try:
+        data = json.loads(request.body)
+        user = request.user
+        
+        # Update fields
+        user.full_name = data.get('full_name', user.full_name)
+        user.phone_number = data.get('phone_number', user.phone_number)
+        user.save()
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Profile updated successfully'
+        })
+    
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'message': 'Invalid JSON data'}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+@login_required(login_url='/login/')
+def api_change_password(request):
+    """Change user password"""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Invalid request method'}, status=405)
+    
+    try:
+        data = json.loads(request.body)
+        user = request.user
+        
+        current_password = data.get('current_password', '')
+        new_password = data.get('new_password', '')
+        
+        # Verify current password
+        if not user.check_password(current_password):
+            return JsonResponse({
+                'success': False,
+                'message': 'Current password is incorrect'
+            }, status=400)
+        
+        # Validate new password
+        if len(new_password) < 6:
+            return JsonResponse({
+                'success': False,
+                'message': 'New password must be at least 6 characters'
+            }, status=400)
+        
+        # Update password
+        user.set_password(new_password)
+        user.save()
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Password changed successfully'
+        })
+    
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'message': 'Invalid JSON data'}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)

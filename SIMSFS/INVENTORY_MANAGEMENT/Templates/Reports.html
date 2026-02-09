@@ -841,7 +841,8 @@ async function generateReport() {
         break;
         
       case 'tax-summary':
-        await generateTaxSummaryReport(fromDate, toDate);  
+        await generateTaxSummaryReport(fromDate, toDate);
+        break;
         
       default:
         alert('Report type not implemented yet');
