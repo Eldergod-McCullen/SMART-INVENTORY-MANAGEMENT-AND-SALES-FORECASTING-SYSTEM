@@ -310,6 +310,165 @@
         padding: 10px 15px;
       }
     }
+
+    /* ==================== LOGOUT MODAL STYLES ==================== */
+    .logout-modal {
+      display: none;
+      position: fixed;
+      z-index: 3000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.6);
+      animation: fadeIn 0.3s ease;
+    }
+    
+    .logout-modal.active {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    
+    .logout-modal-content {
+      background: var(--white);
+      border-radius: 12px;
+      max-width: 450px;
+      width: 90%;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+      animation: slideDown 0.3s ease;
+      overflow: hidden;
+    }
+    
+    .logout-modal-header {
+      background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+      color: var(--white);
+      padding: 25px;
+      text-align: center;
+    }
+    
+    .logout-modal-header i {
+      font-size: 3rem;
+      margin-bottom: 10px;
+      display: block;
+      color: #e74c3c;
+    }
+    
+    .logout-modal-header h2 {
+      font-family: 'Montserrat', sans-serif;
+      font-weight: 600;
+      font-size: 1.5rem;
+      margin: 0;
+    }
+    
+    .logout-modal-body {
+      padding: 30px 25px;
+      text-align: center;
+    }
+    
+    .logout-modal-body p {
+      font-family: 'Poppins', sans-serif;
+      font-size: 1.05rem;
+      color: var(--text-dark);
+      margin: 0 0 15px 0;
+      line-height: 1.6;
+    }
+    
+    .logout-modal-body p strong {
+      color: var(--primary);
+      font-weight: 600;
+    }
+    
+    .logout-warning {
+      font-size: 0.9rem !important;
+      color: var(--gray) !important;
+      font-style: italic;
+    }
+    
+    .logout-modal-footer {
+      padding: 20px 25px;
+      background: #f8f9fa;
+      display: flex;
+      justify-content: space-between;
+      gap: 15px;
+    }
+    
+    .logout-btn-cancel,
+    .logout-btn-confirm {
+      flex: 1;
+      padding: 12px 20px;
+      border: none;
+      border-radius: 6px;
+      font-family: 'Poppins', sans-serif;
+      font-weight: 500;
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: all 0.3s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    
+    .logout-btn-cancel {
+      background: var(--light-gray);
+      color: var(--text-dark);
+      border: 1px solid #bdc3c7;
+    }
+    
+    .logout-btn-cancel:hover {
+      background: #d5dbdb;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+    
+    .logout-btn-confirm {
+      background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+      color: var(--white);
+    }
+    
+    .logout-btn-confirm:hover {
+      background: linear-gradient(135deg, #c0392b 0%, #a93226 100%);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(231, 76, 60, 0.4);
+    }
+    
+    .logout-btn-confirm:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    
+    @keyframes slideDown {
+      from {
+        transform: translateY(-50px);
+        opacity: 0;
+      }
+      to {
+        transform: translateY(0);
+        opacity: 1;
+      }
+    }
+    
+    @media (max-width: 480px) {
+      .logout-modal-content {
+        max-width: 95%;
+      }
+      
+      .logout-modal-footer {
+        flex-direction: column;
+      }
+      
+      .logout-btn-cancel,
+      .logout-btn-confirm {
+        width: 100%;
+      }
+    }
+    
   </style>
 </head>
 
@@ -407,7 +566,31 @@
       </div>
     </div>
   </div>
-  
+
+    <!-- Logout Confirmation Modal -->
+  <div id="logoutModal" class="logout-modal">
+    <div class="logout-modal-content">
+      <div class="logout-modal-header">
+        <i class="fas fa-sign-out-alt"></i>
+        <h2>LOG-OUT CONFIRMATION</h2>
+      </div>
+      
+      <div class="logout-modal-body">
+        <p><strong id="logoutUsername">User</strong>, are you sure you want to log out of your account?</p>
+        <p class="logout-warning">You will need to log in again to access the system.</p>
+      </div>
+      
+      <div class="logout-modal-footer">
+        <button class="logout-btn-cancel" id="cancelLogout">
+          <i class="fas fa-times"></i> Cancel
+        </button>
+        <button class="logout-btn-confirm" id="confirmLogout">
+          <i class="fas fa-sign-out-alt"></i> Yes, Log Out
+        </button>
+      </div>
+    </div>
+  </div>
+
   <script>
     // Sidebar Toggle Functionality
     const menuToggle = document.getElementById('menuToggle');
@@ -540,22 +723,101 @@ window.addEventListener('DOMContentLoaded', function() {
   loadContent(lastPage, lastTitle);
 });
 
-    // Logout functionality
+  // ==================== LOGOUT FUNCTIONALITY ====================
     const logoutLink = document.getElementById('logout-link');
+    const logoutModal = document.getElementById('logoutModal');
+    const cancelLogout = document.getElementById('cancelLogout');
+    const confirmLogout = document.getElementById('confirmLogout');
+    const logoutUsername = document.getElementById('logoutUsername');
+    
+    // Get username from the page
+    const usernameElement = document.getElementById('username');
+    const currentUsername = usernameElement ? usernameElement.textContent : 'User';
+    
+    console.log('🔐 Logout system initialized for user:', currentUsername);
+    
+    // Show logout modal
+    function showLogoutModal() {
+      console.log('📢 Opening logout modal...');
+      logoutUsername.textContent = currentUsername;
+      logoutModal.classList.add('active');
+      document.body.style.overflow = 'hidden'; // Prevent scrolling
+    }
+    
+    // Hide logout modal
+    function hideLogoutModal() {
+      console.log('📢 Closing logout modal...');
+      logoutModal.classList.remove('active');
+      document.body.style.overflow = ''; // Restore scrolling
+    }
+    
+    // Logout link click handler
     if (logoutLink) {
       logoutLink.addEventListener('click', function(event) {
         event.preventDefault();
+        console.log('🚪 Logout link clicked');
+        showLogoutModal();
+      });
+    }
+    
+    // Cancel button handler
+    if (cancelLogout) {
+      cancelLogout.addEventListener('click', function() {
+        console.log('❌ Logout cancelled by user');
+        hideLogoutModal();
+      });
+    }
+    
+    // Confirm logout handler
+    if (confirmLogout) {
+      confirmLogout.addEventListener('click', function() {
+        console.log('✅ Logout confirmed by user:', currentUsername);
         
-        if (confirm('Are you sure you want to logout?')) {
-          // Clear session data
-          sessionStorage.clear();
-          localStorage.clear();
-          
-          // Redirect to login page
+        // Disable button and show loading state
+        confirmLogout.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Logging out...';
+        confirmLogout.disabled = true;
+        cancelLogout.disabled = true;
+        
+        // Clear all session data
+        console.log('🧹 Clearing session data...');
+        sessionStorage.clear();
+        localStorage.removeItem('currentPage');
+        localStorage.removeItem('currentTitle');
+        localStorage.removeItem('sidebarCollapsed');
+        
+        // Optional: Keep some data if needed (like theme preference)
+        // localStorage.removeItem('theme'); // Uncomment if you want to clear theme too
+        
+        console.log('✅ Session data cleared');
+        console.log('🔄 Redirecting to login page...');
+        
+        // Redirect after short delay for smooth UX
+        setTimeout(() => {
           window.location.href = '/login/';
+        }, 800);
+      });
+    }
+    
+    // Close modal when clicking outside
+    if (logoutModal) {
+      logoutModal.addEventListener('click', function(event) {
+        if (event.target === logoutModal) {
+          console.log('📢 Modal closed by clicking outside');
+          hideLogoutModal();
         }
       });
     }
+    
+    // Close modal with Escape key
+    document.addEventListener('keydown', function(event) {
+      if (event.key === 'Escape' && logoutModal && logoutModal.classList.contains('active')) {
+        console.log('📢 Modal closed by Escape key');
+        hideLogoutModal();
+      }
+    });
+    
+    console.log('✅ Logout system ready');
+
   </script>
 
 </body>

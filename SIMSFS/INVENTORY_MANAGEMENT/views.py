@@ -209,7 +209,6 @@ def logout_view(request):
     logout(request)
     return redirect('login')
 
-
 # ================================== MAIN APPLICATION VIEWS ===============================================================================================
 
 @login_required(login_url='/login/')
@@ -314,7 +313,6 @@ def settings_content(request):
     """Load Settings content"""
     context = {}
     return render(request, 'Settings.html', context)
-
 
 # ============= API ENDPOINTS =============
 
