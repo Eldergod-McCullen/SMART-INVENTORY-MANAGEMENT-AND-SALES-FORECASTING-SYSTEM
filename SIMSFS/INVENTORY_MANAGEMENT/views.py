@@ -48,12 +48,16 @@ def test_page(request):
     return render(request, 'Test.html')
 
 # ========================================== AUTHENTICATION VIEWS ==============================================================================================
-
 @ensure_csrf_cookie
-def login_view(request):                   # HANDLING BOTH THE LOG-IN FORM AND THE LOG-IN PROCESSING
+def login_view(request):
+    """
+    Handle login - both form display and authentication
+    Prevents caching to stop back-button issues
+    """
     print("Login view called!")  
     print("Method:", request.method) 
     
+    # If user is already authenticated, redirect to index
     if request.user.is_authenticated:
         return redirect('index')
     
@@ -93,7 +97,10 @@ def login_view(request):                   # HANDLING BOTH THE LOG-IN FORM AND T
                     'message': 'Account is inactive. Please contact administrator.'
                 }, status=403)
             
-            login(request, user)      # LOG-IN THE USER
+            # LOG-IN THE USER
+            login(request, user)
+            
+            print(f"✅ User {user.full_name} logged in successfully")
             
             return JsonResponse({
                 'success': True,
@@ -113,8 +120,15 @@ def login_view(request):                   # HANDLING BOTH THE LOG-IN FORM AND T
                 'message': f'An error occurred: {str(e)}'
             }, status=500)
     
-    # THIS IS THE GET REQUEST FOR THE LOG-IN FORM
-    return render(request, 'Log-in_Register.html')
+    # GET REQUEST - Render login form with cache control
+    response = render(request, 'Log-in_Register.html')
+    
+    # Prevent browser from caching login page
+    response['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    response['Pragma'] = 'no-cache'
+    response['Expires'] = '0'
+    
+    return response
 
 
 def register_view(request):                   # HANDLING BOTH THE USER REGISTRATION FORM AND THE REGISTRATION PROCESS
@@ -205,20 +219,54 @@ def register_view(request):                   # HANDLING BOTH THE USER REGISTRAT
 
 
 def logout_view(request):
-    """Handle user logout"""
+    """
+    Handle user logout
+    - Clears Django session
+    - Redirects to login page
+    """
+    # Get username before logout for logging
+    username = request.user.full_name if request.user.is_authenticated else 'Unknown'
+    
+    # Clear Django session
     logout(request)
+    
+    # Clear any additional session data
+    request.session.flush()
+    
+    print(f"✅ User {username} logged out successfully")
+    
+    # Redirect to login page
     return redirect('login')
 
 # ================================== MAIN APPLICATION VIEWS ===============================================================================================
+@login_required(login_url='/login/')
+def welcome_page(request):
+    """Load Welcome page"""
+    context = {}
+    return render(request, 'Welcome.html', context)
 
 @login_required(login_url='/login/')
 def index(request):
-    """Main view that renders the Index.html with sidebar navigation"""
+    """
+    Main view that renders the Index.html with sidebar navigation
+    Prevents caching to stop back-button issues after logout
+    """
+    # Double-check user is authenticated (should be guaranteed by decorator)
+    if not request.user.is_authenticated:
+        return redirect('login')
+    
     context = {
         'username': request.user.full_name
     }
-    return render(request, 'Index.html', context)
-
+    
+    response = render(request, 'Index.html', context)
+    
+    # Prevent browser from caching this page
+    response['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    response['Pragma'] = 'no-cache'
+    response['Expires'] = '0'
+    
+    return response
 
 # ================================= DYNAMIC CONTENT VIEWS =================================================================================================
 

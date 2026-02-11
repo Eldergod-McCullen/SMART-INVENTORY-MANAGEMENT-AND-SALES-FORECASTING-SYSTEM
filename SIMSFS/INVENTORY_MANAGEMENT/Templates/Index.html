@@ -770,7 +770,7 @@ window.addEventListener('DOMContentLoaded', function() {
     
     // Confirm logout handler
     if (confirmLogout) {
-      confirmLogout.addEventListener('click', function() {
+      confirmLogout.addEventListener('click', async function() {
         console.log('✅ Logout confirmed by user:', currentUsername);
         
         // Disable button and show loading state
@@ -778,25 +778,30 @@ window.addEventListener('DOMContentLoaded', function() {
         confirmLogout.disabled = true;
         cancelLogout.disabled = true;
         
-        // Clear all session data
-        console.log('🧹 Clearing session data...');
-        sessionStorage.clear();
-        localStorage.removeItem('currentPage');
-        localStorage.removeItem('currentTitle');
-        localStorage.removeItem('sidebarCollapsed');
-        
-        // Optional: Keep some data if needed (like theme preference)
-        // localStorage.removeItem('theme'); // Uncomment if you want to clear theme too
-        
-        console.log('✅ Session data cleared');
-        console.log('🔄 Redirecting to login page...');
-        
-        // Redirect after short delay for smooth UX
-        setTimeout(() => {
-          window.location.href = '/login/';
-        }, 800);
+        try {
+          // Clear frontend session data FIRST
+          console.log('🧹 Clearing frontend session data...');
+          sessionStorage.clear();
+          localStorage.removeItem('currentPage');
+          localStorage.removeItem('currentTitle');
+          localStorage.removeItem('sidebarCollapsed');
+          console.log('✅ Frontend session data cleared');
+          
+          // Call Django logout endpoint to clear backend session
+          console.log('🔄 Calling Django logout endpoint...');
+          
+          // Use fetch to call logout (or simple redirect)
+          window.location.href = '/logout/';
+          
+          // Note: The redirect happens immediately, code below won't execute
+          
+        } catch (error) {
+          console.error('❌ Logout error:', error);
+          // If anything fails, still try to redirect
+          window.location.href = '/logout/';
+        }
       });
-    }
+    }    
     
     // Close modal when clicking outside
     if (logoutModal) {
