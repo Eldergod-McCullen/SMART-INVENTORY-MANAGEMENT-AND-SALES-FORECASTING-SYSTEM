@@ -239,8 +239,8 @@ def logout_view(request):
     return redirect('login')
 
 # ================================== MAIN APPLICATION VIEWS ===============================================================================================
-@login_required(login_url='/login/')
-def welcome_page(request):
+"""@login_required(login_url='/login/')"""
+def welcome_view(request):
     """Load Welcome page"""
     context = {}
     return render(request, 'Welcome.html', context)
