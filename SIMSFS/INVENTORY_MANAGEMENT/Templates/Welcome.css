@@ -13,7 +13,7 @@
 
 /* Color scheme for the inventory management system */
 :root {
-    --bg-color:  #1abc9c; /*#081b29*/
+    --bg-color: #081b29;
     --second-bg-color: #112e42;   
     --text-color: #ededed;
     --main-color: #00abf0;
