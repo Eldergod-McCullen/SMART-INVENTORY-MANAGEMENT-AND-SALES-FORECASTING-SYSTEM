@@ -21,6 +21,10 @@ from django.db.models import F, ExpressionWrapper, DecimalField
 
 from sklearn.ensemble import RandomForestRegressor
 import numpy as np
+import sklearn
+#from sklearn.linear_model import forward_selection
+from sklearn.metrics import mean_squared_error, r2_score
+
 
 # ReportLab imports for PDF generation
 from reportlab.lib.pagesizes import letter, A4

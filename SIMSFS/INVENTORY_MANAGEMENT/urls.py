@@ -28,7 +28,7 @@ urlpatterns = [
     path('logout/', views.logout_view, name='logout'),
     
     # MAIN APPLICATION
-    path('', views.index, name='index'),
+    path('index', views.index, name='index'),
     
     # Dynamic content loading endpoints
     path('content/dashboard/', views.dashboard_content, name='dashboard'),
@@ -68,9 +68,6 @@ urlpatterns = [
     path('api/inventory-items/update/', views.api_update_inventory_item, name='api_update_inventory_item'),
     path('api/inventory-items/delete/', views.api_delete_inventory_item, name='api_delete_inventory_item'),
     
-    
-    
-    
     # Suppliers Module URLs
     path('api/suppliers/counties/', views.api_get_counties, name='api_get_counties'),
     path('api/suppliers/counties/add/', views.api_add_county, name='api_add_county'),
@@ -86,16 +83,16 @@ urlpatterns = [
     
     # CUSTOMER URLS
     path('api/customers/counties/', views.api_get_counties, name='api_get_counties'),
-path('api/customers/counties/add/', views.api_add_county, name='api_add_county_customer'),
+    path('api/customers/counties/add/', views.api_add_county, name='api_add_county_customer'),
 
-path('api/customers/towns/', views.api_get_towns, name='api_get_towns'),
-path('api/customers/towns/add/', views.api_add_town, name='api_add_town_customer'),
+    path('api/customers/towns/', views.api_get_towns, name='api_get_towns'),
+    path('api/customers/towns/add/', views.api_add_town, name='api_add_town_customer'),
 
-path('api/customers/generate-id/', views.api_generate_customer_id, name='api_generate_customer_id'),
-path('api/customers/', views.api_get_customers, name='api_get_customers'),
-path('api/customers/add/', views.api_add_customer, name='api_add_customer'),
-path('api/customers/update/', views.api_update_customer, name='api_update_customer'),
-path('api/customers/delete/', views.api_delete_customer, name='api_delete_customer'),
+    path('api/customers/generate-id/', views.api_generate_customer_id, name='api_generate_customer_id'),
+    path('api/customers/', views.api_get_customers, name='api_get_customers'),
+    path('api/customers/add/', views.api_add_customer, name='api_add_customer'),
+    path('api/customers/update/', views.api_update_customer, name='api_update_customer'),
+    path('api/customers/delete/', views.api_delete_customer, name='api_delete_customer'),
 
 
 # ====================================== PURCHASES MODULE URLs =========================================================================================
@@ -150,58 +147,58 @@ path('api/customers/delete/', views.api_delete_customer, name='api_delete_custom
     
     # ========================== PAYMENT MODULE URLs ===============================================================================================================
     # Content page
-path('content/payments/', views.payments_content, name='payments'),
+    path('content/payments/', views.payments_content, name='payments'),
 
-# Payment Mode APIs
-path('api/payments/payment-modes/', views.api_get_payment_modes, name='api_get_payment_modes'),
-path('api/payments/payment-modes/add/', views.api_add_payment_mode, name='api_add_payment_mode'),
+    # Payment Mode APIs
+    path('api/payments/payment-modes/', views.api_get_payment_modes, name='api_get_payment_modes'),
+    path('api/payments/payment-modes/add/', views.api_add_payment_mode, name='api_add_payment_mode'),
 
-# Transaction ID Generation
-path('api/payments/generate-transaction-id/', views.api_generate_transaction_id, name='api_generate_transaction_id'),
+    # Transaction ID Generation
+    path('api/payments/generate-transaction-id/', views.api_generate_transaction_id, name='api_generate_transaction_id'),
 
-# Payment CRUD APIs
-path('api/payments/', views.api_get_payments, name='api_get_payments'),
-path('api/payments/add/', views.api_add_payment, name='api_add_payment'),
-path('api/payments/update/', views.api_update_payment, name='api_update_payment'),
-path('api/payments/delete/', views.api_delete_payment, name='api_delete_payment'),
+    # Payment CRUD APIs
+    path('api/payments/', views.api_get_payments, name='api_get_payments'),
+    path('api/payments/add/', views.api_add_payment, name='api_add_payment'),
+    path('api/payments/update/', views.api_update_payment, name='api_update_payment'),
+    path('api/payments/delete/', views.api_delete_payment, name='api_delete_payment'),
 
-path('api/purchases/get-next-detail-number/', views.api_get_next_detail_number, name='api_get_next_detail_number'),
+    path('api/purchases/get-next-detail-number/', views.api_get_next_detail_number, name='api_get_next_detail_number'),
 
-# Receipt Module URLs
-path('content/receipts/', views.receipts_content, name='receipts'),
-path('api/receipts/generate-transaction-id/', views.api_generate_receipt_transaction_id, name='api_generate_receipt_transaction_id'),
-path('api/receipts/', views.api_get_receipts, name='api_get_receipts'),
-path('api/receipts/add/', views.api_add_receipt, name='api_add_receipt'),
-path('api/receipts/update/', views.api_update_receipt, name='api_update_receipt'),
-path('api/receipts/delete/', views.api_delete_receipt, name='api_delete_receipt'), 
-
-
-# =============================== DASHBOARD URLS/API ENDPOINTS =======================================================================================================================
-path('api/dashboard/sales-details/', views.api_get_all_sales_details, name='api_get_all_sales_details'),
-path('api/dashboard/purchase-details/', views.api_get_all_purchase_details, name='api_get_all_purchase_details'),
-
-# ============================ SALES-FORECASTING MODULE VIEWS =========================================================================================================================
+    # Receipt Module URLs
+    path('content/receipts/', views.receipts_content, name='receipts'),
+    path('api/receipts/generate-transaction-id/', views.api_generate_receipt_transaction_id, name='api_generate_receipt_transaction_id'),
+    path('api/receipts/', views.api_get_receipts, name='api_get_receipts'),
+    path('api/receipts/add/', views.api_add_receipt, name='api_add_receipt'),
+    path('api/receipts/update/', views.api_update_receipt, name='api_update_receipt'),
+    path('api/receipts/delete/', views.api_delete_receipt, name='api_delete_receipt'), 
 
 
+    # =============================== DASHBOARD URLS/API ENDPOINTS =======================================================================================================================
+    path('api/dashboard/sales-details/', views.api_get_all_sales_details, name='api_get_all_sales_details'),
+    path('api/dashboard/purchase-details/', views.api_get_all_purchase_details, name='api_get_all_purchase_details'),
 
-# ======================== REPORTS VIEWS ================================================================================================================================================
-path('api/reports/sales-summary/', views.api_generate_sales_summary, name='api_sales_summary'),
-path('api/reports/inventory-status/', views.api_generate_inventory_status, name='api_inventory_status'),
-path('api/reports/profit-loss/', views.api_generate_profit_loss, name='api_profit_loss'),
-path('api/reports/purchase-summary/', views.api_generate_purchase_summary, name='api_purchase_summary'),
-path('api/reports/outstanding-balances/', views.api_generate_outstanding_balances, name='api_outstanding_balances'),
-path('api/reports/customer-analysis/', views.api_generate_customer_analysis, name='api_customer_analysis'),
-path('api/reports/supplier-analysis/', views.api_generate_supplier_analysis, name='api_supplier_analysis'),
-path('api/reports/tax-summary/', views.api_generate_tax_summary, name='api_tax_summary'),
-path('api/reports/export-pdf/', views.api_export_report_pdf, name='api_export_pdf'),
-path('api/reports/export-excel/', views.api_export_report_excel, name='api_export_excel'),
+    # ============================ SALES-FORECASTING MODULE VIEWS =========================================================================================================================
 
-# ======================== SETTINGS MODULE URLs ========================================================================================================
-path('api/user/profile/', views.api_get_user_profile, name='api_get_user_profile'),
-path('api/user/update-profile/', views.api_update_user_profile, name='api_update_user_profile'),
-path('api/user/change-password/', views.api_change_password, name='api_change_password'),
 
-# ============= TEST URL ==========================================================================================================================================
-path('test/', views.test_page, name='test'),
+
+    # ======================== REPORTS VIEWS ================================================================================================================================================
+    path('api/reports/sales-summary/', views.api_generate_sales_summary, name='api_sales_summary'),
+    path('api/reports/inventory-status/', views.api_generate_inventory_status, name='api_inventory_status'),
+    path('api/reports/profit-loss/', views.api_generate_profit_loss, name='api_profit_loss'),
+    path('api/reports/purchase-summary/', views.api_generate_purchase_summary, name='api_purchase_summary'),
+    path('api/reports/outstanding-balances/', views.api_generate_outstanding_balances, name='api_outstanding_balances'),
+    path('api/reports/customer-analysis/', views.api_generate_customer_analysis, name='api_customer_analysis'),
+    path('api/reports/supplier-analysis/', views.api_generate_supplier_analysis, name='api_supplier_analysis'),
+    path('api/reports/tax-summary/', views.api_generate_tax_summary, name='api_tax_summary'),
+    path('api/reports/export-pdf/', views.api_export_report_pdf, name='api_export_pdf'),
+    path('api/reports/export-excel/', views.api_export_report_excel, name='api_export_excel'),
+
+    # ======================== SETTINGS MODULE URLs ========================================================================================================
+    path('api/user/profile/', views.api_get_user_profile, name='api_get_user_profile'),
+    path('api/user/update-profile/', views.api_update_user_profile, name='api_update_user_profile'),
+    path('api/user/change-password/', views.api_change_password, name='api_change_password'),
+
+    # ============= TEST URL ==========================================================================================================================================
+    path('test/', views.test_page, name='test'),
 
 ]
