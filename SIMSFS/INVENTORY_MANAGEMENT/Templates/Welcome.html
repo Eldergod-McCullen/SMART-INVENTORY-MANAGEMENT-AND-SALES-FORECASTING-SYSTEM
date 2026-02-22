@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Inventory Management System - Welcome{% endblock %}</title>
+    <title>{% block title %}SIMSFS - WELCOME{% endblock %}</title>
 
     <link rel="stylesheet" href="{% static 'Welcome.css' %}">
 
@@ -21,11 +21,13 @@
         <div class="bx bx-menu" id="menu-icon"><span class="animate" style="--i:2;"></span></div>
 
         <!-- Navigation bar design -->
+        <!-- CHANGE: "Get Started" moved to end. "Contact Us" added before it. -->
         <nav class="navbar">
             <a href="#home" class="active">Home</a>
             <a href="#about">About</a>
             <a href="#features">Features</a>
             <a href="#services">Services</a>
+            <a href="#contact-us">Contact Us</a>
             <a href="#contact">Get Started</a>
 
             <span class="active-nav"></span>
@@ -42,14 +44,14 @@
                 <span class="animate" style="--i:3;"></span>
             </div>
             <p>Streamline your business operations with our comprehensive inventory management system. 
-               Track inventory, manage sales, process payments, handle purchases, generate receipts, 
+               Track inventory, manage sales, process payments, handle purchases, generate receipts 
                and forecast future sales with advanced analytics and AI-powered insights.
                 <span class="animate" style="--i:4;"></span>
             </p>
 
             <div class="btn-box">
-                <a href="#contact" class="btn">Get Started</a>
-                <a href="#features" class="btn">Learn More</a>
+                <a href="#about" class="btn">Learn more</a>
+                <a href="#services" class="btn">Why us?</a>
                 <span class="animate" style="--i:5;"></span>
             </div>
         </div>
@@ -86,7 +88,7 @@
             </p>
 
             <div class="btn-box btns">
-                <a href="#services" class="btn">Explore Services</a>
+                <a href="#features" class="btn">Explore Features</a>
                 <span class="animate scroll" style="--i:5;"></span>
             </div>
         </div>
@@ -182,10 +184,13 @@
     </section>
 
     <!-- Services section design -->
+    <!-- CHANGE: Added 2 more service cards to make 8 total -->
     <section class="services" id="services">
         <h2 class="heading">Our <span>Services</span><span class="animate scroll" style="--i:1;"></span></h2>
 
         <div class="services-container">
+
+            <!-- Service 1 -->
             <div class="service-card">
                 <i class='bx bx-store'></i>
                 <h3>Inventory Control</h3>
@@ -193,6 +198,7 @@
                 <span class="animate scroll" style="--i:2;"></span>
             </div>
 
+            <!-- Service 2 -->
             <div class="service-card">
                 <i class='bx bx-cart'></i>
                 <h3>Sales Processing</h3>
@@ -200,6 +206,7 @@
                 <span class="animate scroll" style="--i:3;"></span>
             </div>
 
+            <!-- Service 3 -->
             <div class="service-card">
                 <i class='bx bx-dollar-circle'></i>
                 <h3>Payment Tracking</h3>
@@ -207,6 +214,7 @@
                 <span class="animate scroll" style="--i:4;"></span>
             </div>
 
+            <!-- Service 4 -->
             <div class="service-card">
                 <i class='bx bx-shopping-bag'></i>
                 <h3>Purchase Orders</h3>
@@ -214,6 +222,7 @@
                 <span class="animate scroll" style="--i:5;"></span>
             </div>
 
+            <!-- Service 5 -->
             <div class="service-card">
                 <i class='bx bx-file'></i>
                 <h3>Receipt Management</h3>
@@ -221,16 +230,84 @@
                 <span class="animate scroll" style="--i:6;"></span>
             </div>
 
+            <!-- Service 6 -->
             <div class="service-card">
                 <i class='bx bx-brain'></i>
                 <h3>Sales Forecasting</h3>
                 <p>Machine learning algorithms analyze historical data to predict future demand and optimize stock levels.</p>
                 <span class="animate scroll" style="--i:7;"></span>
             </div>
+
+            <!-- Service 7 - NEW -->
+            <div class="service-card">
+                <i class='bx bx-group'></i>
+                <h3>Customer Management</h3>
+                <p>Maintain detailed customer profiles, purchase histories, credit limits, and loyalty records to build stronger business relationships.</p>
+                <span class="animate scroll" style="--i:8;"></span>
+            </div>
+
+            <!-- Service 8 - NEW -->
+            <div class="service-card">
+                <i class='bx bx-chart'></i>
+                <h3>Reporting & Analytics</h3>
+                <p>Generate comprehensive business reports covering sales summaries, profit margins, stock movement, and financial performance at a glance.</p>
+                <span class="animate scroll" style="--i:9;"></span>
+            </div>
+
         </div>
     </section>
 
-    <!-- Contact/Get Started section design -->
+    <!-- ============================================================ -->
+    <!-- CONTACT US SECTION (NEW) - styled like the Portfolio contact -->
+    <!-- ============================================================ -->
+    <section class="contact-us-section" id="contact-us">
+        <h2 class="heading">Contact <span>Us</span><span class="animate scroll" style="--i:1;"></span></h2>
+
+        <form action="#" method="post" class="contact-us-form">
+            <div class="input-box">
+                <div class="input-field">
+                    <input type="text" placeholder="Full Name" required>
+                    <span class="focus"></span>
+                </div>
+
+                <div class="input-field">
+                    <input type="email" placeholder="Email Address" required>
+                    <span class="focus"></span>
+                </div>
+
+                <span class="animate scroll" style="--i:3;"></span>
+            </div>
+
+            <div class="input-box">
+                <div class="input-field">
+                    <input type="number" placeholder="Phone Number" required>
+                    <span class="focus"></span>
+                </div>
+
+                <div class="input-field">
+                    <input type="text" placeholder="Subject" required>
+                    <span class="focus"></span>
+                </div>
+
+                <span class="animate scroll" style="--i:5;"></span>
+            </div>
+
+            <div class="textarea-field">
+                <textarea name="" id="" cols="30" rows="10" placeholder="Your Message" required></textarea>
+                <span class="focus"></span>
+                <span class="animate scroll" style="--i:7;"></span>
+            </div>
+
+            <div class="btn-box btns">
+                <button type="submit" class="btn">Send Message</button>
+                <span class="animate scroll" style="--i:9;"></span>
+            </div>
+        </form>
+    </section>
+
+    <!-- ============================================================ -->
+    <!-- GET STARTED SECTION (UPDATED) -->
+    <!-- ============================================================ -->
     <section class="contact" id="contact">
         <h2 class="heading">Get <span>Started</span><span class="animate scroll" style="--i:1;"></span></h2>
 
@@ -238,7 +315,7 @@
             <div class="contact-info">
                 <h3>Ready to Transform Your Business?<span class="animate scroll" style="--i:2;"></span></h3>
                 <p>Join thousands of businesses already using InvenTrack to streamline their operations and boost profitability.<span class="animate scroll" style="--i:3;"></span></p>
-                
+
                 <div class="info-boxes">
                     <div class="info-box">
                         <i class='bx bx-time-five'></i>
@@ -250,7 +327,7 @@
                     <div class="info-box">
                         <i class='bx bx-shield'></i>
                         <div>
-                            <h4>Secure & Reliable</h4>
+                            <h4>Secure &amp; Reliable</h4>
                             <p>Enterprise-grade security for your data</p>
                         </div>
                     </div>
@@ -264,19 +341,22 @@
                 </div>
                 <span class="animate scroll" style="--i:4;"></span>
 
-                <div class="btn-box btns">
-                    <button type="submit" class="btn">Already with us? Log in</button>
+                <!-- CHANGE: Two buttons - "Ready? Register" and "Already with us? Log in" -->
+                <div class="btn-box btns get-started-btns">
+                    <a href="/register/" class="btn">Ready? Register</a>
+                    <a href="/login/" class="btn">Already with us? Log in</a>
                     <span class="animate scroll" style="--i:6;"></span>
                 </div>
             </div>
 
             <div class="contact-form">
-                <h3>Contact Us<span class="animate scroll" style="--i:5;"></span></h3>
-                <form action="#" method="post">
-                    <input type="text" placeholder="Your Name" required>
-                    <input type="email" placeholder="Your Email" required>
-                    <textarea placeholder="Your Message" required></textarea>
-                    <button type="submit" class="btn">Send Message</button>
+                <h3>Quick Login<span class="animate scroll" style="--i:5;"></span></h3>
+                <form action="/login/" method="post">
+                    {% csrf_token %}
+                    <input type="email" name="email" placeholder="Your Email" required>
+                    <input type="password" name="password" placeholder="Your Password" required>
+                    <button type="submit" class="btn">LOG IN</button>
+                    <p class="register-prompt">New here? <a href="/register/">Create an account</a></p>
                     <span class="animate scroll" style="--i:6;"></span>
                 </form>
             </div>
