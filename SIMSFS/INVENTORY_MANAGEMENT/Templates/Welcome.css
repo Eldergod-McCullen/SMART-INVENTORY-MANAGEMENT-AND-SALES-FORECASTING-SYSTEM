@@ -11,10 +11,9 @@
     font-family: 'Poppins', sans-serif;
 }
 
-/* Color scheme for the inventory management system */
 :root {
     --bg-color: #081b29;
-    --second-bg-color: #112e42;   
+    --second-bg-color: #112e42;
     --text-color: #ededed;
     --main-color: #00abf0;
 }
@@ -29,7 +28,9 @@ body {
     color: var(--text-color);
 }
 
-/* Header content */
+/* ============================================================
+   HEADER
+   ============================================================ */
 .header {
     position: fixed;
     top: 0;
@@ -86,7 +87,9 @@ section {
     padding: 10rem 9% 2rem;
 }
 
-/* Home section */
+/* ============================================================
+   HOME SECTION
+   ============================================================ */
 .home {
     display: flex;
     align-items: center;
@@ -97,38 +100,6 @@ section {
 .home-content {
     max-width: 60rem;
     z-index: 99;
-}
-
-.home .btn-box {
-    position: relative;
-    display: flex;
-    justify-content: space-between;
-    width: 34.5rem;
-    height: 5rem;
-    
-}
-
-.home .btn-box .btn {
-   /* width: 19rem;    each button gets enough room for the full text 
-    font-size: 1.5rem;
-    letter-spacing: 0;
-    margin-left: 10rem;*/
-    position: relative;
-    display: inline-flex;
-    justify-content: center;
-    align-items: center;
-    width: 15rem;
-    height: 100%;
-    background: var(--main-color);
-    border: 0.2rem solid var(--main-color);
-    border-radius: 1rem;
-    font-size: 1.8rem;
-    font-weight: 600;
-    letter-spacing: 0.1rem;
-    color: var(--bg-color);
-    z-index: 1;
-    overflow: hidden;
-    transition: 0.8s;
 }
 
 .home-content h1 {
@@ -182,13 +153,16 @@ section {
     margin: 2rem 0 4rem;
 }
 
-/* Buttons */
+/* ============================================================
+   BUTTONS — shared base (Home section style)
+   ============================================================ */
 .btn-box {
     position: relative;
     display: flex;
     justify-content: space-between;
     width: 34.5rem;
     height: 5rem;
+    gap: 1rem;
 }
 
 .btn-box .btn {
@@ -243,7 +217,9 @@ section {
     width: 100%;
 }
 
-/* Social icons */
+/* ============================================================
+   SOCIAL ICONS (home)
+   ============================================================ */
 .home-sci {
     position: absolute;
     bottom: 4rem;
@@ -304,7 +280,9 @@ section {
     opacity: 0.8;
 }
 
-/* About section */
+/* ============================================================
+   ABOUT SECTION
+   ============================================================ */
 .about {
     display: flex;
     justify-content: center;
@@ -376,14 +354,15 @@ span {
 
 .btn-box.btns {
     display: inline-block;
-    width: 15rem;
 }
 
 .btn-box.btns a::before {
     background: var(--second-bg-color);
 }
 
-/* Features section */
+/* ============================================================
+   FEATURES SECTION
+   ============================================================ */
 .features {
     display: flex;
     justify-content: center;
@@ -455,7 +434,9 @@ span {
     opacity: 0.9;
 }
 
-/* Services section */
+/* ============================================================
+   SERVICES SECTION
+   ============================================================ */
 .services {
     min-height: auto;
     padding-bottom: 7rem;
@@ -523,54 +504,179 @@ span {
     position: relative;
 }
 
-/* Contact section */
+/* ============================================================
+   CONTACT US SECTION
+   Styled exactly like Personal_portfolio.css contact section.
+   Uses the same .contact class so all rules apply directly.
+   ============================================================ */
 .contact {
     min-height: auto;
     padding-bottom: 7rem;
 }
 
-.contact-content {
+.contact h2.heading {
+    display: inline-block;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+/* The form — centred, max 70rem, matches portfolio exactly */
+.contact form,
+.contact-us-form {
+    max-width: 70rem;
+    margin: 0 auto;
+    text-align: center;
+}
+
+.contact form .input-box,
+.contact-us-form .input-box {
+    position: relative;
     display: flex;
-    gap: 5rem;
-    align-items: flex-start;
-    justify-content: center;
+    justify-content: space-between;
     flex-wrap: wrap;
 }
 
-.contact-info {
-    flex: 1;
-    min-width: 30rem;
+.contact form .input-box .input-field,
+.contact-us-form .input-box .input-field {
+    position: relative;
+    width: 48%;
+    margin: 0.8rem 0;
 }
 
-.contact-info h3 {
-    font-size: 2.6rem;
-    margin-bottom: 2rem;
-}
-
-.contact-info p {
+.contact form .input-box .input-field input,
+.contact form .textarea-field textarea,
+.contact-us-form .input-box .input-field input,
+.contact-us-form .textarea-field textarea {
+    width: 100%;
+    height: 100%;
+    padding: 1.5rem;
     font-size: 1.6rem;
-    margin-bottom: 3rem;
+    color: var(--text-color);
+    background: transparent;
+    border-radius: 0.6rem;
+    border: 0.2rem solid var(--main-color);
 }
 
+.contact form .input-box .input-field input::placeholder,
+.contact form .textarea-field textarea::placeholder,
+.contact-us-form .input-box .input-field input::placeholder,
+.contact-us-form .textarea-field textarea::placeholder {
+    color: var(--text-color);
+}
+
+/* The sliding focus highlight — background fills on focus/valid */
+.contact form .focus,
+.contact-us-form .focus {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 0;
+    height: 100%;
+    background: var(--second-bg-color);
+    border-radius: 0.6rem;
+    z-index: -1;
+    transition: 0.8s;
+}
+
+.contact form .input-box .input-field input:focus ~ .focus,
+.contact form .input-box .input-field input:valid ~ .focus,
+.contact form .textarea-field textarea:focus ~ .focus,
+.contact form .textarea-field textarea:valid ~ .focus,
+.contact-us-form .input-box .input-field input:focus ~ .focus,
+.contact-us-form .input-box .input-field input:valid ~ .focus,
+.contact-us-form .textarea-field textarea:focus ~ .focus,
+.contact-us-form .textarea-field textarea:valid ~ .focus {
+    width: 100%;
+}
+
+.contact form .textarea-field,
+.contact-us-form .textarea-field {
+    position: relative;
+    margin: 0.8rem 0 2.7rem;
+    display: flex;
+}
+
+.contact form .textarea-field textarea,
+.contact-us-form .textarea-field textarea {
+    resize: none;
+}
+
+/* Submit button — uses same .btn-box.btns pattern as portfolio */
+.contact form .btn-box.btns .btn,
+.contact-us-form .btn-box.btns .btn {
+    cursor: pointer;
+}
+
+/* ============================================================
+   GET STARTED SECTION
+   ============================================================ */
+.get-started-section {
+    min-height: auto;
+    padding: 10rem 9% 7rem;
+    background: var(--second-bg-color);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+/* FIX: The heading needs position:relative and display:inline-block
+   so the span.animate.scroll child stays contained inside it */
+.get-started-section .heading {
+    position: relative;
+    display: inline-block;
+}
+
+.get-started-content {
+    width: 100%;
+    max-width: 80rem;
+    text-align: center;
+}
+
+/* FIX: position:relative is REQUIRED on h3 and p so that the
+   span.animate.scroll placed inside them is contained and does
+   not escape to cover other elements below */
+.get-started-content h3 {
+    position: relative;
+    display: inline-block;
+    font-size: 2.6rem;
+    margin-bottom: 1.5rem;
+}
+
+.get-started-content > p {
+    position: relative;
+    font-size: 1.6rem;
+    margin-bottom: 4rem;
+}
+
+/* Info boxes */
 .info-boxes {
     display: flex;
     flex-direction: column;
     gap: 2rem;
+    margin-bottom: 4rem;
+    text-align: left;
 }
 
 .info-box {
     display: flex;
     align-items: center;
     gap: 2rem;
-    background: var(--second-bg-color);
+    background: var(--bg-color);
     padding: 2rem;
     border-radius: 0.8rem;
     border: 0.2rem solid var(--main-color);
+    transition: 0.3s;
+}
+
+.info-box:hover {
+    transform: translateX(0.5rem);
+    box-shadow: 0 0.5rem 1.5rem rgba(0, 171, 240, 0.2);
 }
 
 .info-box i {
     font-size: 4rem;
     color: var(--main-color);
+    flex-shrink: 0;
 }
 
 .info-box h4 {
@@ -583,12 +689,20 @@ span {
     margin: 0;
 }
 
+/* ============================================================
+   GET STARTED BUTTONS
+   Centred, matching Home section btn-box style exactly.
+   FIX: position:relative added so the span.animate.scroll
+   inside the btn-box stays contained and does not cover buttons
+   ============================================================ */
 .get-started-btns {
+    position: relative;          /* FIX: keeps span.animate.scroll contained */
     display: flex;
-    flex-wrap: wrap;
-    gap: 1.5rem;
-    width: auto;
-    height: auto;
+    justify-content: center;
+    align-items: center;
+    gap: 2rem;
+    width: 100%;
+    height: 5rem;
     margin-top: 3rem;
 }
 
@@ -597,8 +711,7 @@ span {
     display: inline-flex;
     justify-content: center;
     align-items: center;
-    padding: 1.2rem 2.5rem;
-    width: auto;
+    width: 27rem;
     height: 5rem;
     background: var(--main-color);
     border: 0.2rem solid var(--main-color);
@@ -611,14 +724,13 @@ span {
     overflow: hidden;
     transition: 0.5s;
     text-decoration: none;
-    cursor: pointer;
 }
 
 .get-started-btns .btn:hover {
     color: var(--main-color);
 }
 
-/* Second button (Log in) - transparent/outlined style */
+/* Second button (Log in) — outlined, transparent fill */
 .get-started-btns .btn:nth-child(2) {
     background: transparent;
     color: var(--main-color);
@@ -648,104 +760,17 @@ span {
     width: 100%;
 }
 
-/* Login box */
-.login-box {
-    flex: 1;
-    min-width: 35rem;
+/* FIX: The get-started-section sits on var(--second-bg-color).
+   All span.animate.scroll elements inside it must use that same
+   colour as the cover — otherwise the cover block is the wrong
+   shade and the heading/content appear hidden behind a dark block */
+.get-started-section .animate.scroll {
     background: var(--second-bg-color);
-    padding: 4rem 3rem;
-    border-radius: 1rem;
-    border: 0.2rem solid var(--main-color);
 }
 
-.login-box h3 {
-    font-size: 2.6rem;
-    margin-bottom: 3rem;
-    text-align: center;
-}
-
-.login-box form {
-    display: flex;
-    flex-direction: column;
-    gap: 2rem;
-}
-
-.login-box .input-field {
-    position: relative;
-}
-
-.login-box .input-field input {
-    width: 100%;
-    height: 5rem;
-    padding: 1.5rem 4.5rem 1.5rem 1.5rem;
-    font-size: 1.6rem;
-    color: var(--text-color);
-    background: transparent;
-    border-radius: 0.6rem;
-    border: 0.2rem solid var(--main-color);
-}
-
-.login-box .input-field input::placeholder {
-    color: var(--text-color);
-    opacity: 0.7;
-}
-
-.login-box .input-field i {
-    position: absolute;
-    right: 1.5rem;
-    top: 50%;
-    transform: translateY(-50%);
-    font-size: 2rem;
-    color: var(--main-color);
-}
-
-.login-box .input-field .focus {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 0;
-    height: 100%;
-    background: var(--bg-color);
-    border-radius: 0.6rem;
-    z-index: -1;
-    transition: 0.5s;
-}
-
-.login-box .input-field input:focus ~ .focus,
-.login-box .input-field input:valid ~ .focus {
-    width: 100%;
-}
-
-.login-box .btn-box {
-    width: 100%;
-    margin-top: 1rem;
-}
-
-.login-box .btn {
-    width: 100%;
-    cursor: pointer;
-}
-
-.register-link {
-    text-align: center;
-    margin-top: 2rem;
-}
-
-.register-link p {
-    font-size: 1.4rem;
-}
-
-.register-link a {
-    color: var(--main-color);
-    font-weight: 600;
-    transition: 0.3s;
-}
-
-.register-link a:hover {
-    text-decoration: underline;
-}
-
-/* Footer */
+/* ============================================================
+   FOOTER
+   ============================================================ */
 .footer {
     display: flex;
     justify-content: space-between;
@@ -753,6 +778,13 @@ span {
     flex-wrap: wrap;
     padding: 2rem 9%;
     background: var(--second-bg-color);
+}
+
+/* FIX: position:relative is REQUIRED so the span.animate.scroll
+   children stay contained inside these divs and animate correctly */
+.footer-text,
+.footer-iconTop {
+    position: relative;
 }
 
 .footer-text p {
@@ -770,7 +802,7 @@ span {
     border-radius: 0.6rem;
     z-index: 1;
     overflow: hidden;
-    transition: 0.5s;
+    transition: 0.7s;
 }
 
 .footer-iconTop a::before {
@@ -782,7 +814,7 @@ span {
     height: 100%;
     background: var(--second-bg-color);
     z-index: -1;
-    transition: 0.5s;
+    transition: 0.7s;
 }
 
 .footer-iconTop a:hover::before {
@@ -799,7 +831,9 @@ span {
     color: var(--main-color);
 }
 
-/* Animations */
+/* ============================================================
+   ANIMATION SYSTEM — matching Personal_portfolio exactly
+   ============================================================ */
 .animate {
     position: absolute;
     top: 0;
@@ -812,221 +846,6 @@ span {
 
 .animate.home-image {
     width: 50%;
-}
-
-.contact-form {
-    flex: 1;
-    min-width: 35rem;
-    background: var(--second-bg-color);
-    padding: 4rem 3rem;
-    border-radius: 1rem;
-    border: 0.2rem solid var(--main-color);
-}
-
-.contact-form h3 {
-    font-size: 2.6rem;
-    margin-bottom: 3rem;
-    text-align: center;
-}
-
-.contact-form form {
-    display: flex;
-    flex-direction: column;
-    gap: 2rem;
-}
-
-.contact-form form input,
-.contact-form form textarea {
-    width: 100%;
-    height: 5rem;
-    padding: 1.5rem;
-    font-size: 1.6rem;
-    color: var(--text-color);
-    background: transparent;
-    border-radius: 0.6rem;
-    border: 0.2rem solid var(--main-color);
-}
-
-.contact-form form input::placeholder,
-.contact-form form textarea::placeholder {
-    color: var(--text-color);
-    opacity: 0.7;
-}
-
-.contact-form form input:focus,
-.contact-form form textarea:focus {
-    outline: none;
-    box-shadow: 0 0 0 2px rgba(0, 171, 240, 0.25);
-}
-
-.contact-form .btn {
-    width: 100%;
-    height: 5rem;
-    cursor: pointer;
-    font-size: 1.8rem;
-    font-weight: 600;
-    background: var(--main-color);
-    color: var(--bg-color);
-    border: 0.2rem solid var(--main-color);
-    border-radius: 0.8rem;
-    transition: 0.5s;
-}
-
-.contact-form .btn:hover {
-    background: transparent;
-    color: var(--main-color);
-}
-
-.contact-form .register-prompt {
-    text-align: center;
-    font-size: 1.4rem;
-    margin-top: -0.5rem;
-}
-
-.contact-form .register-prompt a {
-    color: var(--main-color);
-    font-weight: 600;
-    text-decoration: none;
-    transition: 0.3s;
-}
-
-.contact-form .register-prompt a:hover {
-    text-decoration: underline;
-}
-
-
-/* ------------------------------------------------------------------
-   CONTACT US SECTION (NEW)
-   Styled exactly like the Personal_portfolio.html contact section.
-   ------------------------------------------------------------------ */
-
-.contact-us-section {
-    min-height: auto;
-    padding-bottom: 7rem;
-    background: var(--second-bg-color);  /* alternating background */
-}
-
-.contact-us-section h2 {
-    display: inline-block;
-    left: 50%;
-    transform: translateX(-50%);
-}
-
-/* Reuse the same form layout as Personal_portfolio contact */
-.contact-us-form {
-    max-width: 70rem;
-    margin: 0 auto;
-    text-align: center;
-}
-
-.contact-us-form .input-box {
-    position: relative;
-    display: flex;
-    justify-content: space-between;
-    flex-wrap: wrap;
-}
-
-.contact-us-form .input-box .input-field {
-    position: relative;
-    width: 48%;
-    margin: 0.8rem 0;
-}
-
-.contact-us-form .input-box .input-field input,
-.contact-us-form .textarea-field textarea {
-    width: 100%;
-    height: 6rem;
-    padding: 1.5rem;
-    font-size: 1.6rem;
-    color: var(--text-color);
-    background: transparent;
-    border-radius: 0.6rem;
-    border: 0.2rem solid var(--main-color);
-}
-
-.contact-us-form .input-box .input-field input::placeholder,
-.contact-us-form .textarea-field textarea::placeholder {
-    color: var(--text-color);
-    opacity: 0.7;
-}
-
-.contact-us-form .focus {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 0;
-    height: 100%;
-    background: var(--bg-color);
-    border-radius: 0.6rem;
-    z-index: -1;
-    transition: 0.8s;
-}
-
-.contact-us-form .input-box .input-field input:focus ~ .focus,
-.contact-us-form .input-box .input-field input:valid ~ .focus {
-    width: 100%;
-}
-
-.contact-us-form .textarea-field {
-    position: relative;
-    margin: 0.8rem 0 2.7rem;
-    display: flex;
-}
-
-.contact-us-form .textarea-field textarea {
-    resize: none;
-    height: auto;
-}
-
-.contact-us-form .textarea-field textarea:focus ~ .focus,
-.contact-us-form .textarea-field textarea:valid ~ .focus {
-    width: 100%;
-}
-
-.contact-us-form .btn-box.btns {
-    display: flex;
-    justify-content: center;
-}
-
-.contact-us-form .btn-box.btns .btn {
-    width: 20rem;
-    cursor: pointer;
-    font-size: 1.8rem;
-    font-weight: 600;
-    background: var(--main-color);
-    color: var(--bg-color);
-    border: 0.2rem solid var(--main-color);
-    border-radius: 0.8rem;
-    height: 5rem;
-    transition: 0.5s;
-    position: relative;
-    overflow: hidden;
-    z-index: 1;
-}
-
-.contact-us-form .btn-box.btns .btn::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 0;
-    height: 100%;
-    background: var(--second-bg-color);
-    z-index: -1;
-    transition: 0.5s;
-}
-
-.contact-us-form .btn-box.btns .btn:hover::before {
-    width: 100%;
-}
-
-.contact-us-form .btn-box.btns .btn:hover {
-    color: var(--main-color);
-}
-
-/* Make contact-us-section animate.scroll background correct */
-.contact-us-section .animate.scroll {
-    background: var(--second-bg-color);
 }
 
 .logo .animate,
@@ -1052,12 +871,26 @@ section:nth-child(odd) .animate.scroll,
 .features.show-animate .animate.scroll,
 .services.show-animate .animate.scroll,
 .contact.show-animate .animate.scroll,
+.get-started-section.show-animate .animate.scroll,
 .footer.show-animate .animate.scroll {
     transition-delay: calc(0.3s * var(--i));
     width: 0;
 }
 
-/* Responsive breakpoints */
+/* FIX: The section:nth-child(odd) rule can override the correct
+   background colour on get-started-section. We explicitly force
+   the right colour here so the cover always matches the section */
+.get-started-section .animate.scroll {
+    background: var(--second-bg-color) !important;
+}
+
+.footer .animate.scroll {
+    background: var(--second-bg-color) !important;
+}
+
+/* ============================================================
+   RESPONSIVE BREAKPOINTS
+   ============================================================ */
 @media (max-width: 1200px) {
     html {
         font-size: 55%;
@@ -1110,8 +943,18 @@ section:nth-child(odd) .animate.scroll,
         background: var(--bg-color);
         opacity: 0.6;
     }
-    .contact-content {
+    .get-started-btns {
         flex-direction: column;
+        height: auto;
+        gap: 1.5rem;
+    }
+    .get-started-btns .btn {
+        width: 100%;
+        max-width: 30rem;
+    }
+    .contact form .input-box .input-field,
+    .contact-us-form .input-box .input-field {
+        width: 100%;
     }
 }
 
@@ -1131,22 +974,9 @@ section:nth-child(odd) .animate.scroll,
         gap: 1.5rem;
         width: 100%;
     }
-
     .home .btn-box .btn {
         width: 100%;
         font-size: 1.4rem;
-    }
-
-    .get-started-btns {
-        flex-direction: column;
-    }
-
-    .get-started-btns .btn {
-        width: 100%;
-    }
-
-    .contact-us-form .input-box .input-field {
-        width: 100%;
     }
 }
 
@@ -1163,7 +993,9 @@ section:nth-child(odd) .animate.scroll,
     }
 }
 
-/* Keyframe animations */
+/* ============================================================
+   KEYFRAMES
+   ============================================================ */
 @keyframes homeBgText {
     0%, 10%, 100% {
         background-position: -40rem 0;

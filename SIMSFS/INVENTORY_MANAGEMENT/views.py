@@ -2,6 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse
 from django.http import HttpRequest                                          # IMPORTS FOR HTTP REQUESTS AND RESPONSES
 from django.http import HttpResponse
+from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.contrib import messages                                          # IMPORTS FOR DISPLAYING MESSAGES TO THE USER
 from django.contrib.auth.decorators import login_required
@@ -55,30 +56,31 @@ def test_page(request):
 @ensure_csrf_cookie
 def login_view(request):
     """
-    Handle login - both form display and authentication
-    Prevents caching to stop back-button issues
+    Handle login - both form display and authentication.
+    Prevents caching to stop back-button issues.
+    Returns JSON so the frontend JavaScript handles the redirect.
     """
-    print("Login view called!")  
-    print("Method:", request.method) 
-    
-    # If user is already authenticated, redirect to index
+    print("Login view called!")
+    print("Method:", request.method)
+
+    # If user is already authenticated, redirect straight to index
     if request.user.is_authenticated:
         return redirect('index')
-    
+
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
             email = data.get('email', '').strip().lower()
             password = data.get('password', '').strip()
-            
+
             # INPUT VALIDATION
             if not email or not password:
                 return JsonResponse({
                     'success': False,
                     'message': 'Email and password are required'
                 }, status=400)
-            
-            # FIND THE USER USING THE EMAIL
+
+            # FIND THE USER BY EMAIL
             try:
                 user = User.objects.get(email=email)
             except User.DoesNotExist:
@@ -86,52 +88,64 @@ def login_view(request):
                     'success': False,
                     'message': 'Invalid email or password'
                 }, status=401)
-            
+
             # CHECK THE PASSWORD
             if not user.check_password(password):
                 return JsonResponse({
                     'success': False,
                     'message': 'Invalid email or password'
                 }, status=401)
-            
-            # CONFIRM WHETHER THE USER IS ACTIVE
+
+            # CONFIRM THE ACCOUNT IS ACTIVE
             if not user.is_active:
                 return JsonResponse({
                     'success': False,
                     'message': 'Account is inactive. Please contact administrator.'
                 }, status=403)
-            
-            # LOG-IN THE USER
+
+            # LOG IN THE USER
             login(request, user)
-            
+
             print(f"✅ User {user.full_name} logged in successfully")
-            
+
+            # -------------------------------------------------------
+            # FIX: redirect_url now resolves to /index using the named
+            # URL 'index' from urls.py:
+            #   path('index', views.index, name='index')
+            #
+            # reverse('index') returns '/index' — the JavaScript on
+            # the login page reads this value and does:
+            #   window.location.href = data.redirect_url
+            # so it must point to the index page, not '/' (welcome).
+            # -------------------------------------------------------
             return JsonResponse({
                 'success': True,
                 'message': 'Login successful',
                 'username': user.full_name,
-                'redirect_url': '/'
+                'redirect_url': reverse('index')
             })
-            
+
         except json.JSONDecodeError:
             return JsonResponse({
                 'success': False,
                 'message': 'Invalid request format'
             }, status=400)
+
         except Exception as e:
             return JsonResponse({
                 'success': False,
                 'message': f'An error occurred: {str(e)}'
             }, status=500)
-    
-    # GET REQUEST - Render login form with cache control
+
+    # GET REQUEST — render the login form with cache-control headers
     response = render(request, 'Log-in_Register.html')
-    
-    # Prevent browser from caching login page
+
+    # Prevent the browser from caching the login page so the
+    # back button after logout does not show a stale logged-in page
     response['Cache-Control'] = 'no-cache, no-store, must-revalidate'
     response['Pragma'] = 'no-cache'
     response['Expires'] = '0'
-    
+
     return response
 
 
