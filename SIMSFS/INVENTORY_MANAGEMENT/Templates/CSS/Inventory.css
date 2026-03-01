@@ -1,0 +1,401 @@
+/* ============================================================
+   INVENTORY.CSS
+   Static stylesheet for the Inventory module.
+   Loaded by Inventory.html partial template via:
+       <link rel="stylesheet" href="{% static 'css/Inventory.css' %}">
+
+   CHANGES FROM ORIGINAL:
+   1. Removed `body` selector — body styles are owned by Index.html.
+   2. Removed duplicate .inventory-table declaration (merged into one).
+   3. Renamed .spinner → .inv-spinner to avoid collision with
+      Index.html's .spinner class.
+   4. Renamed @keyframes spin → @keyframes inv-spin and updated
+      the animation-name reference inside .inv-spinner.
+   5. Consolidated the two conflicting .no-data-container blocks
+      into one clean declaration with display:none as default.
+   ============================================================ */
+
+:root {
+    --primary:       #1abc9c;
+    --primary-light: #d1f2eb;
+    --primary-dark:  #16a085;
+    --secondary:     #3498db;
+    --dark:          #2c3e50;
+    --light-dark:    #34495e;
+    --gray:          #7f8c8d;
+    --light-gray:    #ecf0f1;
+    --white:         #ffffff;
+    --error:         #e74c3c;
+    --warning:       #f39c12;
+    --success:       #2ecc71;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* ---- CONTAINER ---- */
+.inventory-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    background-color: var(--white);
+    border-radius: 8px;
+    box-shadow: 0 2px 15px rgba(0, 0, 0, 0.08);
+    padding: 25px;
+}
+
+/* ---- HEADER ---- */
+.header-section {
+    margin-bottom: 30px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid var(--light-gray);
+}
+
+.header-section h1 {
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 600;
+    color: var(--dark);
+    margin-bottom: 8px;
+}
+
+.header-section p {
+    color: var(--gray);
+    font-size: 1.05rem;
+}
+
+/* ---- SEARCH ---- */
+.search-group {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.search-select {
+    padding: 9px;
+    border: 1px solid #bdc3c7;
+    border-radius: 4px;
+    background-color: var(--white);
+    min-width: 160px;
+}
+
+.search-input {
+    padding: 10px;
+    border: 1px solid #bdc3c7;
+    border-radius: 4px;
+    width: 250px;
+}
+
+/* ---- BUTTONS ---- */
+.btn {
+    padding: 10px 15px;
+    border: none;
+    border-radius: 4px;
+    font-family: 'Poppins', sans-serif;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.95rem;
+}
+
+.btn-primary          { background-color: var(--primary);   color: var(--white); }
+.btn-primary:hover    { background-color: var(--primary-dark); }
+.btn-secondary        { background-color: var(--secondary); color: var(--white); }
+.btn-secondary:hover  { background-color: #2980b9; }
+.btn-outline          { background-color: transparent; border: 1px solid #bdc3c7; color: var(--light-dark); }
+.btn-outline:hover    { background-color: var(--light-gray); }
+
+/* ---- TABLE CONTAINER ---- */
+#tableContainer {
+    overflow-x: auto;
+    margin-bottom: 20px;
+}
+
+/* ---- TABLE ---- */
+.inventory-table {
+    width: 100%;
+    border-collapse: collapse;
+    background-color: var(--white);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    margin-bottom: 20px;
+    table-layout: fixed;
+    min-width: 1420px;
+}
+
+.inventory-table th {
+    background-color: var(--dark);
+    color: var(--white);
+    padding: 14px 16px;
+    text-align: left;
+    font-family: 'Poppins', sans-serif;
+    font-weight: 500;
+    font-size: 0.95rem;
+}
+
+.inventory-table td {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--light-gray);
+    color: var(--light-dark);
+    font-size: 0.92rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Allow Item Name column to wrap */
+.inventory-table th:nth-child(5),
+.inventory-table td:nth-child(5) {
+    white-space: normal;
+    word-wrap: break-word;
+}
+
+.inventory-table tr:hover { background-color: rgba(26, 188, 156, 0.05); }
+
+/* ---- COLUMN WIDTHS ---- */
+.inventory-table th:nth-child(1),  .inventory-table td:nth-child(1)  { width: 90px;  min-width: 90px; }
+.inventory-table th:nth-child(2),  .inventory-table td:nth-child(2)  { width: 135px; min-width: 135px; }
+.inventory-table th:nth-child(3),  .inventory-table td:nth-child(3)  { width: 190px; min-width: 190px; word-wrap: normal; }
+.inventory-table th:nth-child(4),  .inventory-table td:nth-child(4)  { width: 160px; min-width: 160px; }
+.inventory-table th:nth-child(5),  .inventory-table td:nth-child(5)  { width: 200px; min-width: 200px; }
+.inventory-table th:nth-child(6),  .inventory-table td:nth-child(6)  { width: 100px; min-width: 70px;  text-align: right; }
+.inventory-table th:nth-child(7),  .inventory-table td:nth-child(7)  { width: 90px;  min-width: 90px;  text-align: right; }
+.inventory-table th:nth-child(8),  .inventory-table td:nth-child(8)  { width: 110px; min-width: 110px; text-align: right; }
+.inventory-table th:nth-child(9),  .inventory-table td:nth-child(9)  { width: 100px; min-width: 100px; text-align: right; }
+.inventory-table th:nth-child(10), .inventory-table td:nth-child(10) { width: 120px; min-width: 120px; text-align: center; }
+.inventory-table th:nth-child(11), .inventory-table td:nth-child(11) { width: 160px; min-width: 160px; }
+
+/* ---- LOW STOCK / REORDER ROW COLOURS ---- */
+.inventory-table .low-stock      { background-color: rgba(243, 156, 18, 0.1); }
+.inventory-table .reorder-needed { background-color: rgba(231, 76, 60, 0.1); }
+
+/* ---- REORDER BADGE ---- */
+.reorder-flag {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.reorder-yes { background-color: rgba(231, 76, 60, 0.15);  color: var(--error); }
+.reorder-no  { background-color: rgba(46, 204, 113, 0.15); color: var(--success); }
+
+/* ---- ACTION CELL & BUTTONS ---- */
+.action-cell {
+    display: flex;
+    gap: 6px;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    align-items: center;
+}
+
+.action-btn {
+    padding: 6px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    min-width: 36px;
+    border: none;
+}
+
+.action-btn i { font-size: 0.9rem; }
+.edit-btn     { background-color: #3498db;        color: white; }
+.update-btn   { background-color: var(--success); color: white; }
+.cancel-btn   { background-color: var(--gray);    color: white; }
+.delete-btn   { background-color: var(--error);   color: white; }
+
+/* ---- INLINE EDIT ---- */
+.editable {
+    background-color: #fffde7;
+    border: 1px solid #ffd54f;
+    padding: 5px 8px;
+    border-radius: 3px;
+    width: 100%;
+}
+
+/* ---- MODAL ---- */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    overflow: auto;
+}
+
+.modal-content {
+    background-color: var(--white);
+    margin: 5% auto;
+    padding: 30px;
+    border-radius: 8px;
+    width: 500px;
+    max-width: 90%;
+    box-shadow: 0 5px 25px rgba(0, 0, 0, 0.2);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 25px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid var(--light-gray);
+}
+
+.modal-header h2 {
+    font-family: 'Montserrat', sans-serif;
+    color: var(--dark);
+    font-size: 1.6rem;
+    margin: 0;
+}
+
+.close-btn       { font-size: 1.8rem; cursor: pointer; color: var(--gray); transition: color 0.3s; }
+.close-btn:hover { color: var(--dark); }
+.form-group      { margin-bottom: 22px; }
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: var(--dark);
+    font-size: 0.95rem;
+}
+
+.form-control {
+    width: 100%;
+    padding: 11px;
+    border: 1px solid #bdc3c7;
+    border-radius: 4px;
+    font-family: 'Roboto', sans-serif;
+    font-size: 0.95rem;
+}
+
+.form-control:focus {
+    border-color: var(--primary);
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(26, 188, 156, 0.2);
+}
+
+.required:after { content: " *"; color: var(--error); }
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 25px;
+    padding-top: 15px;
+    border-top: 1px solid var(--light-gray);
+}
+
+/* ---- PROCESSING OVERLAY ---- */
+.processing-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(255, 255, 255, 0.85);
+    z-index: 2000;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+}
+
+/* Renamed from .spinner → .inv-spinner to avoid collision
+   with Index.html's .spinner class                         */
+.inv-spinner {
+    border: 5px solid #f3f3f3;
+    border-top: 5px solid var(--primary);
+    border-radius: 50%;
+    width: 60px;
+    height: 60px;
+    animation: inv-spin 1s linear infinite;
+    margin-bottom: 20px;
+}
+
+/* Renamed from @keyframes spin → @keyframes inv-spin */
+@keyframes inv-spin {
+    0%   { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* ---- SELECT2 ---- */
+.select2-container { width: 100% !important; }
+
+/* ---- PAGINATION ---- */
+.pagination {
+    display: flex;
+    justify-content: center;
+    margin-top: 25px;
+    gap: 6px;
+}
+
+.page-btn {
+    padding: 8px 14px;
+    background-color: var(--white);
+    border: 1px solid #bdc3c7;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: 'Roboto', sans-serif;
+    transition: all 0.3s;
+}
+
+.page-btn:hover:not(.active) { background-color: var(--light-gray); }
+
+.page-btn.active {
+    background-color: var(--primary);
+    color: var(--white);
+    border-color: var(--primary);
+}
+
+/* ---- NO DATA ---- */
+/* Consolidated from two conflicting declarations in original file */
+.no-data-container {
+    display: none;
+    text-align: center;
+    padding: 50px 20px;
+    background: var(--white);
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    margin-top: 20px;
+}
+
+.no-data-icon  { font-size: 3.5rem; color: #bdc3c7; margin-bottom: 20px; display: block; }
+.no-data-title { color: var(--gray); margin-bottom: 10px; font-family: 'Montserrat', sans-serif; }
+
+/* ---- RESPONSIVE ---- */
+@media (max-width: 1500px) {
+    .inventory-container { padding: 15px; }
+    #tableContainer      { overflow-x: scroll; }
+}
+
+@media (max-width: 1200px) {
+    .inventory-table { table-layout: auto; }
+    #tableContainer  { overflow-x: scroll; }
+}
+
+@media (max-width: 900px) {
+    .action-bar   { flex-direction: column; }
+    .btn-group    { width: 100%; justify-content: center; }
+    .search-group { width: 100%; justify-content: center; }
+}
+
+@media (max-width: 600px) {
+    .search-group        { flex-wrap: wrap; }
+    .search-input        { width: 100%; }
+    .inventory-container { padding: 15px; }
+}

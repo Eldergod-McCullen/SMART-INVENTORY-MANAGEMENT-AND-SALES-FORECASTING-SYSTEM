@@ -13,7 +13,18 @@
   
   <!-- Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  
+
+  <!-- ============================================================
+       jQuery + Select2 loaded HERE ONCE GLOBALLY so every partial
+       template can use them immediately without a race condition.
+       Remove the jQuery/Select2 <script> tags from every partial
+       template (Inventory-items.html, Suppliers.html, etc.) after
+       adding them here.
+  ============================================================ -->
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <link  rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
+
   <style>
     :root {
       --sidebar-bg: #2c3e50;
@@ -41,7 +52,7 @@
       font-family: 'Roboto', sans-serif;
       background-color: #f5f7fa;
       color: var(--text-dark);
-      display: flex;              /* MAKE SURE YOU CHECK IF THIS IS WHAT'S MAKING THE BODY TO MOVE DOWNWARDS */
+      display: flex;
       min-height: 100vh;
     }
     
@@ -276,39 +287,17 @@
     }
     
     @media (max-width: 768px) {
-      .sidebar {
-        width: var(--sidebar-collapsed-width);
-      }
-      
-      .sidebar.collapsed {
-        width: 0;
-      }
-
-      .main-content {
-        margin-left: var(--sidebar-collapsed-width);
-      }
-
-      .sidebar.collapsed ~ .main-content {
-        margin-left: 0;
-      }
-
-      .page-title {
-        font-size: 1.2rem;
-      }
-
-      .welcome-text {
-        display: none;
-      }
+      .sidebar { width: var(--sidebar-collapsed-width); }
+      .sidebar.collapsed { width: 0; }
+      .main-content { margin-left: var(--sidebar-collapsed-width); }
+      .sidebar.collapsed ~ .main-content { margin-left: 0; }
+      .page-title { font-size: 1.2rem; }
+      .welcome-text { display: none; }
     }
     
     @media (max-width: 480px) {
-      .content {
-        padding: 15px;
-      }
-
-      .top-bar {
-        padding: 10px 15px;
-      }
+      .content  { padding: 15px; }
+      .top-bar  { padding: 10px 15px; }
     }
 
     /* ==================== LOGOUT MODAL STYLES ==================== */
@@ -331,7 +320,7 @@
     }
     
     .logout-modal-content {
-      background: var(--white);
+      background: white;
       border-radius: 12px;
       max-width: 450px;
       width: 90%;
@@ -342,7 +331,7 @@
     
     .logout-modal-header {
       background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
-      color: var(--white);
+      color: white;
       padding: 25px;
       text-align: center;
     }
@@ -374,16 +363,8 @@
       line-height: 1.6;
     }
     
-    .logout-modal-body p strong {
-      color: var(--primary);
-      font-weight: 600;
-    }
-    
-    .logout-warning {
-      font-size: 0.9rem !important;
-      color: var(--gray) !important;
-      font-style: italic;
-    }
+    .logout-modal-body p strong { color: var(--primary); font-weight: 600; }
+    .logout-warning { font-size: 0.9rem !important; color: #7f8c8d !important; font-style: italic; }
     
     .logout-modal-footer {
       padding: 20px 25px;
@@ -411,7 +392,7 @@
     }
     
     .logout-btn-cancel {
-      background: var(--light-gray);
+      background: #ecf0f1;
       color: var(--text-dark);
       border: 1px solid #bdc3c7;
     }
@@ -424,7 +405,7 @@
     
     .logout-btn-confirm {
       background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
-      color: var(--white);
+      color: white;
     }
     
     .logout-btn-confirm:hover {
@@ -433,40 +414,23 @@
       box-shadow: 0 4px 12px rgba(231, 76, 60, 0.4);
     }
     
-    .logout-btn-confirm:disabled {
-      opacity: 0.7;
-      cursor: not-allowed;
-    }
+    .logout-btn-confirm:disabled { opacity: 0.7; cursor: not-allowed; }
     
     @keyframes fadeIn {
       from { opacity: 0; }
-      to { opacity: 1; }
+      to   { opacity: 1; }
     }
     
     @keyframes slideDown {
-      from {
-        transform: translateY(-50px);
-        opacity: 0;
-      }
-      to {
-        transform: translateY(0);
-        opacity: 1;
-      }
+      from { transform: translateY(-50px); opacity: 0; }
+      to   { transform: translateY(0);     opacity: 1; }
     }
     
     @media (max-width: 480px) {
-      .logout-modal-content {
-        max-width: 95%;
-      }
-      
-      .logout-modal-footer {
-        flex-direction: column;
-      }
-      
+      .logout-modal-content { max-width: 95%; }
+      .logout-modal-footer  { flex-direction: column; }
       .logout-btn-cancel,
-      .logout-btn-confirm {
-        width: 100%;
-      }
+      .logout-btn-confirm   { width: 100%; }
     }
     
   </style>
@@ -524,12 +488,8 @@
         <i class="fas fa-chart-pie"></i> <span>Reports</span>
       </a>
 
-      <a class="nav-item" data-page="forecasting" data-title="Sales Forecasting">
+      <a class="nav-item" data-page="sales-forecasting" data-title="Sales Forecasting">
         <i class="fa fa-bar-chart"></i> <span>Sales Forecasting</span>
-      </a>
-
-      <a class="nav-item" data-page="users" data-title="Users">
-        <i class="fas fa-user-cog"></i> <span>Users</span>
       </a>
 
       <a class="nav-item" data-page="settings" data-title="Settings">
@@ -558,7 +518,7 @@
       </div>
     </div>
     
-    <!-- Dynamic Content Injection -->
+    <!-- Dynamic Content Area -->
     <div class="content" id="contentArea">
       <div class="loading-spinner" id="loadingSpinner">
         <div class="spinner"></div>
@@ -592,236 +552,224 @@
   </div>
 
   <script>
-    // Sidebar Toggle Functionality
+
+    /* ============================================================
+       SIDEBAR TOGGLE
+    ============================================================ */
     const menuToggle = document.getElementById('menuToggle');
-    const sidebar = document.getElementById('sidebar');
+    const sidebar    = document.getElementById('sidebar');
     
-    menuToggle.addEventListener('click', function() {
+    menuToggle.addEventListener('click', function () {
       sidebar.classList.toggle('collapsed');
       localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
     });
 
-    // Restore sidebar state on page load
-    window.addEventListener('DOMContentLoaded', function() {
-      const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
-      if (isCollapsed) {
+    window.addEventListener('DOMContentLoaded', function () {
+      if (localStorage.getItem('sidebarCollapsed') === 'true') {
         sidebar.classList.add('collapsed');
       }
     });
 
-    // Dynamic Content Loading - FIXED VERSION
-const contentArea = document.getElementById('contentArea');
-const pageTitle = document.getElementById('pageTitle');
-const loadingSpinner = document.getElementById('loadingSpinner');
-const navItems = document.querySelectorAll('.nav-item[data-page]');
 
-// Function to load content dynamically
-async function loadContent(page, title) {
-  try {
-    // Show loading spinner
-    loadingSpinner.classList.add('active');
-    contentArea.innerHTML = '';
-    contentArea.appendChild(loadingSpinner);
+    /* ============================================================
+       DYNAMIC CONTENT LOADING
+    ============================================================ */
+    const contentArea    = document.getElementById('contentArea');
+    const pageTitle      = document.getElementById('pageTitle');
+    const loadingSpinner = document.getElementById('loadingSpinner');
+    const navItems       = document.querySelectorAll('.nav-item[data-page]');
 
-    // Update page title
-    pageTitle.textContent = title;
+    /* ----------------------------------------------------------
+       loadContent — fetches a partial template from Django and
+       injects it into #contentArea, then runs its scripts.
+    ---------------------------------------------------------- */
+    async function loadContent(page, title) {
+      try {
+        loadingSpinner.classList.add('active');
+        contentArea.innerHTML = '';
+        contentArea.appendChild(loadingSpinner);
 
-    // Fetch content from Django backend
-    const response = await fetch(`/content/${page}/`);
-    
-    if (!response.ok) {
-      throw new Error('Failed to load content');
-    }
+        pageTitle.textContent = title;
 
-    const html = await response.text();
-    
-    // Hide loading spinner
-    loadingSpinner.classList.remove('active');
-    
-    // Insert new content
-    contentArea.innerHTML = html;
+        const response = await fetch(`/content/${page}/`);
 
-        // KEY FIX: Extract and execute scripts from the loaded content
-        executeScripts(contentArea);
+        if (!response.ok) {
+          throw new Error(`Server returned ${response.status}`);
+        }
 
-        // Save current page to localStorage
-        localStorage.setItem('currentPage', page);
+        const html = await response.text();
+
+        loadingSpinner.classList.remove('active');
+        contentArea.innerHTML = html;
+
+        /* -------------------------------------------------------
+           CRITICAL: await executeScripts so that external .js
+           files finish downloading before inline init calls run.
+        ------------------------------------------------------- */
+        await executeScripts(contentArea);
+
+        localStorage.setItem('currentPage',  page);
         localStorage.setItem('currentTitle', title);
 
       } catch (error) {
-    console.error('Error loading content:', error);
-    loadingSpinner.classList.remove('active');
-    contentArea.innerHTML = `
-      <div style="text-align: center; padding: 50px;">
-        <i class="fas fa-exclamation-triangle" style="font-size: 3rem; color: #e74c3c; margin-bottom: 20px;"></i>
-        <h3 style="color: #e74c3c;">Error Loading Content</h3>
-        <p>Unable to load the requested page. Please try again.</p>
-        <button class="btn" onclick="location.reload()" style="margin-top: 20px; padding: 10px 20px; background: #1abc9c; color: white; border: none; border-radius: 4px; cursor: pointer;">
-          Refresh Page
-        </button>
-      </div>
-    `;
-  }
-}
+        console.error('Error loading content:', error);
+        loadingSpinner.classList.remove('active');
+        contentArea.innerHTML = `
+          <div style="text-align:center; padding:50px;">
+            <i class="fas fa-exclamation-triangle" style="font-size:3rem; color:#e74c3c; margin-bottom:20px;"></i>
+            <h3 style="color:#e74c3c;">Error Loading Content</h3>
+            <p>Unable to load the requested page. Please try again.</p>
+            <button onclick="location.reload()"
+                    style="margin-top:20px; padding:10px 20px; background:#1abc9c;
+                           color:white; border:none; border-radius:4px; cursor:pointer;">
+              Refresh Page
+            </button>
+          </div>
+        `;
+      }
+    }
 
-// NEW FUNCTION: Execute scripts from dynamically loaded content
-function executeScripts(container) {
-  // Find all script tags in the loaded content
-  const scripts = container.querySelectorAll('script');
-  
-  scripts.forEach(oldScript => {
-    // Create a new script element
-    const newScript = document.createElement('script');
-    
-    // Copy all attributes
-    Array.from(oldScript.attributes).forEach(attr => {
-      newScript.setAttribute(attr.name, attr.value);
+    /* ----------------------------------------------------------
+       executeScripts — FIXED VERSION
+
+       The original version used forEach which fired ALL scripts
+       simultaneously. External scripts (src=) load asynchronously
+       so the inline initXxx() call ran before the .js file had
+       finished downloading, causing "function not defined" errors
+       and blank content areas.
+
+       FIX: Separate external scripts from inline scripts.
+            Load every external script in order using a Promise
+            that resolves on onload. Only AFTER all external
+            scripts have fully loaded do we execute the inline
+            scripts (which contain the initXxx() calls).
+    ---------------------------------------------------------- */
+    async function executeScripts(container) {
+      const allScripts     = Array.from(container.querySelectorAll('script'));
+      const externalScripts = allScripts.filter(s => s.hasAttribute('src'));
+      const inlineScripts  = allScripts.filter(s => !s.hasAttribute('src'));
+
+      /* Step 1 — load each external script sequentially, waiting
+         for each one to finish before moving to the next.        */
+      for (const oldScript of externalScripts) {
+        await new Promise((resolve) => {
+          const newScript = document.createElement('script');
+          Array.from(oldScript.attributes).forEach(attr => {
+            newScript.setAttribute(attr.name, attr.value);
+          });
+          newScript.onload  = resolve;
+          newScript.onerror = resolve;  /* don't block the chain on a 404 */
+          oldScript.parentNode.replaceChild(newScript, oldScript);
+        });
+      }
+
+      /* Step 2 — now that all external scripts are loaded, run
+         the inline scripts (e.g. initInventoryItems() calls).   */
+      for (const oldScript of inlineScripts) {
+        const newScript = document.createElement('script');
+        newScript.textContent = oldScript.textContent;
+        oldScript.parentNode.replaceChild(newScript, oldScript);
+      }
+
+      console.log(
+        `✅ executeScripts: ${externalScripts.length} external loaded,` +
+        ` ${inlineScripts.length} inline executed`
+      );
+    }
+
+
+    /* ============================================================
+       NAVIGATION CLICK HANDLERS
+    ============================================================ */
+    navItems.forEach(item => {
+      item.addEventListener('click', function (e) {
+        e.preventDefault();
+
+        const page  = this.getAttribute('data-page');
+        const title = this.getAttribute('data-title');
+
+        navItems.forEach(nav => nav.classList.remove('active'));
+        this.classList.add('active');
+
+        loadContent(page, title);
+      });
     });
-    
-    // Copy the script content
-    newScript.textContent = oldScript.textContent;
-    
-    // Replace old script with new one (this triggers execution)
-    oldScript.parentNode.replaceChild(newScript, oldScript);
-  });
-  
-  console.log(`✅ Executed ${scripts.length} script(s) in loaded content`);
-}
 
-    // Add click event listeners to navigation items
-navItems.forEach(item => {
-  item.addEventListener('click', function(e) {
-    e.preventDefault();
-    
-    const page = this.getAttribute('data-page');
-    const title = this.getAttribute('data-title');
+    /* Load the last visited page (or Dashboard) on first load */
+    window.addEventListener('DOMContentLoaded', function () {
+      const lastPage  = localStorage.getItem('currentPage')  || 'dashboard';
+      const lastTitle = localStorage.getItem('currentTitle') || 'Dashboard';
 
-    // Remove active class from all items
-    navItems.forEach(nav => nav.classList.remove('active'));
-    
-    // Add active class to clicked item
-    this.classList.add('active');
+      const activeNav = document.querySelector(`.nav-item[data-page="${lastPage}"]`);
+      if (activeNav) {
+        navItems.forEach(nav => nav.classList.remove('active'));
+        activeNav.classList.add('active');
+      }
 
-    // Load content
-    loadContent(page, title);
-  });
-});
+      loadContent(lastPage, lastTitle);
+    });
 
-// Load last visited page or dashboard on page load
-window.addEventListener('DOMContentLoaded', function() {
-  const lastPage = localStorage.getItem('currentPage') || 'dashboard';
-  const lastTitle = localStorage.getItem('currentTitle') || 'Dashboard';
-  
-  // Find and activate the nav item
-  const activeNav = document.querySelector(`.nav-item[data-page="${lastPage}"]`);
-  if (activeNav) {
-    navItems.forEach(nav => nav.classList.remove('active'));
-    activeNav.classList.add('active');
-  }
 
-  // Load the content
-  loadContent(lastPage, lastTitle);
-});
-
-  // ==================== LOGOUT FUNCTIONALITY ====================
-    const logoutLink = document.getElementById('logout-link');
-    const logoutModal = document.getElementById('logoutModal');
-    const cancelLogout = document.getElementById('cancelLogout');
-    const confirmLogout = document.getElementById('confirmLogout');
+    /* ============================================================
+       LOGOUT
+    ============================================================ */
+    const logoutLink     = document.getElementById('logout-link');
+    const logoutModal    = document.getElementById('logoutModal');
+    const cancelLogout   = document.getElementById('cancelLogout');
+    const confirmLogout  = document.getElementById('confirmLogout');
     const logoutUsername = document.getElementById('logoutUsername');
-    
-    // Get username from the page
-    const usernameElement = document.getElementById('username');
-    const currentUsername = usernameElement ? usernameElement.textContent : 'User';
-    
-    console.log('🔐 Logout system initialized for user:', currentUsername);
-    
-    // Show logout modal
+
+    const usernameElement  = document.getElementById('username');
+    const currentUsername  = usernameElement ? usernameElement.textContent : 'User';
+
     function showLogoutModal() {
-      console.log('📢 Opening logout modal...');
-      logoutUsername.textContent = currentUsername;
+      logoutUsername.textContent  = currentUsername;
       logoutModal.classList.add('active');
-      document.body.style.overflow = 'hidden'; // Prevent scrolling
+      document.body.style.overflow = 'hidden';
     }
-    
-    // Hide logout modal
+
     function hideLogoutModal() {
-      console.log('📢 Closing logout modal...');
       logoutModal.classList.remove('active');
-      document.body.style.overflow = ''; // Restore scrolling
+      document.body.style.overflow = '';
     }
-    
-    // Logout link click handler
+
     if (logoutLink) {
-      logoutLink.addEventListener('click', function(event) {
-        event.preventDefault();
-        console.log('🚪 Logout link clicked');
+      logoutLink.addEventListener('click', function (e) {
+        e.preventDefault();
         showLogoutModal();
       });
     }
-    
-    // Cancel button handler
+
     if (cancelLogout) {
-      cancelLogout.addEventListener('click', function() {
-        console.log('❌ Logout cancelled by user');
-        hideLogoutModal();
-      });
+      cancelLogout.addEventListener('click', hideLogoutModal);
     }
-    
-    // Confirm logout handler
+
     if (confirmLogout) {
-      confirmLogout.addEventListener('click', async function() {
-        console.log('✅ Logout confirmed by user:', currentUsername);
-        
-        // Disable button and show loading state
+      confirmLogout.addEventListener('click', async function () {
         confirmLogout.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Logging out...';
-        confirmLogout.disabled = true;
-        cancelLogout.disabled = true;
-        
-        try {
-          // Clear frontend session data FIRST
-          console.log('🧹 Clearing frontend session data...');
-          sessionStorage.clear();
-          localStorage.removeItem('currentPage');
-          localStorage.removeItem('currentTitle');
-          localStorage.removeItem('sidebarCollapsed');
-          console.log('✅ Frontend session data cleared');
-          
-          // Call Django logout endpoint to clear backend session
-          console.log('🔄 Calling Django logout endpoint...');
-          
-          // Use fetch to call logout (or simple redirect)
-          window.location.href = '/logout/';
-          
-          // Note: The redirect happens immediately, code below won't execute
-          
-        } catch (error) {
-          console.error('❌ Logout error:', error);
-          // If anything fails, still try to redirect
-          window.location.href = '/logout/';
-        }
-      });
-    }    
-    
-    // Close modal when clicking outside
-    if (logoutModal) {
-      logoutModal.addEventListener('click', function(event) {
-        if (event.target === logoutModal) {
-          console.log('📢 Modal closed by clicking outside');
-          hideLogoutModal();
-        }
+        confirmLogout.disabled  = true;
+        cancelLogout.disabled   = true;
+
+        sessionStorage.clear();
+        localStorage.removeItem('currentPage');
+        localStorage.removeItem('currentTitle');
+        localStorage.removeItem('sidebarCollapsed');
+
+        window.location.href = '/logout/';
       });
     }
-    
-    // Close modal with Escape key
-    document.addEventListener('keydown', function(event) {
-      if (event.key === 'Escape' && logoutModal && logoutModal.classList.contains('active')) {
-        console.log('📢 Modal closed by Escape key');
+
+    if (logoutModal) {
+      logoutModal.addEventListener('click', function (e) {
+        if (e.target === logoutModal) hideLogoutModal();
+      });
+    }
+
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && logoutModal && logoutModal.classList.contains('active')) {
         hideLogoutModal();
       }
     });
-    
-    console.log('✅ Logout system ready');
 
   </script>
 

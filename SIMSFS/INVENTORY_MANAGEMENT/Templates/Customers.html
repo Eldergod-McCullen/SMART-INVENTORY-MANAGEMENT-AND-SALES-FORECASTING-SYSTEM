@@ -1,990 +1,194 @@
 {% load static %}
-<!DOCTYPE html>
-<html lang="en">
 
-<head>  
-<base target="_top">
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+{% csrf_token %}
+<meta name="csrf-token" content="{{ csrf_token }}">
 
-  <title>{% block title %} CUSTOMERS {% endblock %}</title>        <!-- TRY IMPLEMENTING THIS WITHOUT THE HTML title TAGS,JUST THE DJANGO BLOCK TAGS-->
-  
-  <!-- Google Fonts -->
-  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600&family=Poppins:wght@400;500;600&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
-  
-  <!-- Font Awesome -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  
-  <!-- Select2 -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css">
-  
-  <!--link rel="stylesheet" href="{% static 'Customers.css' %}"-->
+<!-- CSS for this module -->
+<link rel="stylesheet" href="{% static 'Customers.css' %}">
 
-<style>
-.customer-container{
-    font-family: 'Roboto', sans-serif;
-    padding: 20px;
-    background-color: #f8f9fa;
-    border-radius: 8px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-}
-  
-  .customer-header {
-    margin-bottom: 25px;
-  }
-  
-  .customer-header h1 {
-    font-family: 'Montserrat', sans-serif;
-    font-weight: 600;
-    color: #2c3e50;
-    margin-bottom: 5px;
-  }
-  
-  .customer-header p {
-    color: #7f8c8d;
-    font-size: 1.05rem;
-  }
-  
-  .action-bar {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 20px;
-    flex-wrap: wrap;
-    gap: 15px;
-  }
-  
-  .btn-group {
-    display: flex;
-    gap: 10px;
-  }
-  
-  .btn {
-    padding: 10px 15px;
-    border: none;
-    border-radius: 4px;
-    font-family: 'Poppins', sans-serif;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.3s;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-  
-  .btn-primary {
-    background-color: #1abc9c;
-    color: white;
-  }
-  
-  .btn-primary:hover {
-    background-color: #16a085;
-  }
-  
-  .btn-secondary {
-    background-color: #3498db;
-    color: white;
-  }
-  
-  .btn-secondary:hover {
-    background-color: #2980b9;
-  }
-  
-  .btn-outline {
-    background-color: transparent;
-    border: 1px solid #bdc3c7;
-    color: #34495e;
-  }
-  
-  .btn-outline:hover {
-    background-color: #ecf0f1;
-  }
-  
-  .search-group {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-  }
-  
-  .search-select {
-    padding: 9px;
-    border: 1px solid #bdc3c7;
-    border-radius: 4px;
-    background-color: white;
-  }
-  
-  .search-input {
-    padding: 10px;
-    border: 1px solid #bdc3c7;
-    border-radius: 4px;
-    width: 250px;
-  }
-  
-  .customer-table {
-    width: 100%;
-    border-collapse: collapse;
-    background-color: white;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-  }
-  
-  .customer-table th {
-    background-color: #2c3e50;
-    color: white;
-    padding: 12px 15px;
-    text-align: left;
-    font-family: 'Poppins', sans-serif;
-    font-weight: 500;
-  }
-  
-  .customer-table td {
-    padding: 12px 15px;
-    border-bottom: 1px solid #ecf0f1;
-    color: #34495e;
-  }
-  
-  .customer-table tr:hover {
-    background-color: #f8f9fa;
-  }
-  
-.custNoData{                                              /* ADDITIONAL STYLES */
-    display:none; 
-    text-align:center; 
-    padding:40px; 
-    background:white; 
-    border-radius:8px;
-}  
 
-.fas fa-inbox{
-    font-size:3rem;     
-    color:#bdc3c7; 
-    margin-bottom:20px;
-}
-
-h3{
-    color:#7f8c8d;
-}
-
-  .action-cell {
-    display: flex;
-    gap: 8px;
-  }
-  
-  .action-btn {
-    padding: 5px 10px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.85rem;
-  }
-  
-  .edit-btn {
-    background-color: #3498db;
-    color: white;
-    border: none;
-  }
-  
-  .update-btn {
-    background-color: #2ecc71;
-    color: white;
-    border: none;
-  }
-  
-  .cancel-btn {
-    background-color: #95a5a6;
-    color: white;
-    border: none;
-  }
-  
-  .delete-btn {
-    background-color: #e74c3c;
-    color: white;
-    border: none;
-  }
-  
-  .editable {
-    background-color: #fffde7;
-    border: 1px solid #ffd54f;
-    padding: 5px;
-    border-radius: 3px;
-  }
-  
-  .modal {
-    display: none;
-    position: fixed;
-    z-index: 1000;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0,0,0,0.5);
-  }
-  
-  .modal-content {
-    background-color: white;
-    margin: 5% auto;
-    padding: 25px;
-    border-radius: 8px;
-    width: 450px;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-  }
-  
-  .modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-    padding-bottom: 15px;
-    border-bottom: 1px solid #ecf0f1;
-  }
-  
-  .modal-header h2 {
-    font-family: 'Montserrat', sans-serif;
-    color: #2c3e50;
-    font-size: 1.5rem;
-    margin: 0;
-  }
-  
-  .close-btn {
-    font-size: 1.5rem;
-    cursor: pointer;
-    color: #7f8c8d;
-  }
-  
-  .form-group {
-    margin-bottom: 20px;
-  }
-  
-  .form-group label {
-    display: block;
-    margin-bottom: 8px;
-    font-weight: 500;
-    color: #2c3e50;
-  }
-  
-  .form-control {
-    width: 100%;
-    padding: 10px;
-    border: 1px solid #bdc3c7;
-    border-radius: 4px;
-    font-family: 'Roboto', sans-serif;
-  }
-  
-  .form-control:focus {
-    border-color: #1abc9c;
-    outline: none;
-    box-shadow: 0 0 0 2px rgba(26, 188, 156, 0.2);
-  }
-  
-  .required:after {
-    content: " *";
-    color: #e74c3c;
-  }
-  
-  .modal-footer {
-    display: flex;
-    justify-content: flex-end;
-    gap: 10px;
-    margin-top: 20px;
-  }
-  
-  .processing-overlay {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(255,255,255,0.8);
-    z-index: 2000;
-    justify-content: center;
-    align-items: center;
-    flex-direction: column;
-  }
-  
-  .spinner {
-    border: 5px solid #f3f3f3;
-    border-top: 5px solid #1abc9c;
-    border-radius: 50%;
-    width: 50px;
-    height: 50px;
-    animation: spin 1s linear infinite;
-    margin-bottom: 20px;
-  }
-  
-  @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-  }
-  
-  .select2-container {
-    width: 100% !important;
-  }
-  
-  .id-generate {
-    display: flex;
-    gap: 10px;
-  }
-  
-  .id-field {
-    flex: 1;
-  }
-  
-  .pagination {
-    display: flex;
-    justify-content: center;
-    margin-top: 20px;
-    gap: 5px;
-  }
-  
-  .page-btn {
-    padding: 8px 12px;
-    background-color: white;
-    border: 1px solid #bdc3c7;
-    border-radius: 4px;
-    cursor: pointer;
-  }
-  
-  .page-btn.active {
-    background-color: #1abc9c;
-    color: white;
-    border-color: #1abc9c;
-  }
-</style>
-</head>
-
-<body>
+<!-- ==================== MAIN CONTAINER ==================== -->
 <div class="customer-container">
-  <!-- Header Section -->
-  <div class="customer-header">
-    <h1>ADD AND MANAGE YOUR CUSTOMERS</h1>
-  </div>
-  
-  <!-- Action Bar -->
-  <div class="action-bar">
-    <div class="btn-group">
-      <button class="btn btn-primary" onclick="custOpenNewCustomerModal()">
-        <i class="fas fa-user-friends"></i> New Customer
-      </button>
-      <button class="btn btn-secondary" onclick="custOpenNewStateModal()">
-        <i class="fa fa-map-marker"></i> New County
-      </button>
-      <button class="btn btn-secondary" onclick="custOpenNewCityModal()">
-        <i class="fa fa-location-arrow"></i> New Town
-      </button>
-    </div>
-    
-    <div class="search-group">
-      <select id="custSearchCriteria" class="search-select" title="Search criteria filter">
-        <option value="all">All</option>
-        <option value="Customer Name">Customer Name</option>
-        <option value="County">County</option>
-        <option value="Town">Town</option>
-      </select>
-      <input type="text" id="custSearchInput" class="search-input" placeholder="Search...">
-      <button class="btn btn-outline" onclick="custSearchCustomers()">
-        <i class="fas fa-search"></i> Search
-      </button>
-      <button class="btn btn-outline" onclick="custClearSearch()">
-        <i class="fas fa-times"></i> Clear
-      </button>
-    </div>
-  </div>
-  
-  <!-- Customers Table -->
-  <div id="custTableContainer">
-    <table class="customer-table">
-      <thead>
-        <tr>
-          <th width="5%">Customer ID</th>
-          <th width="15%">Customer Name</th>
-          <th width="8%">Phone Number</th>
-          <th width="10%">E-Mail</th>
-          <th width="7%">County</th>
-          <th width="7%">Town</th>
-          <th width="7%">Total Sales</th>
-          <th width="7%">Total Payments</th>
-          <th width="7%">Balance Receivable</th>
-          <th width="7%">Actions</th>
-        </tr>
-      </thead>
-      <tbody id="custTableBody">
-        <!-- Data will be populated by JavaScript -->
-      </tbody>
-    </table>
-    
-    <!-- Pagination -->
-    <div class="pagination" id="custPagination">
-      <!-- Pagination buttons will be added here -->
-    </div>
-  </div>
-  
-  <!-- No Data Message -->
-  <div id="custNoData" class="custNoData">
-    <i class="fas fa-inbox"></i>
-    <h3>No customers found</h3>
-    <p>Click "New Customer" to add a customer</p>
-  </div>
-</div>
 
-<!-- NEW COUNTY MODAL -->
-<div id="custStateModal" class="modal">
-  <div class="modal-content">
-    <div class="modal-header">
-      <h2>Add New County</h2>
-      <span class="close-btn" onclick="custCloseStateModal()">&times;</span>
+    <!-- HEADER -->
+    <div class="customer-header">
+        <h1>ADD AND MANAGE YOUR CUSTOMERS</h1>
     </div>
-    <div class="form-group">
-      <label class="required">County Name</label>
-      <input type="text" id="custNewState" class="form-control" title="custNewState" required>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-outline" onclick="custCloseStateModal()">Close</button>
-      <button class="btn btn-primary" onclick="custSaveNewState()">Save</button>
-    </div>
-  </div>
-</div>
 
-<!-- New Town Modal -->
-<div id="custCityModal" class="modal">
-  <div class="modal-content">
-    <div class="modal-header">
-      <h2>Add New Town</h2>
-      <span class="close-btn" onclick="custCloseCityModal()">&times;</span>
-    </div>
-    <div class="form-group">
-      <label class="required">Town Name</label>
-      <input type="text" id="custNewCity" class="form-control" title="custNewCity" required>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-outline" onclick="custCloseCityModal()">Close</button>
-      <button class="btn btn-primary" onclick="custSaveNewCity()">Save</button>
-    </div>
-  </div>
-</div>
+    <!-- ACTION BAR -->
+    <div class="action-bar">
+        <div class="btn-group">
+            <button class="btn btn-primary" onclick="custOpenNewCustomerModal()">
+                <i class="fas fa-user-friends"></i> New Customer
+            </button>
+            <button class="btn btn-secondary" onclick="custOpenNewStateModal()">
+                <i class="fa fa-map-marker"></i> New County
+            </button>
+            <button class="btn btn-secondary" onclick="custOpenNewCityModal()">
+                <i class="fa fa-location-arrow"></i> New Town
+            </button>
+        </div>
 
-<!-- New Customer Modal -->
-<div id="custCustomerModal" class="modal">
-  <div class="modal-content">
-    <div class="modal-header">
-      <h2>Add New Customer</h2>
-      <span class="close-btn" onclick="custCloseCustomerModal()">&times;</span>
+        <div class="search-group">
+            <select id="custSearchCriteria" class="search-select" title="Search criteria filter">
+                <option value="all">All</option>
+                <option value="Customer Name">Customer Name</option>
+                <option value="County">County</option>
+                <option value="Town">Town</option>
+            </select>
+            <input type="text" id="custSearchInput" class="search-input" placeholder="Search...">
+            <button class="btn btn-outline" onclick="custSearchCustomers()">
+                <i class="fas fa-search"></i> Search
+            </button>
+            <button class="btn btn-outline" onclick="custClearSearch()">
+                <i class="fas fa-times"></i> Clear
+            </button>
+        </div>
     </div>
-    <div class="form-group">
-      <label class="required">Customer ID</label>
-      <div class="id-generate">
-        <input type="text" id="custCustomerId" class="form-control id-field" title="custCustomerId" readonly>
-        <button class="btn btn-secondary" onclick="custGenerateCustomerId()">Generate</button>
-      </div>
+
+    <!-- CUSTOMERS TABLE -->
+    <div id="custTableContainer">
+        <table class="customer-table">
+            <thead>
+                <tr>
+                    <th width="5%">Customer ID</th>
+                    <th width="15%">Customer Name</th>
+                    <th width="8%">Phone Number</th>
+                    <th width="10%">E-Mail</th>
+                    <th width="7%">County</th>
+                    <th width="7%">Town</th>
+                    <th width="7%">Total Sales</th>
+                    <th width="7%">Total Payments</th>
+                    <th width="7%">Balance Receivable</th>
+                    <th width="7%">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="custTableBody">
+                <!-- Populated by Customers.js → renderCustomerTable() -->
+            </tbody>
+        </table>
+
+        <!-- Pagination -->
+        <div class="pagination" id="custPagination"></div>
     </div>
-    <div class="form-group">
-      <label class="required">Customer Name</label>
-      <input type="text" id="custCustomerName" class="form-control" title="custCustomerName" required>
+
+    <!-- No Data Message -->
+    <div id="custNoData" class="custNoData">
+        <i class="fas fa-inbox"></i>
+        <h3>No customers found</h3>
+        <p>Click "New Customer" to add a customer</p>
     </div>
-    <div class="form-group">
-      <label>Phone Number</label>
-      <input type="text" id="custCustomerContact" class="form-control" title="custCustomerContact">
-    </div>
-    <div class="form-group">
-      <label>E-Mail</label>
-      <input type="email" id="custCustomerEmail" class="form-control" title="custCustomerEmail">
-    </div>
-    <div class="form-group">
-      <label class="required">County</label>
-      <select id="custCustomerState" class="form-control" title="custCustomerState"></select>
-    </div>
-    <div class="form-group">
-      <label class="required">Town</label>
-      <select id="custCustomerCity" class="form-control" title="custCustomerCity"></select>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-outline" onclick="custCloseCustomerModal()">Close</button>
-      <button class="btn btn-primary" onclick="custSaveNewCustomer()">Save</button>
-    </div>
-  </div>
+
 </div>
+<!-- ==================== END MAIN CONTAINER ==================== -->
+
 
 <!-- Processing Overlay -->
 <div id="custProcessingOverlay" class="processing-overlay">
-  <div class="spinner"></div>
-  <p>Processing...</p>
+    <!-- Renamed from .spinner to .cust-spinner to avoid
+         collision with Index.html's .spinner class          -->
+    <div class="cust-spinner"></div>
+    <p>Processing...</p>
 </div>
 
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
-<!--script src="{% static 'Customers.js' %}"></!--script-->
 
+<!-- ==================== MODALS ==================== -->
+
+<!-- Add New County Modal -->
+<div id="custStateModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Add New County</h2>
+            <span class="close-btn" onclick="custCloseStateModal()">&times;</span>
+        </div>
+        <div class="form-group">
+            <label class="required">County Name</label>
+            <input type="text" id="custNewState" class="form-control" title="custNewState">
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-outline" onclick="custCloseStateModal()">Close</button>
+            <button class="btn btn-primary" onclick="custSaveNewState()">Save</button>
+        </div>
+    </div>
+</div>
+
+<!-- Add New Town Modal -->
+<div id="custCityModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Add New Town</h2>
+            <span class="close-btn" onclick="custCloseCityModal()">&times;</span>
+        </div>
+        <div class="form-group">
+            <label class="required">Town Name</label>
+            <input type="text" id="custNewCity" class="form-control" title="custNewCity">
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-outline" onclick="custCloseCityModal()">Close</button>
+            <button class="btn btn-primary" onclick="custSaveNewCity()">Save</button>
+        </div>
+    </div>
+</div>
+
+<!-- Add New Customer Modal -->
+<div id="custCustomerModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Add New Customer</h2>
+            <span class="close-btn" onclick="custCloseCustomerModal()">&times;</span>
+        </div>
+        <div class="form-group">
+            <label class="required">Customer ID</label>
+            <div class="id-generate">
+                <input type="text" id="custCustomerId" class="form-control id-field" title="custCustomerId" readonly>
+                <button class="btn btn-secondary" onclick="custGenerateCustomerId()">Generate</button>
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="required">Customer Name</label>
+            <input type="text" id="custCustomerName" class="form-control" title="custCustomerName">
+        </div>
+        <div class="form-group">
+            <label>Phone Number</label>
+            <input type="text" id="custCustomerContact" class="form-control" title="custCustomerContact">
+        </div>
+        <div class="form-group">
+            <label>E-Mail</label>
+            <input type="email" id="custCustomerEmail" class="form-control" title="custCustomerEmail">
+        </div>
+        <div class="form-group">
+            <label class="required">County</label>
+            <select id="custCustomerState" class="form-control" title="custCustomerState" style="width:100%"></select>
+        </div>
+        <div class="form-group">
+            <label class="required">Town</label>
+            <select id="custCustomerCity" class="form-control" title="custCustomerCity" style="width:100%"></select>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-outline" onclick="custCloseCustomerModal()">Close</button>
+            <button class="btn btn-primary" onclick="custSaveNewCustomer()">Save</button>
+        </div>
+    </div>
+</div>
+
+
+<!-- ==================== SCRIPTS ==================== -->
+<!--
+    jQuery and Select2 are already loaded globally in Index.html <head>.
+    Do NOT add them here — that was causing the race condition.
+-->
+
+<!-- Customers module logic -->
+<script src="{% static 'Customers.js' %}"></script>
+
+<!--
+    CRITICAL: Call initCustomers() directly here.
+    Do NOT use DOMContentLoaded or $(document).ready().
+    Those events have already fired on the parent Index.html page
+    and will never fire again for dynamically injected content.
+    executeScripts() in Index.html ensures Customers.js is fully
+    loaded before this inline call runs.
+-->
 <script>
-// Customers.js - Complete Implementation
-console.log('Customers.js loaded');
-
-let custCurrentPage = 1;
-const custPageSize = 25;
-let custAllCustomers = [];
-let custFilteredCustomers = [];
-let custCounties = [];
-let custTowns = [];
-
-function getCSRFToken() {
-    const cookies = document.cookie.split(';');
-    for (let cookie of cookies) {
-        const [name, value] = cookie.trim().split('=');
-        if (name === 'csrftoken') return value;
-    }
-    return null;
-}
-
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('DOM loaded, initializing customers module...');
-    loadCounties();
-    loadTowns();
-    loadCustomers();
-    $('#custCustomerState').select2({placeholder: 'Select County', allowClear: true});
-    $('#custCustomerCity').select2({placeholder: 'Select Town', allowClear: true});
-});
-
-async function loadCounties() {
-    try {
-        const response = await fetch('/api/customers/counties/', {
-            method: 'GET',
-            headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCSRFToken()},
-            credentials: 'same-origin'
-        });
-        const result = await response.json();
-        if (result.success) {
-            custCounties = result.data;
-            populateCountyDropdown();
-        }
-    } catch (error) {
-        console.error('Error loading counties:', error);
-    }
-}
-
-async function loadTowns() {
-    try {
-        const response = await fetch('/api/customers/towns/', {
-            method: 'GET',
-            headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCSRFToken()},
-            credentials: 'same-origin'
-        });
-        const result = await response.json();
-        if (result.success) {
-            custTowns = result.data;
-            populateTownDropdown();
-        }
-    } catch (error) {
-        console.error('Error loading towns:', error);
-    }
-}
-
-function populateCountyDropdown() {
-    const countySelect = $('#custCustomerState');
-    countySelect.empty();
-    countySelect.append(new Option('Select County', '', true, true));
-    custCounties.forEach(county => {
-        if (county) countySelect.append(new Option(county, county));
-    });
-    countySelect.trigger('change');
-}
-
-function populateTownDropdown() {
-    const townSelect = $('#custCustomerCity');
-    townSelect.empty();
-    townSelect.append(new Option('Select Town', '', true, true));
-    custTowns.forEach(town => {
-        if (town) townSelect.append(new Option(town, town));
-    });
-    townSelect.trigger('change');
-}
-
-async function loadCustomers() {
-    showCustProcessing();
-    try {
-        const response = await fetch('/api/customers/', {
-            method: 'GET',
-            headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCSRFToken()},
-            credentials: 'same-origin'
-        });
-        const result = await response.json();
-        if (result.success) {
-            custAllCustomers = result.data;
-            custFilteredCustomers = [...result.data];
-            renderCustomerTable();
-        } else {
-            alert('Error loading customers: ' + result.message);
-        }
-    } catch (error) {
-        console.error('Error loading customers:', error);
-        alert('Failed to load customers');
-    } finally {
-        hideCustProcessing();
-    }
-}
-
-function renderCustomerTable() {
-    const startIndex = (custCurrentPage - 1) * custPageSize;
-    const endIndex = startIndex + custPageSize;
-    const pageCustomers = custFilteredCustomers.slice(startIndex, endIndex);
-    const tableBody = document.getElementById('custTableBody');
-    tableBody.innerHTML = '';
-    
-    if (pageCustomers.length === 0) {
-        document.getElementById('custTableContainer').style.display = 'none';
-        document.getElementById('custNoData').style.display = 'block';
-        document.getElementById('custPagination').innerHTML = '';
-        return;
-    }
-    
-    document.getElementById('custTableContainer').style.display = 'block';
-    document.getElementById('custNoData').style.display = 'none';
-    
-    pageCustomers.forEach((customer) => {
-        const row = document.createElement('tr');
-        row.setAttribute('data-customer-id', customer.id);
-        row.innerHTML = `
-            <td class="col-id">${customer.id}</td>
-            <td class="col-name">${customer.name}</td>
-            <td class="col-contact">${customer.contact || ''}</td>
-            <td class="col-email">${customer.email || ''}</td>
-            <td class="col-state">${customer.state}</td>
-            <td class="col-city">${customer.city}</td>
-            <td class="col-sales">${parseFloat(customer.sales).toFixed(2)}</td>
-            <td class="col-receipts">${parseFloat(customer.receipts).toFixed(2)}</td>
-            <td class="col-balance">${parseFloat(customer.balance).toFixed(2)}</td>
-            <td class="action-cell">
-                <button class="action-btn edit-btn"><i class="fas fa-edit"></i></button>
-                <button class="action-btn delete-btn"><i class="fas fa-trash"></i></button>
-                <button class="action-btn update-btn" style="display:none;"><i class="fas fa-save"></i></button>
-                <button class="action-btn cancel-btn" style="display:none;"><i class="fas fa-times"></i></button>
-            </td>
-        `;
-        row.querySelector('.edit-btn').addEventListener('click', function() {editCustomer(this);});
-        row.querySelector('.delete-btn').addEventListener('click', function() {deleteCustomer(row.getAttribute('data-customer-id'));});
-        row.querySelector('.update-btn').addEventListener('click', function() {updateCustomer(this);});
-        row.querySelector('.cancel-btn').addEventListener('click', function() {cancelEdit(this);});
-        tableBody.appendChild(row);
-    });
-    renderCustPagination();
-}
-
-function renderCustPagination() {
-    const totalPages = Math.ceil(custFilteredCustomers.length / custPageSize);
-    const paginationDiv = document.getElementById('custPagination');
-    paginationDiv.innerHTML = '';
-    if (totalPages <= 1) return;
-    
-    const prevBtn = document.createElement('button');
-    prevBtn.className = 'page-btn';
-    prevBtn.innerHTML = '<i class="fas fa-chevron-left"></i>';
-    prevBtn.disabled = custCurrentPage === 1;
-    prevBtn.onclick = () => {if (custCurrentPage > 1) {custCurrentPage--; renderCustomerTable();}};
-    paginationDiv.appendChild(prevBtn);
-    
-    for (let i = 1; i <= totalPages; i++) {
-        const pageBtn = document.createElement('button');
-        pageBtn.className = `page-btn ${i === custCurrentPage ? 'active' : ''}`;
-        pageBtn.textContent = i;
-        pageBtn.onclick = () => {custCurrentPage = i; renderCustomerTable();};
-        paginationDiv.appendChild(pageBtn);
-    }
-    
-    const nextBtn = document.createElement('button');
-    nextBtn.className = 'page-btn';
-    nextBtn.innerHTML = '<i class="fas fa-chevron-right"></i>';
-    nextBtn.disabled = custCurrentPage === totalPages;
-    nextBtn.onclick = () => {if (custCurrentPage < totalPages) {custCurrentPage++; renderCustomerTable();}};
-    paginationDiv.appendChild(nextBtn);
-}
-
-function custOpenNewStateModal() {
-    document.getElementById('custStateModal').style.display = 'block';
-    document.getElementById('custNewState').value = '';
-}
-
-function custCloseStateModal() {
-    document.getElementById('custStateModal').style.display = 'none';
-}
-
-async function custSaveNewState() {
-    const countyName = document.getElementById('custNewState').value.trim();
-    if (!countyName) {alert('Please enter a county name'); return;}
-    showCustProcessing();
-    try {
-        const response = await fetch('/api/customers/counties/add/', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCSRFToken()},
-            credentials: 'same-origin',
-            body: JSON.stringify({ county_name: countyName })
-        });
-        const result = await response.json();
-        if (result.success) {
-            alert('County Added Successfully');
-            custCloseStateModal();
-            await loadCounties();
-        } else {
-            alert('Error: ' + result.message);
-        }
-    } catch (error) {
-        console.error('Error saving county:', error);
-        alert('Failed to add county');
-    } finally {
-        hideCustProcessing();
-    }
-}
-
-function custOpenNewCityModal() {
-    document.getElementById('custCityModal').style.display = 'block';
-    document.getElementById('custNewCity').value = '';
-}
-
-function custCloseCityModal() {
-    document.getElementById('custCityModal').style.display = 'none';
-}
-
-async function custSaveNewCity() {
-    const townName = document.getElementById('custNewCity').value.trim();
-    if (!townName) {alert('Please enter a town name'); return;}
-    showCustProcessing();
-    try {
-        const response = await fetch('/api/customers/towns/add/', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCSRFToken()},
-            credentials: 'same-origin',
-            body: JSON.stringify({ town_name: townName })
-        });
-        const result = await response.json();
-        if (result.success) {
-            alert('Town Added Successfully');
-            custCloseCityModal();
-            await loadTowns();
-        } else {
-            alert('Error: ' + result.message);
-        }
-    } catch (error) {
-        console.error('Error saving town:', error);
-        alert('Failed to add town');
-    } finally {
-        hideCustProcessing();
-    }
-}
-
-function custOpenNewCustomerModal() {
-    document.getElementById('custCustomerModal').style.display = 'block';
-    document.getElementById('custCustomerId').value = '';
-    document.getElementById('custCustomerName').value = '';
-    document.getElementById('custCustomerContact').value = '';
-    document.getElementById('custCustomerEmail').value = '';
-    $('#custCustomerState').val('').trigger('change');
-    $('#custCustomerCity').val('').trigger('change');
-}
-
-function custCloseCustomerModal() {
-    document.getElementById('custCustomerModal').style.display = 'none';
-}
-
-async function custGenerateCustomerId() {
-    showCustProcessing();
-    try {
-        const response = await fetch('/api/customers/generate-id/', {
-            method: 'GET',
-            headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCSRFToken()},
-            credentials: 'same-origin'
-        });
-        const result = await response.json();
-        if (result.success) {
-            document.getElementById('custCustomerId').value = result.customer_id;
-        } else {
-            alert('Error generating ID: ' + result.message);
-        }
-    } catch (error) {
-        console.error('Error generating customer ID:', error);
-        alert('Failed to generate customer ID');
-    } finally {
-        hideCustProcessing();
-    }
-}
-
-async function custSaveNewCustomer() {
-    const customerData = {
-        id: document.getElementById('custCustomerId').value.trim(),
-        name: document.getElementById('custCustomerName').value.trim(),
-        contact: document.getElementById('custCustomerContact').value.trim(),
-        email: document.getElementById('custCustomerEmail').value.trim(),
-        state: $('#custCustomerState').val(),
-        city: $('#custCustomerCity').val()
-    };
-    if (!customerData.id) {alert('Please generate a Customer ID'); return;}
-    if (!customerData.name) {alert('Please enter Customer Name'); return;}
-    if (!customerData.state) {alert('Please select County'); return;}
-    if (!customerData.city) {alert('Please select Town'); return;}
-    
-    showCustProcessing();
-    try {
-        const response = await fetch('/api/customers/add/', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCSRFToken()},
-            credentials: 'same-origin',
-            body: JSON.stringify(customerData)
-        });
-        const result = await response.json();
-        if (result.success) {
-            alert('Customer Saved Successfully');
-            custCloseCustomerModal();
-            await loadCustomers();
-        } else {
-            alert('Error: ' + result.message);
-        }
-    } catch (error) {
-        console.error('Error saving customer:', error);
-        alert('Failed to save customer');
-    } finally {
-        hideCustProcessing();
-    }
-}
-
-function editCustomer(button) {
-    const row = button.closest('tr');
-    const cells = row.querySelectorAll('td');
-    row.setAttribute('data-original-name', cells[1].textContent);
-    row.setAttribute('data-original-contact', cells[2].textContent);
-    row.setAttribute('data-original-email', cells[3].textContent);
-    row.setAttribute('data-original-state', cells[4].textContent);
-    row.setAttribute('data-original-city', cells[5].textContent);
-    cells[1].innerHTML = `<input type="text" class="editable" value="${cells[1].textContent}">`;
-    cells[2].innerHTML = `<input type="text" class="editable" value="${cells[2].textContent}">`;
-    cells[3].innerHTML = `<input type="email" class="editable" value="${cells[3].textContent}">`;
-    let countyOptions = custCounties.map(county => `<option value="${county}" ${county === cells[4].textContent ? 'selected' : ''}>${county}</option>`).join('');
-    cells[4].innerHTML = `<select class="editable" style="width:100%">${countyOptions}</select>`;
-    let townOptions = custTowns.map(town => `<option value="${town}" ${town === cells[5].textContent ? 'selected' : ''}>${town}</option>`).join('');
-    cells[5].innerHTML = `<select class="editable" style="width:100%">${townOptions}</select>`;
-    const actionCell = cells[9];
-    actionCell.querySelector('.edit-btn').style.display = 'none';
-    actionCell.querySelector('.delete-btn').style.display = 'none';
-    actionCell.querySelector('.update-btn').style.display = 'inline-block';
-    actionCell.querySelector('.cancel-btn').style.display = 'inline-block';
-}
-
-function cancelEdit(button) {
-    const row = button.closest('tr');
-    const cells = row.querySelectorAll('td');
-    cells[1].textContent = row.getAttribute('data-original-name');
-    cells[2].textContent = row.getAttribute('data-original-contact');
-    cells[3].textContent = row.getAttribute('data-original-email');
-    cells[4].textContent = row.getAttribute('data-original-state');
-    cells[5].textContent = row.getAttribute('data-original-city');
-    const actionCell = cells[9];
-    actionCell.querySelector('.edit-btn').style.display = 'inline-block';
-    actionCell.querySelector('.delete-btn').style.display = 'inline-block';
-    actionCell.querySelector('.update-btn').style.display = 'none';
-    actionCell.querySelector('.cancel-btn').style.display = 'none';
-}
-
-async function updateCustomer(button) {
-    const row = button.closest('tr');
-    const cells = row.querySelectorAll('td');
-    const customerData = {
-        id: row.getAttribute('data-customer-id'),
-        name: cells[1].querySelector('input').value.trim(),
-        contact: cells[2].querySelector('input').value.trim(),
-        email: cells[3].querySelector('input').value.trim(),
-        state: cells[4].querySelector('select').value,
-        city: cells[5].querySelector('select').value
-    };
-    if (!customerData.name || !customerData.state || !customerData.city) {
-        alert('Please fill all required fields');
-        return;
-    }
-    showCustProcessing();
-    try {
-        const response = await fetch('/api/customers/update/', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCSRFToken()},
-            credentials: 'same-origin',
-            body: JSON.stringify(customerData)
-        });
-        const result = await response.json();
-        if (result.success) {
-            alert('Customer Updated Successfully');
-            await loadCustomers();
-        } else {
-            alert('Error: ' + result.message);
-        }
-    } catch (error) {
-        console.error('Error updating customer:', error);
-        alert('Failed to update customer');
-    } finally {
-        hideCustProcessing();
-    }
-}
-
-async function deleteCustomer(customerId) {
-    if (!confirm('Are you sure you want to delete this customer?')) return;
-    showCustProcessing();
-    try {
-        const response = await fetch('/api/customers/delete/', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCSRFToken()},
-            credentials: 'same-origin',
-            body: JSON.stringify({ customer_id: customerId })
-        });
-        const result = await response.json();
-        if (result.success) {
-            alert('Customer Deleted Successfully');
-            await loadCustomers();
-        } else {
-            if (result.has_balance) {
-                alert('Customer has outstanding balance. Please clear all dues first.');
-            } else {
-                alert('Error: ' + result.message);
-            }
-        }
-    } catch (error) {
-        console.error('Error deleting customer:', error);
-        alert('Failed to delete customer');
-    } finally {
-        hideCustProcessing();
-    }
-}
-
-function custSearchCustomers() {
-    const criteria = document.getElementById('custSearchCriteria').value;
-    const query = document.getElementById('custSearchInput').value.toLowerCase().trim();
-    if (!query) {
-        custFilteredCustomers = [...custAllCustomers];
-    } else {
-        custFilteredCustomers = custAllCustomers.filter(customer => {
-            if (criteria === 'all') {
-                return (customer.name.toLowerCase().includes(query) || (customer.state && customer.state.toLowerCase().includes(query)) || (customer.city && customer.city.toLowerCase().includes(query)));
-            } else if (criteria === 'Customer Name') {
-                return customer.name.toLowerCase().includes(query);
-            } else if (criteria === 'County') {
-                return customer.state && customer.state.toLowerCase().includes(query);
-            } else if (criteria === 'Town') {
-                return customer.city && customer.city.toLowerCase().includes(query);
-            }
-            return true;
-        });
-    }
-    custCurrentPage = 1;
-    renderCustomerTable();
-    if (custFilteredCustomers.length === 0) alert('No matching data found');
-}
-
-function custClearSearch() {
-    document.getElementById('custSearchInput').value = '';
-    document.getElementById('custSearchCriteria').value = 'all';
-    custFilteredCustomers = [...custAllCustomers];
-    custCurrentPage = 1;
-    renderCustomerTable();
-}
-
-function showCustProcessing() {
-    document.getElementById('custProcessingOverlay').style.display = 'flex';
-}
-
-function hideCustProcessing() {
-    document.getElementById('custProcessingOverlay').style.display = 'none';
-}
+    initCustomers();
 </script>
-
-
-    
-</body>
-</html>

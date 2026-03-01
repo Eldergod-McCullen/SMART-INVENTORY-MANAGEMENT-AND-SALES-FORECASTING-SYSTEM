@@ -108,16 +108,6 @@ def login_view(request):
 
             print(f"✅ User {user.full_name} logged in successfully")
 
-            # -------------------------------------------------------
-            # FIX: redirect_url now resolves to /index using the named
-            # URL 'index' from urls.py:
-            #   path('index', views.index, name='index')
-            #
-            # reverse('index') returns '/index' — the JavaScript on
-            # the login page reads this value and does:
-            #   window.location.href = data.redirect_url
-            # so it must point to the index page, not '/' (welcome).
-            # -------------------------------------------------------
             return JsonResponse({
                 'success': True,
                 'message': 'Login successful',
