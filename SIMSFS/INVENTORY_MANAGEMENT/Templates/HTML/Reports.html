@@ -1,0 +1,166 @@
+{% load static %}
+
+{% csrf_token %}
+<meta name="csrf-token" content="{{ csrf_token }}">
+
+<!-- CSS for this module -->
+<link rel="stylesheet" href="{% static 'Reports.css' %}">
+
+<!-- Flatpickr CSS (date pickers in the report generator) -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+
+
+<!-- ==================== MAIN CONTAINER ==================== -->
+<div class="reports-container">
+
+    <!-- HEADER -->
+    <div class="reports-header">
+        <h1><i class="fas fa-chart-bar"></i> Business Reports &amp; Analytics</h1>
+        <p>Generate comprehensive reports and gain insights into your business performance</p>
+    </div>
+
+    <!-- QUICK REPORTS -->
+    <div class="quick-reports">
+        <div class="quick-report-btn" onclick="rptGenerateQuickReport('today-sales')">
+            <i class="fas fa-calendar-day"></i>
+            <span>Today's Sales</span>
+        </div>
+        <div class="quick-report-btn" onclick="rptGenerateQuickReport('week-sales')">
+            <i class="fas fa-calendar-week"></i>
+            <span>This Week</span>
+        </div>
+        <div class="quick-report-btn" onclick="rptGenerateQuickReport('month-sales')">
+            <i class="fas fa-calendar-alt"></i>
+            <span>This Month</span>
+        </div>
+        <div class="quick-report-btn" onclick="rptGenerateQuickReport('inventory-status')">
+            <i class="fas fa-boxes"></i>
+            <span>Inventory Status</span>
+        </div>
+        <div class="quick-report-btn" onclick="rptGenerateQuickReport('outstanding-balances')">
+            <i class="fas fa-exclamation-circle"></i>
+            <span>Outstanding Balances</span>
+        </div>
+        <div class="quick-report-btn" onclick="rptGenerateQuickReport('profit-loss')">
+            <i class="fas fa-chart-line"></i>
+            <span>Profit &amp; Loss Report</span>
+        </div>
+    </div>
+
+    <!-- REPORT GENERATOR -->
+    <div class="report-generator">
+        <div class="generator-header">
+            <h2 class="generator-title">Generate Custom Report</h2>
+        </div>
+
+        <!-- Row 1: type + date range -->
+        <div class="form-grid">
+            <div class="form-group">
+                <label>Report Type</label>
+                <select id="reportType" class="form-control">
+                    <option value="">Select Report Type</option>
+                    <option value="sales-summary">Sales Summary Report</option>
+                    <option value="inventory-status">Inventory Status Report</option>
+                    <option value="profit-loss">Profit &amp; Loss Report</option>
+                    <option value="purchase-summary">Purchase Summary Report</option>
+                    <option value="customer-analysis">Customer Analysis Report</option>
+                    <option value="supplier-analysis">Supplier Analysis Report</option>
+                    <option value="outstanding-balances">Outstanding Balances Report</option>
+                    <option value="tax-summary">Tax Summary Report</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>From Date</label>
+                <input type="text" id="fromDate" class="form-control date-picker" placeholder="DD/MM/YYYY">
+            </div>
+
+            <div class="form-group">
+                <label>To Date</label>
+                <input type="text" id="toDate" class="form-control date-picker" placeholder="DD/MM/YYYY">
+            </div>
+        </div>
+
+        <!-- Row 2: optional filters -->
+        <div class="form-grid">
+            <div class="form-group">
+                <label>Filter by Category (Optional)</label>
+                <select id="filterCategory" class="form-control">
+                    <option value="">All Categories</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Filter by County (Optional)</label>
+                <select id="filterCounty" class="form-control">
+                    <option value="">All Counties</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Action buttons -->
+        <div class="btn-group">
+            <button class="btn btn-outline" onclick="rptClearFilters()">
+                <i class="fas fa-eraser"></i> Clear
+            </button>
+            <button class="btn btn-primary" onclick="rptGenerateReport()">
+                <i class="fas fa-chart-bar"></i> Generate Report
+            </button>
+            <button class="btn btn-success" onclick="rptExportToPDF()" id="exportPDFBtn" style="display:none;">
+                <i class="fas fa-file-pdf"></i> Export PDF
+            </button>
+            <button class="btn btn-warning" onclick="rptExportToExcel()" id="exportExcelBtn" style="display:none;">
+                <i class="fas fa-file-excel"></i> Export Excel
+            </button>
+        </div>
+    </div>
+
+    <!-- REPORT DISPLAY AREA — populated dynamically by Reports.js -->
+    <div class="report-display" id="reportDisplay"></div>
+
+</div>
+<!-- ==================== END MAIN CONTAINER ==================== -->
+
+
+<!-- Loading Overlay -->
+<!--
+    id renamed: loadingOverlay → rptLoadingOverlay
+    class renamed: .loading-overlay → .rpt-loading-overlay
+    Spinner class renamed: .spinner → .rpt-spinner
+    All match Reports.css and Reports.js usage.
+-->
+<div id="rptLoadingOverlay" class="rpt-loading-overlay">
+    <div class="rpt-spinner"></div>
+    <p>Generating report...</p>
+</div>
+
+
+<!-- ==================== SCRIPTS ==================== -->
+<!--
+    jQuery is already loaded globally in Index.html.
+    Do NOT add it here.
+
+    Chart.js, Flatpickr, jsPDF, and jspdf-autotable are
+    only needed by this module so they are loaded here.
+-->
+
+<!-- Flatpickr JS (date pickers) -->
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+
+<!-- Chart.js (all report charts) -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+<!-- jsPDF + AutoTable (PDF export) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+
+<!-- Reports module logic -->
+<!--
+    initReports() is called at the END of Reports.js itself.
+    Do NOT add a separate <script>initReports();</script> here.
+    Calling it inside the JS file guarantees the function is
+    always defined before it is invoked, avoiding the timing
+    edge case where executeScripts() runs the inline call before
+    the external script has finished executing.
+-->
+<script src="{% static 'Reports.js' %}"></script>

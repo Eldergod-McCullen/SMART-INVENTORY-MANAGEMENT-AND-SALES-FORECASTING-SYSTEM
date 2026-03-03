@@ -1,0 +1,346 @@
+{% load static %}
+
+{% csrf_token %}
+<meta name="csrf-token" content="{{ csrf_token }}">
+
+<!-- CSS for this module -->
+<link rel="stylesheet" href="{% static 'Dashboard.css' %}">
+
+
+<!-- ==================== MAIN CONTAINER ==================== -->
+<div class="dashboard-container">
+
+    <!-- HEADER -->
+    <div class="dashboard-header">
+        <h1><i class="fas fa-tachometer-alt"></i> Business Dashboard</h1>
+        <p>Complete real-time overview of your business operations</p>
+    </div>
+
+    <!-- ==================== 10 KPI CARDS ==================== -->
+    <div class="stats-grid">
+
+        <!-- Card 1: Inventory Cost Value -->
+        <div class="stat-card">
+            <div class="stat-icon primary"><i class="fas fa-boxes"></i></div>
+            <div class="stat-content">
+                <div class="stat-label">Inventory Cost Value</div>
+                <div class="stat-value" id="inventoryCostValue">KSH 0.00</div>
+                <div class="stat-change" id="inventoryCostChange">At purchase price</div>
+            </div>
+        </div>
+
+        <!-- Card 2: Potential Revenue -->
+        <div class="stat-card">
+            <div class="stat-icon info"><i class="fas fa-hand-holding-usd"></i></div>
+            <div class="stat-content">
+                <div class="stat-label">Potential Revenue</div>
+                <div class="stat-value" id="potentialRevenue">KSH 0.00</div>
+                <div class="stat-change" id="potentialProfit">Potential profit</div>
+            </div>
+        </div>
+
+        <!-- Card 3: Total Sales -->
+        <div class="stat-card">
+            <div class="stat-icon success"><i class="fas fa-chart-line"></i></div>
+            <div class="stat-content">
+                <div class="stat-label">Total Sales</div>
+                <div class="stat-value" id="totalSales">KSH 0.00</div>
+                <div class="stat-change" id="salesChange">Loading...</div>
+            </div>
+        </div>
+
+        <!-- Card 4: Total Purchases -->
+        <div class="stat-card">
+            <div class="stat-icon secondary"><i class="fas fa-shopping-cart"></i></div>
+            <div class="stat-content">
+                <div class="stat-label">Total Purchases</div>
+                <div class="stat-value" id="totalPurchases">KSH 0.00</div>
+                <div class="stat-change" id="purchasesChange">Loading...</div>
+            </div>
+        </div>
+
+        <!-- Card 5: Net Profit -->
+        <div class="stat-card">
+            <div class="stat-icon navy"><i class="fas fa-piggy-bank"></i></div>
+            <div class="stat-content">
+                <div class="stat-label">Net Profit</div>
+                <div class="stat-value" id="netProfit">KSH 0.00</div>
+                <div class="stat-change" id="profitMargin">Loading...</div>
+            </div>
+        </div>
+
+        <!-- Card 6: Receivables -->
+        <div class="stat-card">
+            <div class="stat-icon warning"><i class="fas fa-hand-holding-usd"></i></div>
+            <div class="stat-content">
+                <div class="stat-label">Receivables</div>
+                <div class="stat-value" id="totalReceivables">KSH 0.00</div>
+                <div class="stat-change" id="receivablesChange">Loading...</div>
+            </div>
+        </div>
+
+        <!-- Card 7: Payables -->
+        <div class="stat-card">
+            <div class="stat-icon error"><i class="fas fa-file-invoice-dollar"></i></div>
+            <div class="stat-content">
+                <div class="stat-label">Payables</div>
+                <div class="stat-value" id="totalPayables">KSH 0.00</div>
+                <div class="stat-change" id="payablesChange">Loading...</div>
+            </div>
+        </div>
+
+        <!-- Card 8: Reorder Required -->
+        <div class="stat-card">
+            <div class="stat-icon purple"><i class="fas fa-exclamation-triangle"></i></div>
+            <div class="stat-content">
+                <div class="stat-label">Reorder Required</div>
+                <div class="stat-value" id="reorderItems">0</div>
+                <div class="stat-change negative">Items below minimum</div>
+            </div>
+        </div>
+
+        <!-- Card 9: Top Selling Item -->
+        <div class="stat-card">
+            <div class="stat-icon orange"><i class="fas fa-trophy"></i></div>
+            <div class="stat-content">
+                <div class="stat-label">Top Selling Item</div>
+                <div class="stat-value small" id="topSellingItem">Loading...</div>
+                <div class="stat-change positive" id="topItemCategory">Category &amp; Type</div>
+            </div>
+        </div>
+
+        <!-- Card 10: Top Sales Location -->
+        <div class="stat-card">
+            <div class="stat-icon info"><i class="fas fa-map-marker-alt"></i></div>
+            <div class="stat-content">
+                <div class="stat-label">Top Sales Location</div>
+                <div class="stat-value" id="topSalesLocation">Loading...</div>
+                <div class="stat-change positive" id="topLocationAmount">By county</div>
+            </div>
+        </div>
+
+    </div>
+    <!-- ==================== END KPI CARDS ==================== -->
+
+
+    <!-- ==================== CHARTS ==================== -->
+    <div class="charts-grid">
+
+        <!-- Sales Trend — full-width line chart -->
+        <div class="chart-card wide">
+            <div class="chart-header">
+                <div>
+                    <div class="chart-title">Overall Sales Trend</div>
+                    <div class="chart-subtitle">Monthly sales performance</div>
+                </div>
+            </div>
+            <div class="chart-container">
+                <canvas id="salesTrendChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Sales by Location -->
+        <div class="chart-card">
+            <div class="chart-header">
+                <div>
+                    <div class="chart-title">Sales by Location</div>
+                    <div class="chart-subtitle">Revenue by county</div>
+                </div>
+            </div>
+            <div class="chart-container">
+                <canvas id="salesLocationChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Sales by Category -->
+        <div class="chart-card">
+            <div class="chart-header">
+                <div>
+                    <div class="chart-title">Sales by Category</div>
+                    <div class="chart-subtitle">By item type</div>
+                </div>
+            </div>
+            <div class="chart-container">
+                <canvas id="salesCategoryChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Purchases by Location -->
+        <div class="chart-card">
+            <div class="chart-header">
+                <div>
+                    <div class="chart-title">Purchases by Location</div>
+                    <div class="chart-subtitle">Spending by county</div>
+                </div>
+            </div>
+            <div class="chart-container">
+                <canvas id="purchasesLocationChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Purchases by Category -->
+        <div class="chart-card">
+            <div class="chart-header">
+                <div>
+                    <div class="chart-title">Purchases by Category</div>
+                    <div class="chart-subtitle">By item type</div>
+                </div>
+            </div>
+            <div class="chart-container">
+                <canvas id="purchasesCategoryChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Payment Status -->
+        <div class="chart-card">
+            <div class="chart-header">
+                <div>
+                    <div class="chart-title">Payment Status</div>
+                    <div class="chart-subtitle">Orders by status</div>
+                </div>
+            </div>
+            <div class="chart-container">
+                <canvas id="paymentStatusChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Top 5 Customers -->
+        <div class="chart-card">
+            <div class="chart-header">
+                <div>
+                    <div class="chart-title">Top 5 Customers</div>
+                    <div class="chart-subtitle">By total sales</div>
+                </div>
+            </div>
+            <div class="chart-container">
+                <canvas id="topCustomersChart"></canvas>
+            </div>
+        </div>
+
+    </div>
+    <!-- ==================== END CHARTS ==================== -->
+
+
+    <!-- ==================== TABLES ==================== -->
+    <div class="tables-grid">
+
+        <!-- Items Requiring Reorder -->
+        <div class="table-card">
+            <div class="table-header">
+                <div class="table-title">
+                    <i class="fas fa-exclamation-circle" style="color:var(--error);"></i>
+                    Items Requiring Reorder
+                </div>
+            </div>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Item ID</th>
+                        <th>Item Name</th>
+                        <th>Category</th>
+                        <th>Current Stock</th>
+                        <th>Reorder Level</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="lowStockTable">
+                    <tr><td colspan="6" style="text-align:center; padding:30px;">Loading...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Recent Sales Orders -->
+        <div class="table-card">
+            <div class="table-header">
+                <div class="table-title">
+                    <i class="fas fa-receipt" style="color:var(--success);"></i>
+                    Recent Sales Orders
+                </div>
+            </div>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>SO ID</th>
+                        <th>Date</th>
+                        <th>Customer</th>
+                        <th>Amount</th>
+                        <th>Receipt Status</th>
+                        <th>Shipping Status</th>
+                    </tr>
+                </thead>
+                <tbody id="recentSalesTable">
+                    <tr><td colspan="6" style="text-align:center; padding:30px;">Loading...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Recent Purchase Orders -->
+        <div class="table-card">
+            <div class="table-header">
+                <div class="table-title">
+                    <i class="fas fa-shopping-bag" style="color:var(--secondary);"></i>
+                    Recent Purchase Orders
+                </div>
+            </div>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>PO ID</th>
+                        <th>Date</th>
+                        <th>Supplier</th>
+                        <th>Amount</th>
+                        <th>Payment Status</th>
+                        <th>Shipping Status</th>
+                    </tr>
+                </thead>
+                <tbody id="recentPurchasesTable">
+                    <tr><td colspan="6" style="text-align:center; padding:30px;">Loading...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+    <!-- ==================== END TABLES ==================== -->
+
+</div>
+<!-- ==================== END MAIN CONTAINER ==================== -->
+
+
+<!-- Loading Overlay -->
+<!--
+    Renamed from id="loadingOverlay" → id="dashLoadingOverlay"
+    Class renamed from .loading-overlay → .dash-loading-overlay
+    Spinner renamed from .spinner → .dash-spinner
+    to avoid any collision with Index.html names.
+-->
+<div id="dashLoadingOverlay" class="dash-loading-overlay">
+    <div class="dash-spinner"></div>
+    <p>Loading dashboard...</p>
+</div>
+
+
+<!-- ==================== SCRIPTS ==================== -->
+<!--
+    jQuery is already loaded globally in Index.html <head>.
+    Do NOT add it here.
+
+    Chart.js is loaded here because it is only needed by the
+    Dashboard module. If you decide to use Chart.js in other
+    modules too, move this tag to Index.html <head> instead.
+-->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+<!-- Dashboard module logic -->
+<script src="{% static 'Dashboard.js' %}"></script>
+
+<!--
+    CRITICAL: Call initDashboard() directly here.
+    Do NOT use DOMContentLoaded or $(document).ready().
+    Those events have already fired on the parent Index.html page
+    and will never fire again for dynamically injected content.
+    executeScripts() in Index.html ensures Dashboard.js is fully
+    loaded before this inline call runs.
+-->
+<script>
+    initDashboard();
+</script>

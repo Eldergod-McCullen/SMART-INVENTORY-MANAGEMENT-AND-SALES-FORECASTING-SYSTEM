@@ -1,4 +1,5 @@
 {% load static %}
+
 <!DOCTYPE html>
 <html lang="en">
 
@@ -442,7 +443,7 @@
     <div class="app-title">
       <div class="app-title-content">
         <i class="fa fa-warehouse"></i>
-        <span class="app-title-text">InvenTrack</span>
+        <span class="app-title-text">IVNTRCK</span>
       </div>
       <i class="fa fa-bars menu-toggle" id="menuToggle"></i>
     </div>
@@ -644,38 +645,52 @@
             scripts have fully loaded do we execute the inline
             scripts (which contain the initXxx() calls).
     ---------------------------------------------------------- */
+    
     async function executeScripts(container) {
-      const allScripts     = Array.from(container.querySelectorAll('script'));
-      const externalScripts = allScripts.filter(s => s.hasAttribute('src'));
-      const inlineScripts  = allScripts.filter(s => !s.hasAttribute('src'));
+    const scripts = Array.from(container.querySelectorAll('script'));
+    console.log(`⚙️ Processing ${scripts.length} script(s)...`);
 
-      /* Step 1 — load each external script sequentially, waiting
-         for each one to finish before moving to the next.        */
-      for (const oldScript of externalScripts) {
-        await new Promise((resolve) => {
-          const newScript = document.createElement('script');
-          Array.from(oldScript.attributes).forEach(attr => {
-            newScript.setAttribute(attr.name, attr.value);
-          });
-          newScript.onload  = resolve;
-          newScript.onerror = resolve;  /* don't block the chain on a 404 */
-          oldScript.parentNode.replaceChild(newScript, oldScript);
+    for (const oldScript of scripts) {
+        await new Promise((resolve, reject) => {
+            const newScript = document.createElement('script');
+
+            // Copy all attributes (src, type, etc.)
+            Array.from(oldScript.attributes).forEach(attr => {
+                newScript.setAttribute(attr.name, attr.value);
+            });
+
+            if (oldScript.src) {
+                // -------------------------------------------------------
+                // EXTERNAL SCRIPT — wait for it to fully load before
+                // continuing to the next script in the sequence.
+                // This is what prevents initReports() from firing before
+                // Reports.js is downloaded.
+                // -------------------------------------------------------
+                newScript.onload = () => {
+                    console.log(`✅ Loaded: ${oldScript.src}`);
+                    resolve();
+                };
+                newScript.onerror = (err) => {
+                    console.error(`❌ Failed to load: ${oldScript.src}`, err);
+                    resolve(); // resolve anyway so remaining scripts still run
+                };
+                oldScript.parentNode.replaceChild(newScript, oldScript);
+            } else {
+                // -------------------------------------------------------
+                // INLINE SCRIPT — execute its content synchronously.
+                // By the time we reach here, all preceding external
+                // scripts have already loaded, so initReports() (or any
+                // other init call) is guaranteed to be defined.
+                // -------------------------------------------------------
+                newScript.textContent = oldScript.textContent;
+                oldScript.parentNode.replaceChild(newScript, oldScript);
+                resolve();
+            }
         });
-      }
-
-      /* Step 2 — now that all external scripts are loaded, run
-         the inline scripts (e.g. initInventoryItems() calls).   */
-      for (const oldScript of inlineScripts) {
-        const newScript = document.createElement('script');
-        newScript.textContent = oldScript.textContent;
-        oldScript.parentNode.replaceChild(newScript, oldScript);
-      }
-
-      console.log(
-        `✅ executeScripts: ${externalScripts.length} external loaded,` +
-        ` ${inlineScripts.length} inline executed`
-      );
     }
+
+    console.log(`✅ All ${scripts.length} script(s) executed in order.`);
+  }
 
 
     /* ============================================================

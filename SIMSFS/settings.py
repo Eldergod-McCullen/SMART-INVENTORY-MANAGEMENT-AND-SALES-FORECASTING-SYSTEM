@@ -57,7 +57,9 @@ ROOT_URLCONF = 'SIMSFS.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [], # 'INVENTORY_MANAGEMENT\Templates'
+        'DIRS': [
+                    BASE_DIR / 'SIMSFS' / 'INVENTORY_MANAGEMENT' / 'Templates' / 'HTML',
+                ], 
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -76,11 +78,6 @@ WSGI_APPLICATION = 'SIMSFS.wsgi.application'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
 DATABASES = {
-#    'default2': {
-#        'ENGINE': 'django.db.backends.sqlite3',             # ADD THIS AS A DATABASE LATER
-#        'NAME': BASE_DIR / 'db.sqlite3',
-#    },
-    
     'default': {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'SMART INVENTORY MANAGEMENT AND SALES FORECASTING SYSTEM',
@@ -134,7 +131,6 @@ STATIC_URL = 'static/'
 STATIC_URL = '/static/'
 
 STATICFILES_DIRS = [
-    BASE_DIR / 'SIMSFS' / 'INVENTORY_MANAGEMENT' / 'Templates',
     BASE_DIR / 'SIMSFS' / 'INVENTORY_MANAGEMENT' / 'Templates' / 'CSS' , 
     BASE_DIR / 'SIMSFS' / 'INVENTORY_MANAGEMENT' / 'Templates' / 'JavaScript', 
 ]

@@ -1,0 +1,271 @@
+{% load static %}
+
+{% csrf_token %}
+<meta name="csrf-token" content="{{ csrf_token }}">
+
+<!-- CSS for this module -->
+<link rel="stylesheet" href="{% static 'Sales.css' %}">
+
+<!-- Flatpickr CSS (date picker used in the New SO modal) -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+
+
+<!-- ==================== MAIN CONTAINER ==================== -->
+<div class="sales-container">
+
+    <!-- HEADER -->
+    <div class="header-section">
+        <h1>CREATE AND MANAGE YOUR SALES ORDERS AND THEIR DETAILS</h1>
+    </div>
+
+    <!-- ACTION BAR -->
+    <div class="action-bar">
+        <div class="btn-group">
+            <button class="btn btn-primary" onclick="soOpenNewSOModal()">
+                <i class="fas fa-file-invoice"></i> New Sales Order
+            </button>
+            <button class="btn btn-secondary" onclick="soOpenReceiptStatusModal()">
+                <i class="fas fa-money-bill-wave"></i> New Receipt Status
+            </button>
+            <button class="btn btn-secondary" onclick="soOpenShippingStatusModal()">
+                <i class="fas fa-truck"></i> New Shipping Status
+            </button>
+        </div>
+
+        <div class="search-group">
+            <select id="soSearchCriteria" class="search-select" title="soSearchCriteria">
+                <option value="all">All</option>
+                <option value="SO ID">SO ID</option>
+                <option value="Customer Name">Customer Name</option>
+                <option value="Invoice Num">Invoice Number</option>
+                <option value="Receipt Status">Receipt Status</option>
+                <option value="Shipping Status">Shipping Status</option>
+            </select>
+            <input type="text" id="soSearchInput" class="search-input" placeholder="Search...">
+            <button class="btn btn-outline" onclick="soSearchSOs()">
+                <i class="fas fa-search"></i> Search
+            </button>
+            <button class="btn btn-outline" onclick="soClearSearch()">
+                <i class="fas fa-times"></i> Clear
+            </button>
+        </div>
+    </div>
+
+    <!-- SALES ORDERS TABLE -->
+    <div id="soTableContainer">
+        <table class="sales-table">
+            <thead>
+                <tr>
+                    <th>SO ID</th>
+                    <th>Date</th>
+                    <th>Customer ID</th>
+                    <th>Customer Name</th>
+                    <th>Invoice Number</th>
+                    <th>County</th>
+                    <th>Town</th>
+                    <th>Total Amount</th>
+                    <th>Amount Received</th>
+                    <th>SO Balance</th>
+                    <th>Receipt Status</th>
+                    <th>Shipping Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="soTableBody">
+                <!-- Populated by Sales.js → soRenderTable() -->
+            </tbody>
+        </table>
+
+        <!-- Pagination -->
+        <div class="pagination" id="soPagination"></div>
+    </div>
+
+    <!-- No Data Message -->
+    <div id="soNoData" class="no-data-container">
+        <i class="fas fa-inbox no-data-icon"></i>
+        <h3 class="no-data-title">No sales orders found</h3>
+        <p>Click "New Sales Order" to create a sales order</p>
+    </div>
+
+</div>
+<!-- ==================== END MAIN CONTAINER ==================== -->
+
+
+<!-- Processing Overlay -->
+<!--
+    Spinner renamed from .spinner → .so-spinner
+    to avoid collision with Index.html's .spinner class.
+-->
+<div id="soProcessingOverlay" class="processing-overlay">
+    <div class="so-spinner"></div>
+    <p>Processing...</p>
+</div>
+
+
+<!-- ==================== MODALS ==================== -->
+
+<!-- Receipt Status Modal -->
+<div id="soReceiptStatusModal" class="modal">
+    <div class="modal-content" style="width:450px; height:auto; margin:5% auto;">
+        <div class="modal-header">
+            <h2>Configure Receipt Status</h2>
+            <span class="close-btn" onclick="soCloseReceiptStatusModal()">&times;</span>
+        </div>
+        <div class="form-group">
+            <label class="required">Receipt Status</label>
+            <input type="text" id="soNewReceiptStatus" class="form-control">
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-outline" onclick="soCloseReceiptStatusModal()">Close</button>
+            <button class="btn btn-primary" onclick="soSaveNewReceiptStatus()">Save</button>
+        </div>
+    </div>
+</div>
+
+<!-- Shipping Status Modal -->
+<div id="soShippingStatusModal" class="modal">
+    <div class="modal-content" style="width:450px; height:auto; margin:5% auto;">
+        <div class="modal-header">
+            <h2>Configure Shipping Status</h2>
+            <span class="close-btn" onclick="soCloseShippingStatusModal()">&times;</span>
+        </div>
+        <div class="form-group">
+            <label class="required">Shipping Status</label>
+            <input type="text" id="soNewShippingStatus" class="form-control">
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-outline" onclick="soCloseShippingStatusModal()">Close</button>
+            <button class="btn btn-primary" onclick="soSaveNewShippingStatus()">Save</button>
+        </div>
+    </div>
+</div>
+
+<!-- New / Edit SO Modal (full-screen) -->
+<div id="soNewSOModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="soModalTitle">Create New Sales Order</h2>
+            <span class="close-btn" onclick="soCloseNewSOModal()">&times;</span>
+        </div>
+
+        <!-- Section 1: SO Header Information -->
+        <div class="form-section">
+            <h3>SO Information</h3>
+            <div class="form-grid">
+
+                <div class="form-group">
+                    <label class="required">SO ID</label>
+                    <div class="id-generate">
+                        <input type="text" id="soSOID" class="form-control id-field" readonly>
+                        <button class="btn btn-secondary" onclick="soGenerateSOID()" id="soGenerateBtn">Generate</button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="required">SO Date</label>
+                    <input type="text" id="soSODate" class="form-control date-picker" placeholder="DD/MM/YYYY">
+                </div>
+
+                <div class="form-group">
+                    <label class="required">Customer Name</label>
+                    <select id="soCustomerName" class="form-control" style="width:100%;"></select>
+                </div>
+
+                <div class="form-group">
+                    <label class="required">Customer ID</label>
+                    <input type="text" id="soCustomerID" class="form-control" readonly>
+                </div>
+
+                <div class="form-group">
+                    <label class="required">County</label>
+                    <input type="text" id="soCounty" class="form-control" readonly>
+                </div>
+
+                <div class="form-group">
+                    <label class="required">Town</label>
+                    <input type="text" id="soTown" class="form-control" readonly>
+                </div>
+
+                <div class="form-group">
+                    <label class="required">Invoice Number</label>
+                    <input type="text" id="soInvoiceNum" class="form-control" readonly>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Section 2: SO Items -->
+        <div class="form-section">
+            <h3>SO Items</h3>
+            <button class="add-item-btn" onclick="soAddItemRow()">
+                <i class="fas fa-plus"></i> Add Item
+            </button>
+
+            <div class="items-table-container">
+                <table class="items-table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>SO ID</th>
+                            <th>Detail ID</th>
+                            <th>Customer ID</th>
+                            <th>Customer Name</th>
+                            <th>County</th>
+                            <th>Town</th>
+                            <th>Invoice Number</th>
+                            <th>Item ID</th>
+                            <th>Item Type</th>
+                            <th>Item Category</th>
+                            <th>Item Subcategory</th>
+                            <th>Item Name</th>
+                            <th>Quantity</th>
+                            <th>Unit Price</th>
+                            <th>Price Excluding Tax</th>
+                            <th>Tax Rate (%)</th>
+                            <th>Total Tax</th>
+                            <th>Price Inclusive of Tax</th>
+                            <th>Shipping Fees</th>
+                            <th>Total Price</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="soItemsTableBody">
+                        <!-- Item rows added dynamically by soAddItemRow() -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="modal-footer">
+            <button class="btn btn-outline" onclick="soCloseNewSOModal()">Close</button>
+            <button class="btn btn-primary" onclick="soSaveNewSO()" id="soSaveBtn">Save SO</button>
+        </div>
+
+    </div>
+</div>
+
+
+<!-- ==================== SCRIPTS ==================== -->
+<!--
+    jQuery and Select2 are already loaded globally in Index.html.
+    Do NOT add them here.
+
+    Flatpickr is only needed by this module so it is loaded here.
+    If another module also needs it, move to Index.html <head>.
+-->
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+
+<!-- Sales module logic -->
+<script src="{% static 'Sales.js' %}"></script>
+
+<!--
+    CRITICAL: Call initSales() directly here.
+    Do NOT use DOMContentLoaded or $(document).ready().
+    Those events have already fired on the parent Index.html page
+    and will never fire again for dynamically injected content.
+    executeScripts() in Index.html ensures Sales.js is fully
+    loaded before this inline call runs.
+-->
+<script>
+    initSales();
+</script>
