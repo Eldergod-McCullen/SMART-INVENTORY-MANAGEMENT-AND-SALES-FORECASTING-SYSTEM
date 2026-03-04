@@ -1,5 +1,4 @@
 {% load static %}
-
 <!DOCTYPE html>
 <html lang="en">
 
@@ -14,18 +13,7 @@
   
   <!-- Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
-  <!-- ============================================================
-       jQuery + Select2 loaded HERE ONCE GLOBALLY so every partial
-       template can use them immediately without a race condition.
-       Remove the jQuery/Select2 <script> tags from every partial
-       template (Inventory-items.html, Suppliers.html, etc.) after
-       adding them here.
-  ============================================================ -->
-  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-  <link  rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
-
+  
   <style>
     :root {
       --sidebar-bg: #2c3e50;
@@ -53,7 +41,7 @@
       font-family: 'Roboto', sans-serif;
       background-color: #f5f7fa;
       color: var(--text-dark);
-      display: flex;
+      display: flex;              /* MAKE SURE YOU CHECK IF THIS IS WHAT'S MAKING THE BODY TO MOVE DOWNWARDS */
       min-height: 100vh;
     }
     
@@ -288,17 +276,39 @@
     }
     
     @media (max-width: 768px) {
-      .sidebar { width: var(--sidebar-collapsed-width); }
-      .sidebar.collapsed { width: 0; }
-      .main-content { margin-left: var(--sidebar-collapsed-width); }
-      .sidebar.collapsed ~ .main-content { margin-left: 0; }
-      .page-title { font-size: 1.2rem; }
-      .welcome-text { display: none; }
+      .sidebar {
+        width: var(--sidebar-collapsed-width);
+      }
+      
+      .sidebar.collapsed {
+        width: 0;
+      }
+
+      .main-content {
+        margin-left: var(--sidebar-collapsed-width);
+      }
+
+      .sidebar.collapsed ~ .main-content {
+        margin-left: 0;
+      }
+
+      .page-title {
+        font-size: 1.2rem;
+      }
+
+      .welcome-text {
+        display: none;
+      }
     }
     
     @media (max-width: 480px) {
-      .content  { padding: 15px; }
-      .top-bar  { padding: 10px 15px; }
+      .content {
+        padding: 15px;
+      }
+
+      .top-bar {
+        padding: 10px 15px;
+      }
     }
 
     /* ==================== LOGOUT MODAL STYLES ==================== */
@@ -321,7 +331,7 @@
     }
     
     .logout-modal-content {
-      background: white;
+      background: var(--white);
       border-radius: 12px;
       max-width: 450px;
       width: 90%;
@@ -332,7 +342,7 @@
     
     .logout-modal-header {
       background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
-      color: white;
+      color: var(--white);
       padding: 25px;
       text-align: center;
     }
@@ -364,8 +374,16 @@
       line-height: 1.6;
     }
     
-    .logout-modal-body p strong { color: var(--primary); font-weight: 600; }
-    .logout-warning { font-size: 0.9rem !important; color: #7f8c8d !important; font-style: italic; }
+    .logout-modal-body p strong {
+      color: var(--primary);
+      font-weight: 600;
+    }
+    
+    .logout-warning {
+      font-size: 0.9rem !important;
+      color: var(--gray) !important;
+      font-style: italic;
+    }
     
     .logout-modal-footer {
       padding: 20px 25px;
@@ -393,7 +411,7 @@
     }
     
     .logout-btn-cancel {
-      background: #ecf0f1;
+      background: var(--light-gray);
       color: var(--text-dark);
       border: 1px solid #bdc3c7;
     }
@@ -406,7 +424,7 @@
     
     .logout-btn-confirm {
       background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
-      color: white;
+      color: var(--white);
     }
     
     .logout-btn-confirm:hover {
@@ -415,23 +433,40 @@
       box-shadow: 0 4px 12px rgba(231, 76, 60, 0.4);
     }
     
-    .logout-btn-confirm:disabled { opacity: 0.7; cursor: not-allowed; }
+    .logout-btn-confirm:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+    }
     
     @keyframes fadeIn {
       from { opacity: 0; }
-      to   { opacity: 1; }
+      to { opacity: 1; }
     }
     
     @keyframes slideDown {
-      from { transform: translateY(-50px); opacity: 0; }
-      to   { transform: translateY(0);     opacity: 1; }
+      from {
+        transform: translateY(-50px);
+        opacity: 0;
+      }
+      to {
+        transform: translateY(0);
+        opacity: 1;
+      }
     }
     
     @media (max-width: 480px) {
-      .logout-modal-content { max-width: 95%; }
-      .logout-modal-footer  { flex-direction: column; }
+      .logout-modal-content {
+        max-width: 95%;
+      }
+      
+      .logout-modal-footer {
+        flex-direction: column;
+      }
+      
       .logout-btn-cancel,
-      .logout-btn-confirm   { width: 100%; }
+      .logout-btn-confirm {
+        width: 100%;
+      }
     }
     
   </style>
@@ -443,7 +478,7 @@
     <div class="app-title">
       <div class="app-title-content">
         <i class="fa fa-warehouse"></i>
-        <span class="app-title-text">IVNTRCK</span>
+        <span class="app-title-text">InvenTrack</span>
       </div>
       <i class="fa fa-bars menu-toggle" id="menuToggle"></i>
     </div>
@@ -489,8 +524,12 @@
         <i class="fas fa-chart-pie"></i> <span>Reports</span>
       </a>
 
-      <a class="nav-item" data-page="sales-forecasting" data-title="Sales Forecasting">
+      <a class="nav-item" data-page="forecasting" data-title="Sales Forecasting">
         <i class="fa fa-bar-chart"></i> <span>Sales Forecasting</span>
+      </a>
+
+      <a class="nav-item" data-page="users" data-title="Users">
+        <i class="fas fa-user-cog"></i> <span>Users</span>
       </a>
 
       <a class="nav-item" data-page="settings" data-title="Settings">
@@ -513,13 +552,13 @@
         <span class="welcome-text">WELCOME <span class="username" id="username">{{ username|default:'ADMIN' }}</span></span>
         <div class="top-bar-links">
           <a href="#" title="Notifications"><i class="fas fa-bell"></i></a>
-          <a href="#" title="Settings"><i class="fas fa-cog"></i></a>
-          <a href="#" title="Profile"><i class="fas fa-user"></i></a>
+          <a href="#" id="topbarSettingsLink" title="Settings"><i class="fas fa-cog"></i></a>
+          <a href="#" id="topbarProfileLink"  title="Profile"><i class="fas fa-user"></i></a>
         </div>
       </div>
     </div>
     
-    <!-- Dynamic Content Area -->
+    <!-- Dynamic Content Injection -->
     <div class="content" id="contentArea">
       <div class="loading-spinner" id="loadingSpinner">
         <div class="spinner"></div>
@@ -553,238 +592,286 @@
   </div>
 
   <script>
-
-    /* ============================================================
-       SIDEBAR TOGGLE
-    ============================================================ */
+    // Sidebar Toggle Functionality
     const menuToggle = document.getElementById('menuToggle');
-    const sidebar    = document.getElementById('sidebar');
+    const sidebar = document.getElementById('sidebar');
     
-    menuToggle.addEventListener('click', function () {
+    menuToggle.addEventListener('click', function() {
       sidebar.classList.toggle('collapsed');
       localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
     });
 
-    window.addEventListener('DOMContentLoaded', function () {
-      if (localStorage.getItem('sidebarCollapsed') === 'true') {
+    // Restore sidebar state on page load
+    window.addEventListener('DOMContentLoaded', function() {
+      const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+      if (isCollapsed) {
         sidebar.classList.add('collapsed');
       }
     });
 
+    // Dynamic Content Loading - FIXED VERSION
+const contentArea = document.getElementById('contentArea');
+const pageTitle = document.getElementById('pageTitle');
+const loadingSpinner = document.getElementById('loadingSpinner');
+const navItems = document.querySelectorAll('.nav-item[data-page]');
 
-    /* ============================================================
-       DYNAMIC CONTENT LOADING
-    ============================================================ */
-    const contentArea    = document.getElementById('contentArea');
-    const pageTitle      = document.getElementById('pageTitle');
-    const loadingSpinner = document.getElementById('loadingSpinner');
-    const navItems       = document.querySelectorAll('.nav-item[data-page]');
+// Function to load content dynamically
+async function loadContent(page, title) {
+  try {
+    // Show loading spinner
+    loadingSpinner.classList.add('active');
+    contentArea.innerHTML = '';
+    contentArea.appendChild(loadingSpinner);
 
-    /* ----------------------------------------------------------
-       loadContent — fetches a partial template from Django and
-       injects it into #contentArea, then runs its scripts.
-    ---------------------------------------------------------- */
-    async function loadContent(page, title) {
-      try {
-        loadingSpinner.classList.add('active');
-        contentArea.innerHTML = '';
-        contentArea.appendChild(loadingSpinner);
+    // Update page title
+    pageTitle.textContent = title;
 
-        pageTitle.textContent = title;
+    // Fetch content from Django backend
+    const response = await fetch(`/content/${page}/`);
+    
+    if (!response.ok) {
+      throw new Error('Failed to load content');
+    }
 
-        const response = await fetch(`/content/${page}/`);
+    const html = await response.text();
+    
+    // Hide loading spinner
+    loadingSpinner.classList.remove('active');
+    
+    // Insert new content
+    contentArea.innerHTML = html;
 
-        if (!response.ok) {
-          throw new Error(`Server returned ${response.status}`);
-        }
+        // KEY FIX: Extract and execute scripts from the loaded content
+        executeScripts(contentArea);
 
-        const html = await response.text();
-
-        loadingSpinner.classList.remove('active');
-        contentArea.innerHTML = html;
-
-        /* -------------------------------------------------------
-           CRITICAL: await executeScripts so that external .js
-           files finish downloading before inline init calls run.
-        ------------------------------------------------------- */
-        await executeScripts(contentArea);
-
-        localStorage.setItem('currentPage',  page);
+        // Save current page to localStorage
+        localStorage.setItem('currentPage', page);
         localStorage.setItem('currentTitle', title);
 
       } catch (error) {
-        console.error('Error loading content:', error);
-        loadingSpinner.classList.remove('active');
-        contentArea.innerHTML = `
-          <div style="text-align:center; padding:50px;">
-            <i class="fas fa-exclamation-triangle" style="font-size:3rem; color:#e74c3c; margin-bottom:20px;"></i>
-            <h3 style="color:#e74c3c;">Error Loading Content</h3>
-            <p>Unable to load the requested page. Please try again.</p>
-            <button onclick="location.reload()"
-                    style="margin-top:20px; padding:10px 20px; background:#1abc9c;
-                           color:white; border:none; border-radius:4px; cursor:pointer;">
-              Refresh Page
-            </button>
-          </div>
-        `;
-      }
-    }
+    console.error('Error loading content:', error);
+    loadingSpinner.classList.remove('active');
+    contentArea.innerHTML = `
+      <div style="text-align: center; padding: 50px;">
+        <i class="fas fa-exclamation-triangle" style="font-size: 3rem; color: #e74c3c; margin-bottom: 20px;"></i>
+        <h3 style="color: #e74c3c;">Error Loading Content</h3>
+        <p>Unable to load the requested page. Please try again.</p>
+        <button class="btn" onclick="location.reload()" style="margin-top: 20px; padding: 10px 20px; background: #1abc9c; color: white; border: none; border-radius: 4px; cursor: pointer;">
+          Refresh Page
+        </button>
+      </div>
+    `;
+  }
+}
 
-    /* ----------------------------------------------------------
-       executeScripts — FIXED VERSION
-
-       The original version used forEach which fired ALL scripts
-       simultaneously. External scripts (src=) load asynchronously
-       so the inline initXxx() call ran before the .js file had
-       finished downloading, causing "function not defined" errors
-       and blank content areas.
-
-       FIX: Separate external scripts from inline scripts.
-            Load every external script in order using a Promise
-            that resolves on onload. Only AFTER all external
-            scripts have fully loaded do we execute the inline
-            scripts (which contain the initXxx() calls).
-    ---------------------------------------------------------- */
+// NEW FUNCTION: Execute scripts from dynamically loaded content
+function executeScripts(container) {
+  // Find all script tags in the loaded content
+  const scripts = container.querySelectorAll('script');
+  
+  scripts.forEach(oldScript => {
+    // Create a new script element
+    const newScript = document.createElement('script');
     
-    async function executeScripts(container) {
-    const scripts = Array.from(container.querySelectorAll('script'));
-    console.log(`⚙️ Processing ${scripts.length} script(s)...`);
+    // Copy all attributes
+    Array.from(oldScript.attributes).forEach(attr => {
+      newScript.setAttribute(attr.name, attr.value);
+    });
+    
+    // Copy the script content
+    newScript.textContent = oldScript.textContent;
+    
+    // Replace old script with new one (this triggers execution)
+    oldScript.parentNode.replaceChild(newScript, oldScript);
+  });
+  
+  console.log(`✅ Executed ${scripts.length} script(s) in loaded content`);
+}
 
-    for (const oldScript of scripts) {
-        await new Promise((resolve, reject) => {
-            const newScript = document.createElement('script');
+    // Add click event listeners to navigation items
+navItems.forEach(item => {
+  item.addEventListener('click', function(e) {
+    e.preventDefault();
+    
+    const page = this.getAttribute('data-page');
+    const title = this.getAttribute('data-title');
 
-            // Copy all attributes (src, type, etc.)
-            Array.from(oldScript.attributes).forEach(attr => {
-                newScript.setAttribute(attr.name, attr.value);
-            });
+    // Remove active class from all items
+    navItems.forEach(nav => nav.classList.remove('active'));
+    
+    // Add active class to clicked item
+    this.classList.add('active');
 
-            if (oldScript.src) {
-                // -------------------------------------------------------
-                // EXTERNAL SCRIPT — wait for it to fully load before
-                // continuing to the next script in the sequence.
-                // This is what prevents initReports() from firing before
-                // Reports.js is downloaded.
-                // -------------------------------------------------------
-                newScript.onload = () => {
-                    console.log(`✅ Loaded: ${oldScript.src}`);
-                    resolve();
-                };
-                newScript.onerror = (err) => {
-                    console.error(`❌ Failed to load: ${oldScript.src}`, err);
-                    resolve(); // resolve anyway so remaining scripts still run
-                };
-                oldScript.parentNode.replaceChild(newScript, oldScript);
-            } else {
-                // -------------------------------------------------------
-                // INLINE SCRIPT — execute its content synchronously.
-                // By the time we reach here, all preceding external
-                // scripts have already loaded, so initReports() (or any
-                // other init call) is guaranteed to be defined.
-                // -------------------------------------------------------
-                newScript.textContent = oldScript.textContent;
-                oldScript.parentNode.replaceChild(newScript, oldScript);
-                resolve();
-            }
-        });
-    }
+    // Load content
+    loadContent(page, title);
+  });
+});
 
-    console.log(`✅ All ${scripts.length} script(s) executed in order.`);
+// Load last visited page or dashboard on page load
+window.addEventListener('DOMContentLoaded', function() {
+  const lastPage = localStorage.getItem('currentPage') || 'dashboard';
+  const lastTitle = localStorage.getItem('currentTitle') || 'Dashboard';
+  
+  // Find and activate the nav item
+  const activeNav = document.querySelector(`.nav-item[data-page="${lastPage}"]`);
+  if (activeNav) {
+    navItems.forEach(nav => nav.classList.remove('active'));
+    activeNav.classList.add('active');
   }
 
+  // Load the content
+  loadContent(lastPage, lastTitle);
+});
 
-    /* ============================================================
-       NAVIGATION CLICK HANDLERS
-    ============================================================ */
-    navItems.forEach(item => {
-      item.addEventListener('click', function (e) {
-        e.preventDefault();
-
-        const page  = this.getAttribute('data-page');
-        const title = this.getAttribute('data-title');
-
-        navItems.forEach(nav => nav.classList.remove('active'));
-        this.classList.add('active');
-
-        loadContent(page, title);
-      });
-    });
-
-    /* Load the last visited page (or Dashboard) on first load */
-    window.addEventListener('DOMContentLoaded', function () {
-      const lastPage  = localStorage.getItem('currentPage')  || 'dashboard';
-      const lastTitle = localStorage.getItem('currentTitle') || 'Dashboard';
-
-      const activeNav = document.querySelector(`.nav-item[data-page="${lastPage}"]`);
-      if (activeNav) {
-        navItems.forEach(nav => nav.classList.remove('active'));
-        activeNav.classList.add('active');
-      }
-
-      loadContent(lastPage, lastTitle);
-    });
-
-
-    /* ============================================================
-       LOGOUT
-    ============================================================ */
-    const logoutLink     = document.getElementById('logout-link');
-    const logoutModal    = document.getElementById('logoutModal');
-    const cancelLogout   = document.getElementById('cancelLogout');
-    const confirmLogout  = document.getElementById('confirmLogout');
+  // ==================== LOGOUT FUNCTIONALITY ====================
+    const logoutLink = document.getElementById('logout-link');
+    const logoutModal = document.getElementById('logoutModal');
+    const cancelLogout = document.getElementById('cancelLogout');
+    const confirmLogout = document.getElementById('confirmLogout');
     const logoutUsername = document.getElementById('logoutUsername');
-
-    const usernameElement  = document.getElementById('username');
-    const currentUsername  = usernameElement ? usernameElement.textContent : 'User';
-
+    
+    // Get username from the page
+    const usernameElement = document.getElementById('username');
+    const currentUsername = usernameElement ? usernameElement.textContent : 'User';
+    
+    console.log('🔐 Logout system initialized for user:', currentUsername);
+    
+    // Show logout modal
     function showLogoutModal() {
-      logoutUsername.textContent  = currentUsername;
+      console.log('📢 Opening logout modal...');
+      logoutUsername.textContent = currentUsername;
       logoutModal.classList.add('active');
-      document.body.style.overflow = 'hidden';
+      document.body.style.overflow = 'hidden'; // Prevent scrolling
     }
-
+    
+    // Hide logout modal
     function hideLogoutModal() {
+      console.log('📢 Closing logout modal...');
       logoutModal.classList.remove('active');
-      document.body.style.overflow = '';
+      document.body.style.overflow = ''; // Restore scrolling
     }
-
+    
+    // Logout link click handler
     if (logoutLink) {
-      logoutLink.addEventListener('click', function (e) {
-        e.preventDefault();
+      logoutLink.addEventListener('click', function(event) {
+        event.preventDefault();
+        console.log('🚪 Logout link clicked');
         showLogoutModal();
       });
     }
-
+    
+    // Cancel button handler
     if (cancelLogout) {
-      cancelLogout.addEventListener('click', hideLogoutModal);
+      cancelLogout.addEventListener('click', function() {
+        console.log('❌ Logout cancelled by user');
+        hideLogoutModal();
+      });
     }
-
+    
+    // Confirm logout handler
     if (confirmLogout) {
-      confirmLogout.addEventListener('click', async function () {
+      confirmLogout.addEventListener('click', async function() {
+        console.log('✅ Logout confirmed by user:', currentUsername);
+        
+        // Disable button and show loading state
         confirmLogout.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Logging out...';
-        confirmLogout.disabled  = true;
-        cancelLogout.disabled   = true;
-
-        sessionStorage.clear();
-        localStorage.removeItem('currentPage');
-        localStorage.removeItem('currentTitle');
-        localStorage.removeItem('sidebarCollapsed');
-
-        window.location.href = '/logout/';
+        confirmLogout.disabled = true;
+        cancelLogout.disabled = true;
+        
+        try {
+          // Clear frontend session data FIRST
+          console.log('🧹 Clearing frontend session data...');
+          sessionStorage.clear();
+          localStorage.removeItem('currentPage');
+          localStorage.removeItem('currentTitle');
+          localStorage.removeItem('sidebarCollapsed');
+          console.log('✅ Frontend session data cleared');
+          
+          // Call Django logout endpoint to clear backend session
+          console.log('🔄 Calling Django logout endpoint...');
+          
+          // Use fetch to call logout (or simple redirect)
+          window.location.href = '/logout/';
+          
+          // Note: The redirect happens immediately, code below won't execute
+          
+        } catch (error) {
+          console.error('❌ Logout error:', error);
+          // If anything fails, still try to redirect
+          window.location.href = '/logout/';
+        }
       });
-    }
-
+    }    
+    
+    // Close modal when clicking outside
     if (logoutModal) {
-      logoutModal.addEventListener('click', function (e) {
-        if (e.target === logoutModal) hideLogoutModal();
+      logoutModal.addEventListener('click', function(event) {
+        if (event.target === logoutModal) {
+          console.log('📢 Modal closed by clicking outside');
+          hideLogoutModal();
+        }
       });
     }
-
-    document.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape' && logoutModal && logoutModal.classList.contains('active')) {
+    
+    // Close modal with Escape key
+    document.addEventListener('keydown', function(event) {
+      if (event.key === 'Escape' && logoutModal && logoutModal.classList.contains('active')) {
+        console.log('📢 Modal closed by Escape key');
         hideLogoutModal();
       }
     });
+    
+    console.log('✅ Logout system ready');
+
+  // ==================== TOP BAR ICON HANDLERS ====================
+  /*
+     Both the Settings icon (fa-cog) and Profile icon (fa-user) in
+     the top bar navigate to the Settings page.
+
+     navigateToSettings() mirrors exactly what clicking the sidebar
+     "Settings" nav item does:
+       1. Clears the active class from all sidebar nav items.
+       2. Marks the Settings sidebar nav item as active.
+       3. Calls loadContent('settings', 'Settings') to inject the
+          Settings partial template into the content area.
+
+     The Settings partial template (Settings.html) always opens with
+     "My Profile" as the default active section (it has the
+     class="settings-section active" and the first sidebar nav item
+     has class="settings-nav-item active").  This means:
+       • Settings icon  → lands on Settings → My Profile  ✓
+       • Profile  icon  → lands on Settings → My Profile  ✓
+  */
+  function navigateToSettings() {
+    // Deactivate all sidebar nav items
+    navItems.forEach(nav => nav.classList.remove('active'));
+
+    // Activate the Settings sidebar nav item
+    const settingsNav = document.querySelector('.nav-item[data-page="settings"]');
+    if (settingsNav) settingsNav.classList.add('active');
+
+    // Update top bar title and load the Settings content
+    loadContent('settings', 'Settings');
+  }
+
+  const topbarSettingsLink = document.getElementById('topbarSettingsLink');
+  const topbarProfileLink  = document.getElementById('topbarProfileLink');
+
+  if (topbarSettingsLink) {
+    topbarSettingsLink.addEventListener('click', function (e) {
+      e.preventDefault();
+      navigateToSettings();
+    });
+  }
+
+  if (topbarProfileLink) {
+    topbarProfileLink.addEventListener('click', function (e) {
+      e.preventDefault();
+      navigateToSettings();
+    });
+  }
+
+  console.log('✅ Top bar Settings & Profile icons wired up');
 
   </script>
 

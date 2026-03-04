@@ -1,0 +1,418 @@
+{% load static %}
+
+<!-- Poppins font — only required by the Settings module -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap">
+
+<!-- Settings stylesheet -->
+<link rel="stylesheet" href="{% static 'Settings.css' %}">
+
+<!-- ============================================================
+     CONTENT
+     ============================================================ -->
+<div class="settings-container">
+
+    <!-- Header -->
+    <div class="settings-header">
+        <h1><i class="fas fa-cogs"></i> Settings</h1>
+        <p>Manage your account, preferences, and system configuration</p>
+    </div>
+
+    <div class="settings-layout">
+
+        <!-- Sidebar Navigation -->
+        <div class="settings-sidebar">
+
+            <a class="settings-nav-item active" data-section="profile">
+                <i class="fas fa-user"></i> <span>My Profile</span>
+            </a>
+
+            <a class="settings-nav-item" data-section="password">
+                <i class="fas fa-lock"></i> <span>Change Password</span>
+            </a>
+
+         <!--  <a class="settings-nav-item" data-section="business">
+                <i class="fas fa-building"></i> <span>Business Info</span>
+            </a>   
+        --> 
+            <!-- 
+            <a class="settings-nav-item" data-section="system">
+                <i class="fas fa-sliders-h"></i> <span>System Preferences</span>
+            </a>
+        --> 
+            <a class="settings-nav-item" data-section="inventory">
+                <i class="fas fa-boxes"></i> <span>Inventory Settings</span>
+            </a>
+
+            <a class="settings-nav-item" data-section="backup">
+                <i class="fas fa-database"></i> <span>Backup &amp; Data</span>
+            </a>
+
+        </div>
+
+        <!-- Content Area -->
+        <div class="settings-content">
+
+            <!-- ================================================
+                 PROFILE SECTION
+                 ================================================ -->
+            <div class="settings-section active" id="profile-section">
+                <div class="section-header">
+                    <h2 class="section-title">My Profile</h2>
+                    <p class="section-subtitle">Manage your personal information</p>
+                </div>
+
+                <div class="profile-photo-section">
+                    <div class="profile-photo" id="profilePhoto">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <div>
+                        <h3 id="userName">Loading...</h3>
+                        <p style="color:var(--gray);margin-bottom:10px;" id="userEmail">Loading...</p>
+                        <button class="btn btn-outline" onclick="stgUploadPhoto()">
+                            <i class="fas fa-camera"></i> Change Photo
+                        </button>
+                        <input type="file" id="photoInput" accept="image/*" style="display:none;">
+                    </div>
+                </div>
+
+                <form id="profileForm">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Full Name</label>
+                            <input type="text" id="profileName" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Email Address</label>
+                            <input type="email" id="profileEmail" class="form-control" disabled>
+                        </div>
+                        <div class="form-group">
+                            <label>Phone Number</label>
+                            <input type="tel" id="profilePhone" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label>User Role</label>
+                            <input type="text" id="profileRole" class="form-control" disabled>
+                        </div>
+                    </div>
+                    <div class="btn-group">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Save Changes
+                        </button>
+                        <button type="button" class="btn btn-outline" onclick="stgLoadUserProfile()">
+                            <i class="fas fa-undo"></i> Reset
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- ================================================
+                 PASSWORD SECTION
+                 ================================================ -->
+            <div class="settings-section" id="password-section">
+                <div class="section-header">
+                    <h2 class="section-title">Change Password</h2>
+                    <p class="section-subtitle">Update your account password</p>
+                </div>
+
+                <div class="warning-box">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <strong>Password Requirements:</strong> Minimum 12 characters. Use a strong, unique password(Mixture of special symbols & alphanumeric sy).
+                </div>
+
+                <form id="passwordForm" style="max-width:500px;">
+                    <div class="form-group">
+                        <label>Current Password</label>
+                        <input type="password" id="currentPassword" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>New Password</label>
+                        <input type="password" id="newPassword" class="form-control" required minlength="6">
+                    </div>
+                    <div class="form-group">
+                        <label>Confirm New Password</label>
+                        <input type="password" id="confirmPassword" class="form-control" required minlength="6">
+                    </div>
+                    <div class="btn-group">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-key"></i> Update Password
+                        </button>
+                        <button type="reset" class="btn btn-outline">
+                            <i class="fas fa-times"></i> Cancel
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- ================================================
+                 BUSINESS INFO SECTION
+                 ================================================ -->
+            <div class="settings-section" id="business-section">
+                <div class="section-header">
+                    <h2 class="section-title">Business Information</h2>
+                    <p class="section-subtitle">Configure your business details</p>
+                </div>
+
+                <form id="businessForm">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Business Name</label>
+                            <input type="text" id="businessName" class="form-control" placeholder="Your Business Name">
+                        </div>
+                        <div class="form-group">
+                            <label>Registration Number</label>
+                            <input type="text" id="businessReg" class="form-control" placeholder="REG-123456">
+                        </div>
+                        <div class="form-group">
+                            <label>Business Phone</label>
+                            <input type="tel" id="businessPhone" class="form-control" placeholder="+254 700 000 000">
+                        </div>
+                        <div class="form-group">
+                            <label>Business Email</label>
+                            <input type="email" id="businessEmail" class="form-control" placeholder="info@business.com">
+                        </div>
+                        <div class="form-group">
+                            <label>Default County</label>
+                            <select id="businessCounty" class="form-control">
+                                <option value="">Select County</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Default Town</label>
+                            <select id="businessTown" class="form-control">
+                                <option value="">Select Town</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Business Address</label>
+                        <textarea id="businessAddress" class="form-control" rows="3" placeholder="Full business address"></textarea>
+                    </div>
+                    <div class="btn-group">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Save Business Info
+                        </button>
+                        <button type="button" class="btn btn-outline" onclick="stgLoadBusinessInfo()">
+                            <i class="fas fa-undo"></i> Reset
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- ================================================
+                 SYSTEM PREFERENCES SECTION
+                 ================================================ -->
+            <div class="settings-section" id="system-section">
+                <div class="section-header">
+                    <h2 class="section-title">System Preferences</h2>
+                    <p class="section-subtitle">Configure default system settings</p>
+                </div>
+
+                <form id="systemForm">
+
+                    <div class="settings-card">
+                        <div class="settings-card-header">Tax Settings</div>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>Default Sales Tax Rate (%)</label>
+                                <input type="number" id="salesTaxRate" class="form-control" step="0.01" min="0" max="100" value="16">
+                            </div>
+                            <div class="form-group">
+                                <label>Default Purchase Tax Rate (%)</label>
+                                <input type="number" id="purchaseTaxRate" class="form-control" step="0.01" min="0" max="100" value="16">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="settings-card">
+                        <div class="settings-card-header">Payment Settings</div>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>Default Payment Terms (Days)</label>
+                                <input type="number" id="paymentTerms" class="form-control" min="0" value="30">
+                            </div>
+                            <div class="form-group">
+                                <label>Currency</label>
+                                <select id="currency" class="form-control">
+                                    <option value="KSH" selected>KSH - Kenyan Shilling</option>
+                                    <option value="USD">USD - US Dollar</option>
+                                    <option value="EUR">EUR - Euro</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="settings-card">
+                        <div class="settings-card-header">Display Preferences</div>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>Date Format</label>
+                                <select id="dateFormat" class="form-control">
+                                    <option value="DD/MM/YYYY" selected>DD/MM/YYYY</option>
+                                    <option value="MM/DD/YYYY">MM/DD/YYYY</option>
+                                    <option value="YYYY-MM-DD">YYYY-MM-DD</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Records Per Page</label>
+                                <select id="recordsPerPage" class="form-control">
+                                    <option value="10">10</option>
+                                    <option value="25" selected>25</option>
+                                    <option value="50">50</option>
+                                    <option value="100">100</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="btn-group">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Save Preferences
+                        </button>
+                        <button type="button" class="btn btn-outline" onclick="stgLoadSystemPreferences()">
+                            <i class="fas fa-undo"></i> Reset to Defaults
+                        </button>
+                    </div>
+
+                </form>
+            </div>
+
+            <!-- ================================================
+                 INVENTORY SETTINGS SECTION
+                 ================================================ -->
+            <div class="settings-section" id="inventory-section">
+                <div class="section-header">
+                    <h2 class="section-title">Inventory Settings</h2>
+                    <p class="section-subtitle">Configure inventory management preferences</p>
+                </div>
+
+                <form id="inventoryForm">
+
+                    <div class="settings-card">
+                        <div class="settings-card-header">Stock Alerts</div>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>Default Reorder Level</label>
+                                <input type="number" id="defaultReorderLevel" class="form-control" min="0" value="10">
+                                <small style="color:var(--gray);">Applied to new items if not specified</small>
+                            </div>
+                            <div class="form-group">
+                                <label>Low Stock Alert Threshold (%)</label>
+                                <input type="number" id="lowStockThreshold" class="form-control" min="0" max="100" value="20">
+                                <small style="color:var(--gray);">Alert when stock falls below this percentage</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="settings-card">
+                        <div class="settings-card-header">Item ID Configuration</div>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>Item ID Prefix</label>
+                                <input type="text" id="itemIdPrefix" class="form-control" value="IT" maxlength="3">
+                                <small style="color:var(--gray);">New items will use this prefix (e.g., IT00001)</small>
+                            </div>
+                            <div class="form-group">
+                                <label>Auto-generate Item IDs</label>
+                                <select id="autoGenerateIds" class="form-control">
+                                    <option value="yes" selected>Yes</option>
+                                    <option value="no">No - Manual Entry</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="btn-group">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Save Inventory Settings
+                        </button>
+                        <button type="button" class="btn btn-outline" onclick="stgLoadInventorySettings()">
+                            <i class="fas fa-undo"></i> Reset
+                        </button>
+                    </div>
+
+                </form>
+            </div>
+
+            <!-- ================================================
+                 BACKUP & DATA SECTION
+                 ================================================ -->
+            <div class="settings-section" id="backup-section">
+                <div class="section-header">
+                    <h2 class="section-title">Backup &amp; Data Management</h2>
+                    <p class="section-subtitle">Protect and manage your business data</p>
+                </div>
+
+                <div class="info-box">
+                    <i class="fas fa-info-circle"></i>
+                    <strong>Regular backups are essential!</strong> Create backups regularly to protect your data from loss.
+                </div>
+
+                <div class="settings-card">
+                    <div class="settings-card-header">Database Backup</div>
+                    <p style="color:var(--gray);margin-bottom:20px;">
+                        Create a complete backup of your database including all inventory, sales, purchases, and customer data.
+                    </p>
+                    <div class="btn-group">
+                        <button class="btn btn-primary" onclick="stgCreateBackup()">
+                            <i class="fas fa-download"></i> Create Backup Now
+                        </button>
+                        <button class="btn btn-secondary" onclick="stgRestoreBackup()">
+                            <i class="fas fa-upload"></i> Restore from Backup
+                        </button>
+                    </div>
+                </div>
+
+                <div class="settings-card">
+                    <div class="settings-card-header">Export Data</div>
+                    <p style="color:var(--gray);margin-bottom:20px;">
+                        Export your data in various formats for analysis or migration.
+                    </p>
+                    <div class="btn-group">
+                        <button class="btn btn-outline" onclick="stgExportData('inventory')">
+                            <i class="fas fa-file-excel"></i> Export Inventory
+                        </button>
+                        <button class="btn btn-outline" onclick="stgExportData('sales')">
+                            <i class="fas fa-file-excel"></i> Export Sales
+                        </button>
+                        <button class="btn btn-outline" onclick="stgExportData('purchases')">
+                            <i class="fas fa-file-excel"></i> Export Purchases
+                        </button>
+                        <button class="btn btn-outline" onclick="stgExportData('all')">
+                            <i class="fas fa-file-archive"></i> Export All Data
+                        </button>
+                    </div>
+                </div>
+
+                <div class="settings-card">
+                    <div class="settings-card-header">Complete system reversal</div>
+                    <div class="warning-box">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <strong>Warning:</strong> The actions below are irreversible. Proceed with extreme caution.
+                    </div>
+                    <div class="btn-group">
+                        <button class="btn btn-danger" onclick="stgClearAllData()">
+                            <i class="fas fa-trash"></i> Clear All Data
+                        </button>
+                    </div>
+                </div>
+
+            </div><!-- /#backup-section -->
+
+        </div><!-- /.settings-content -->
+
+    </div><!-- /.settings-layout -->
+
+</div><!-- /.settings-container -->
+
+<!-- Loading Overlay (renamed: stgLoadingOverlay / stg-loading-overlay / stg-spinner) -->
+<div id="stgLoadingOverlay" class="stg-loading-overlay">
+    <div class="stg-spinner"></div>
+    <p>Processing...</p>
+</div>
+
+<!--
+    Settings module logic.
+    initSettings() is called at the END of Settings.js.
+    Do NOT add a separate <script>initSettings();</script> here.
+-->
+<script src="{% static 'Settings.js' %}"></script>
