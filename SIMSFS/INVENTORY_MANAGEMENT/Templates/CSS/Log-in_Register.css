@@ -12,7 +12,7 @@ body{
     justify-content: center;
     align-items: center;
     min-height: 100vh;
-    background: #161618;
+    background: #081b29;
     background-size: 400% 400%;
     animation: gradientBG 15s ease infinite;
 }   
@@ -24,7 +24,7 @@ body{
     background: black;
     border-radius: 30px;
     margin: 20px;
-    box-shadow: 0 0 30px rgba(0,0,0,0.5);
+    box-shadow: 0 0 30px rgba(17, 16, 16, 0.5);
     overflow: hidden;
 }
 
@@ -140,7 +140,7 @@ form{
 .btn{
     width: 100%;
     height: 48px;
-    background: #d3ad7f;
+    background: #112e42;
     border-radius: 8px;
     box-shadow: 0 0 10px rgba(0,0,0,0.1);
     border: none;
@@ -210,7 +210,7 @@ form{
     position: absolute;
     width: 300%;
     height: 100%;
-    background: #d3ad7f;
+    background: #112e42;
     z-index: 2;
     transition: 1.6s ease-in-out;
 }

@@ -478,7 +478,7 @@
     <div class="app-title">
       <div class="app-title-content">
         <i class="fa fa-warehouse"></i>
-        <span class="app-title-text">InvenTrack</span>
+        <span class="app-title-text">INVNTRCK</span>
       </div>
       <i class="fa fa-bars menu-toggle" id="menuToggle"></i>
     </div>
@@ -552,8 +552,8 @@
         <span class="welcome-text">WELCOME <span class="username" id="username">{{ username|default:'ADMIN' }}</span></span>
         <div class="top-bar-links">
           <a href="#" title="Notifications"><i class="fas fa-bell"></i></a>
-          <a href="#" id="topbarSettingsLink" title="Settings"><i class="fas fa-cog"></i></a>
-          <a href="#" id="topbarProfileLink"  title="Profile"><i class="fas fa-user"></i></a>
+          <a href="{% url 'api_get_user_profile' %}" id="topbarSettingsLink"><i class="fas fa-cog"></i></a>
+          <a href="{% url 'api_get_user_profile' %}" id="topbarProfileLink"><i class="fas fa-user"></i></a>
         </div>
       </div>
     </div>
