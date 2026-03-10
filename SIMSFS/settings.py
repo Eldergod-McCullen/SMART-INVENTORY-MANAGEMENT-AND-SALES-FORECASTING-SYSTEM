@@ -27,6 +27,17 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
+# ============================================================
+# EMAIL CONFIGURATION — Gmail SMTP    --REMEMBER TO GET THE APP PASSWORD
+# ============================================================
+EMAIL_BACKEND        = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST           = 'smtp.gmail.com'
+EMAIL_PORT           = 587
+EMAIL_USE_TLS        = True
+EMAIL_HOST_USER      = 'thundergodmccullen@gmail.com'   # your Gmail address
+EMAIL_HOST_PASSWORD  = 'YOUR_APP_PASSWORD_HERE'          # Gmail App Password (not your login password)
+DEFAULT_FROM_EMAIL   = 'thundergodmccullen@gmail.com'
+CONTACT_RECIPIENT    = 'thundergodmccullen@gmail.com'
 
 # Application definition
 # NOT EVERY MODULE IS AN APPLICATION IN THIS PROGRAM

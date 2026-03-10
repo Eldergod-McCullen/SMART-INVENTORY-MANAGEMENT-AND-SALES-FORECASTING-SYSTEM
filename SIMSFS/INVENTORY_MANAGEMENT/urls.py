@@ -21,11 +21,14 @@ from . import views
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', views.welcome_view, name='welcome'),
+    path('contact/', views.contact_view, name='contact'),            # URL FOR THE WELCOME PAGE'S CONTACT SECTION
     
     # AUTHENTICATION URLs-LOG IN/LOG OUT/REGISTER
     path('login/', views.login_view, name='login'),
     path('register/', views.register_view, name='register'),
     path('logout/', views.logout_view, name='logout'),
+    
+    
     
     # MAIN APPLICATION
     path('index', views.index, name='index'),

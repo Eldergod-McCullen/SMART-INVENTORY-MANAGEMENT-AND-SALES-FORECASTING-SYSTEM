@@ -140,30 +140,117 @@ document.querySelectorAll('.info-box').forEach(box => {
 });
 
 // ============================================================
-// Contact Us form — basic client-side validation
+// Contact Us form — fetch() submission to /contact/
 // ============================================================
-const contactForm = document.querySelector('.contact-us-form');
+const contactForm = document.getElementById('contactForm');
 
 if (contactForm) {
-    contactForm.addEventListener('submit', function (e) {
-        const inputs = this.querySelectorAll('input[required], textarea[required]');
-        let allFilled = true;
 
-        inputs.forEach(input => {
-            if (!input.value.trim()) {
-                allFilled = false;
-                input.style.borderColor = '#ff4444';
-                input.addEventListener('input', () => {
-                    input.style.borderColor = '';
-                }, { once: true });
+    contactForm.addEventListener('submit', async function (e) {
+        e.preventDefault();
+
+        const nameEl    = document.getElementById('contactName');
+        const emailEl   = document.getElementById('contactEmail');
+        const phoneEl   = document.getElementById('contactPhone');
+        const subjectEl = document.getElementById('contactSubject');
+        const messageEl = document.getElementById('contactMessage');
+        const submitBtn = document.getElementById('contactSubmitBtn');
+        const feedback  = document.getElementById('contactFeedback');
+
+        // ── Client-side validation ──────────────────────────
+        let valid = true;
+
+        [nameEl, emailEl, subjectEl, messageEl].forEach(field => {
+            if (!field.value.trim()) {
+                field.style.borderColor = '#ff4444';
+                field.addEventListener('input', () => { field.style.borderColor = ''; }, { once: true });
+                valid = false;
             }
         });
 
-        if (!allFilled) {
-            e.preventDefault();
-            alert('Please fill in all required fields before submitting.');
+        if (!valid) {
+            showContactFeedback('Please fill in all required fields.', 'error');
+            return;
+        }
+
+        // Basic email format check
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(emailEl.value.trim())) {
+            emailEl.style.borderColor = '#ff4444';
+            showContactFeedback('Please enter a valid email address.', 'error');
+            return;
+        }
+
+        // ── Get CSRF token from cookie ───────────────────────
+        function getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
+            return null;
+        }
+
+        // ── Disable button while sending ────────────────────
+        submitBtn.disabled    = true;
+        submitBtn.textContent = 'Sending...';
+        feedback.style.display = 'none';
+
+        try {
+            const response = await fetch('/contact/', {
+                method : 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken' : getCookie('csrftoken'),
+                },
+                body: JSON.stringify({
+                    full_name : nameEl.value.trim(),
+                    email     : emailEl.value.trim(),
+                    phone     : phoneEl   ? phoneEl.value.trim() : '',
+                    subject   : subjectEl.value.trim(),
+                    message   : messageEl.value.trim(),
+                }),
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                showContactFeedback(data.message, 'success');
+                contactForm.reset();                // clear all fields on success
+            } else {
+                showContactFeedback(data.message || 'Something went wrong. Please try again.', 'error');
+            }
+
+        } catch (err) {
+            showContactFeedback('Network error. Please check your connection and try again.', 'error');
+        } finally {
+            submitBtn.disabled    = false;
+            submitBtn.textContent = 'Send Message';
         }
     });
+
+    // ── Helper: show the feedback banner ────────────────────
+    function showContactFeedback(message, type) {
+        const feedback = document.getElementById('contactFeedback');
+        feedback.textContent    = message;
+        feedback.style.display  = 'block';
+        feedback.style.padding  = '12px 20px';
+        feedback.style.borderRadius = '6px';
+        feedback.style.marginBottom = '20px';
+        feedback.style.fontWeight   = '500';
+        feedback.style.fontSize     = '0.97rem';
+
+        if (type === 'success') {
+            feedback.style.background   = '#d1f2eb';
+            feedback.style.color        = '#1a8a6e';
+            feedback.style.border       = '1px solid #1abc9c';
+        } else {
+            feedback.style.background   = '#fde8e8';
+            feedback.style.color        = '#c0392b';
+            feedback.style.border       = '1px solid #e74c3c';
+        }
+
+        // Auto-hide after 6 seconds
+        setTimeout(() => { feedback.style.display = 'none'; }, 6000);
+    }
 }
 
 // ============================================================

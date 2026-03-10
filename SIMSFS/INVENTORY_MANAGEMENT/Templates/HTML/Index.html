@@ -1,4 +1,5 @@
 {% load static %}
+
 <!DOCTYPE html>
 <html lang="en">
 
@@ -13,7 +14,20 @@
   
   <!-- Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  
+
+  <!-- ============================================================
+       GLOBAL LIBRARIES — loaded ONCE here so every partial
+       template can use them without re-loading or race conditions.
+       DO NOT add these libraries inside any partial template.
+         • jQuery 3.6
+         • Select2
+         • Chart.js 4.4  ← added here; removed from Reports.html
+  ============================================================ -->
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <link  rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
   <style>
     :root {
       --sidebar-bg: #2c3e50;
@@ -41,11 +55,11 @@
       font-family: 'Roboto', sans-serif;
       background-color: #f5f7fa;
       color: var(--text-dark);
-      display: flex;              /* MAKE SURE YOU CHECK IF THIS IS WHAT'S MAKING THE BODY TO MOVE DOWNWARDS */
+      display: flex;
       min-height: 100vh;
     }
     
-    /* Sidebar Styles */
+    /* ---- Sidebar ---- */
     .sidebar {
       width: var(--sidebar-width);
       background: var(--sidebar-bg);
@@ -54,20 +68,18 @@
       height: 100vh;
       position: fixed;
       overflow-y: auto;
-      box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 0 15px rgba(0,0,0,0.1);
       z-index: 1000;
     }
 
-    .sidebar.collapsed {
-      width: var(--sidebar-collapsed-width);
-    }
+    .sidebar.collapsed { width: var(--sidebar-collapsed-width); }
     
     .app-title {
       font-family: 'Montserrat', sans-serif;
       font-weight: 600;
       font-size: 1.4rem;
       padding: 24px 20px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      border-bottom: 1px solid rgba(255,255,255,0.1);
       color: white;
       display: flex;
       align-items: center;
@@ -92,10 +104,7 @@
       font-size: 35px;
     }
 
-    .sidebar.collapsed .app-title-text {
-      opacity: 0;
-      width: 0;
-    }
+    .sidebar.collapsed .app-title-text { opacity: 0; width: 0; }
 
     .menu-toggle {
       cursor: pointer;
@@ -110,9 +119,7 @@
       color: var(--hover-bg);
     }
 
-    .nav {
-      padding: 15px 0;
-    }
+    .nav { padding: 15px 0; }
     
     .nav-item {
       display: flex;
@@ -148,9 +155,7 @@
       flex-shrink: 0;
     }
 
-    .nav-item span {
-      transition: opacity 0.3s ease;
-    }
+    .nav-item span { transition: opacity 0.3s ease; }
 
     .sidebar.collapsed .nav-item span {
       opacity: 0;
@@ -167,9 +172,10 @@
       border-radius: 4px;
       white-space: nowrap;
       z-index: 1001;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
     }
     
+    /* ---- Main Content ---- */
     .main-content {
       flex: 1;
       margin-left: var(--sidebar-width);
@@ -178,9 +184,7 @@
       transition: margin-left 0.3s ease;
     }
 
-    .sidebar.collapsed ~ .main-content {
-      margin-left: var(--sidebar-collapsed-width);
-    }
+    .sidebar.collapsed ~ .main-content { margin-left: var(--sidebar-collapsed-width); }
     
     .top-bar {
       background: var(--topbar-bg);
@@ -188,7 +192,7 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+      box-shadow: 0 2px 5px rgba(0,0,0,0.05);
       position: sticky;
       top: 0;
       z-index: 999;
@@ -250,15 +254,14 @@
       min-height: calc(100vh - 80px);
     }
 
+    /* ---- Loading Spinner ---- */
     .loading-spinner {
       display: none;
       text-align: center;
       padding: 50px;
     }
 
-    .loading-spinner.active {
-      display: block;
-    }
+    .loading-spinner.active { display: block; }
 
     .spinner {
       border: 5px solid #f3f3f3;
@@ -271,56 +274,32 @@
     }
 
     @keyframes spin {
-      0% { transform: rotate(0deg); }
+      0%   { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
     }
     
     @media (max-width: 768px) {
-      .sidebar {
-        width: var(--sidebar-collapsed-width);
-      }
-      
-      .sidebar.collapsed {
-        width: 0;
-      }
-
-      .main-content {
-        margin-left: var(--sidebar-collapsed-width);
-      }
-
-      .sidebar.collapsed ~ .main-content {
-        margin-left: 0;
-      }
-
-      .page-title {
-        font-size: 1.2rem;
-      }
-
-      .welcome-text {
-        display: none;
-      }
+      .sidebar               { width: var(--sidebar-collapsed-width); }
+      .sidebar.collapsed     { width: 0; }
+      .main-content          { margin-left: var(--sidebar-collapsed-width); }
+      .sidebar.collapsed ~ .main-content { margin-left: 0; }
+      .page-title            { font-size: 1.2rem; }
+      .welcome-text          { display: none; }
     }
     
     @media (max-width: 480px) {
-      .content {
-        padding: 15px;
-      }
-
-      .top-bar {
-        padding: 10px 15px;
-      }
+      .content  { padding: 15px; }
+      .top-bar  { padding: 10px 15px; }
     }
 
-    /* ==================== LOGOUT MODAL STYLES ==================== */
+    /* ==================== LOGOUT MODAL ==================== */
     .logout-modal {
       display: none;
       position: fixed;
       z-index: 3000;
-      left: 0;
-      top: 0;
-      width: 100%;
-      height: 100%;
-      background-color: rgba(0, 0, 0, 0.6);
+      left: 0; top: 0;
+      width: 100%; height: 100%;
+      background-color: rgba(0,0,0,0.6);
       animation: fadeIn 0.3s ease;
     }
     
@@ -331,18 +310,18 @@
     }
     
     .logout-modal-content {
-      background: var(--white);
+      background: white;
       border-radius: 12px;
       max-width: 450px;
       width: 90%;
-      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+      box-shadow: 0 10px 40px rgba(0,0,0,0.3);
       animation: slideDown 0.3s ease;
       overflow: hidden;
     }
     
     .logout-modal-header {
       background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
-      color: var(--white);
+      color: white;
       padding: 25px;
       text-align: center;
     }
@@ -361,10 +340,7 @@
       margin: 0;
     }
     
-    .logout-modal-body {
-      padding: 30px 25px;
-      text-align: center;
-    }
+    .logout-modal-body { padding: 30px 25px; text-align: center; }
     
     .logout-modal-body p {
       font-family: 'Poppins', sans-serif;
@@ -374,16 +350,8 @@
       line-height: 1.6;
     }
     
-    .logout-modal-body p strong {
-      color: var(--primary);
-      font-weight: 600;
-    }
-    
-    .logout-warning {
-      font-size: 0.9rem !important;
-      color: var(--gray) !important;
-      font-style: italic;
-    }
+    .logout-modal-body p strong { color: var(--primary); font-weight: 600; }
+    .logout-warning { font-size: 0.9rem !important; color: #7f8c8d !important; font-style: italic; }
     
     .logout-modal-footer {
       padding: 20px 25px;
@@ -411,7 +379,7 @@
     }
     
     .logout-btn-cancel {
-      background: var(--light-gray);
+      background: #ecf0f1;
       color: var(--text-dark);
       border: 1px solid #bdc3c7;
     }
@@ -419,66 +387,49 @@
     .logout-btn-cancel:hover {
       background: #d5dbdb;
       transform: translateY(-2px);
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
     }
     
     .logout-btn-confirm {
       background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
-      color: var(--white);
+      color: white;
     }
     
     .logout-btn-confirm:hover {
       background: linear-gradient(135deg, #c0392b 0%, #a93226 100%);
       transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(231, 76, 60, 0.4);
+      box-shadow: 0 4px 12px rgba(231,76,60,0.4);
     }
     
-    .logout-btn-confirm:disabled {
-      opacity: 0.7;
-      cursor: not-allowed;
-    }
+    .logout-btn-confirm:disabled { opacity: 0.7; cursor: not-allowed; }
     
     @keyframes fadeIn {
       from { opacity: 0; }
-      to { opacity: 1; }
+      to   { opacity: 1; }
     }
     
     @keyframes slideDown {
-      from {
-        transform: translateY(-50px);
-        opacity: 0;
-      }
-      to {
-        transform: translateY(0);
-        opacity: 1;
-      }
+      from { transform: translateY(-50px); opacity: 0; }
+      to   { transform: translateY(0);     opacity: 1; }
     }
     
     @media (max-width: 480px) {
-      .logout-modal-content {
-        max-width: 95%;
-      }
-      
-      .logout-modal-footer {
-        flex-direction: column;
-      }
-      
+      .logout-modal-content { max-width: 95%; }
+      .logout-modal-footer  { flex-direction: column; }
       .logout-btn-cancel,
-      .logout-btn-confirm {
-        width: 100%;
-      }
+      .logout-btn-confirm   { width: 100%; }
     }
     
   </style>
 </head>
 
 <body>
-  <!-- Sidebar Navigation -->
+  <!-- ==================== SIDEBAR ==================== -->
   <div class="sidebar" id="sidebar">
     <div class="app-title">
       <div class="app-title-content">
         <i class="fa fa-warehouse"></i>
-        <span class="app-title-text">INVNTRCK</span>
+        <span class="app-title-text">IVNTRCK</span>
       </div>
       <i class="fa fa-bars menu-toggle" id="menuToggle"></i>
     </div>
@@ -490,7 +441,7 @@
 
       <a class="nav-item" data-page="inventory-items" data-title="Inventory Items">
         <i class="fas fa-boxes"></i> <span>Inventory Items</span>
-      </a> 
+      </a>
 
       <a class="nav-item" data-page="inventory" data-title="Inventory">
         <i class="fa fa-industry"></i> <span>Inventory</span>
@@ -524,12 +475,8 @@
         <i class="fas fa-chart-pie"></i> <span>Reports</span>
       </a>
 
-      <a class="nav-item" data-page="forecasting" data-title="Sales Forecasting">
+      <a class="nav-item" data-page="sales-forecasting" data-title="Sales Forecasting">
         <i class="fa fa-bar-chart"></i> <span>Sales Forecasting</span>
-      </a>
-
-      <a class="nav-item" data-page="users" data-title="Users">
-        <i class="fas fa-user-cog"></i> <span>Users</span>
       </a>
 
       <a class="nav-item" data-page="settings" data-title="Settings">
@@ -542,23 +489,21 @@
     </nav>
   </div>
   
-  <!-- Main Content -->
+  <!-- ==================== MAIN CONTENT ==================== -->
   <div class="main-content">
-    <!-- Top Bar -->
     <div class="top-bar">
       <h1 class="page-title" id="pageTitle">Dashboard</h1>
       
       <div class="user-welcome">
         <span class="welcome-text">WELCOME <span class="username" id="username">{{ username|default:'ADMIN' }}</span></span>
         <div class="top-bar-links">
-          <a href="#" title="Notifications"><i class="fas fa-bell"></i></a>
-          <a href="{% url 'api_get_user_profile' %}" id="topbarSettingsLink"><i class="fas fa-cog"></i></a>
-          <a href="{% url 'api_get_user_profile' %}" id="topbarProfileLink"><i class="fas fa-user"></i></a>
+          <a href="#" title="Notifications" id="topbarNotificationsLink"><i class="fas fa-bell"></i></a>
+          <a href="#" title="Settings"      id="topbarSettingsLink"><i class="fas fa-cog"></i></a>
+          <a href="#" title="Profile"       id="topbarProfileLink"><i class="fas fa-user"></i></a>
         </div>
       </div>
     </div>
     
-    <!-- Dynamic Content Injection -->
     <div class="content" id="contentArea">
       <div class="loading-spinner" id="loadingSpinner">
         <div class="spinner"></div>
@@ -567,19 +512,17 @@
     </div>
   </div>
 
-  <!-- Logout Confirmation Modal -->
+  <!-- ==================== LOGOUT MODAL ==================== -->
   <div id="logoutModal" class="logout-modal">
     <div class="logout-modal-content">
       <div class="logout-modal-header">
         <i class="fas fa-sign-out-alt"></i>
         <h2>LOG-OUT CONFIRMATION</h2>
       </div>
-      
       <div class="logout-modal-body">
         <p><strong id="logoutUsername">User</strong>, are you sure you want to log out of your account?</p>
         <p class="logout-warning">You will need to log in again to access the system.</p>
       </div>
-      
       <div class="logout-modal-footer">
         <button class="logout-btn-cancel" id="cancelLogout">
           <i class="fas fa-times"></i> Cancel
@@ -591,287 +534,281 @@
     </div>
   </div>
 
+
   <script>
-    // Sidebar Toggle Functionality
+
+    /* ============================================================
+       SIDEBAR TOGGLE
+    ============================================================ */
     const menuToggle = document.getElementById('menuToggle');
-    const sidebar = document.getElementById('sidebar');
+    const sidebar    = document.getElementById('sidebar');
     
-    menuToggle.addEventListener('click', function() {
+    menuToggle.addEventListener('click', function () {
       sidebar.classList.toggle('collapsed');
       localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
     });
 
-    // Restore sidebar state on page load
-    window.addEventListener('DOMContentLoaded', function() {
-      const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
-      if (isCollapsed) {
-        sidebar.classList.add('collapsed');
+
+    /* ============================================================
+       DYNAMIC CONTENT LOADING
+    ============================================================ */
+    const contentArea    = document.getElementById('contentArea');
+    const pageTitle      = document.getElementById('pageTitle');
+    const loadingSpinner = document.getElementById('loadingSpinner');
+    const navItems       = document.querySelectorAll('.nav-item[data-page]');
+
+    /*
+      FIX — AbortController
+      ─────────────────────
+      ROOT CAUSE OF DOUBLE-CLICK BUG:
+      When the page first loads, DOMContentLoaded fires and starts
+      a fetch for the last-visited page (e.g. Dashboard).  If the
+      user clicks a nav item before that fetch completes, a second
+      fetch starts.  Both fetches are now racing. Whichever one
+      resolves LAST wins and overwrites the content the user wanted,
+      leaving them with the wrong page.  The user has to click a
+      second time to get the correct content.
+
+      THE FIX:
+      Keep a reference to an AbortController for the current
+      in-flight request. Every time loadContent() is called, abort
+      the previous request first, then start a new one.  The aborted
+      fetch throws an AbortError which we catch and silently ignore.
+      This guarantees only ONE fetch is ever active at a time.
+    */
+    let currentAbortController = null;
+
+    async function loadContent(page, title) {
+
+      /* --- Cancel any in-flight request from a previous navigation --- */
+      if (currentAbortController) {
+        currentAbortController.abort();
+        console.log(`⚡ Previous navigation cancelled`);
       }
-    });
+      currentAbortController = new AbortController();
+      const signal = currentAbortController.signal;
 
-    // Dynamic Content Loading - FIXED VERSION
-const contentArea = document.getElementById('contentArea');
-const pageTitle = document.getElementById('pageTitle');
-const loadingSpinner = document.getElementById('loadingSpinner');
-const navItems = document.querySelectorAll('.nav-item[data-page]');
+      try {
+        /* Show spinner */
+        loadingSpinner.classList.add('active');
+        contentArea.innerHTML = '';
+        contentArea.appendChild(loadingSpinner);
+        pageTitle.textContent = title;
 
-// Function to load content dynamically
-async function loadContent(page, title) {
-  try {
-    // Show loading spinner
-    loadingSpinner.classList.add('active');
-    contentArea.innerHTML = '';
-    contentArea.appendChild(loadingSpinner);
+        /* Fetch the partial template — signal lets us cancel mid-flight */
+        const response = await fetch(`/content/${page}/`, { signal });
 
-    // Update page title
-    pageTitle.textContent = title;
+        if (!response.ok) {
+          throw new Error(`Server returned ${response.status}`);
+        }
 
-    // Fetch content from Django backend
-    const response = await fetch(`/content/${page}/`);
-    
-    if (!response.ok) {
-      throw new Error('Failed to load content');
-    }
+        const html = await response.text();
 
-    const html = await response.text();
-    
-    // Hide loading spinner
-    loadingSpinner.classList.remove('active');
-    
-    // Insert new content
-    contentArea.innerHTML = html;
+        /*
+          Guard: if this request was aborted while we were awaiting
+          response.text(), stop here.  Don't inject stale content.
+        */
+        if (signal.aborted) return;
 
-        // KEY FIX: Extract and execute scripts from the loaded content
-        executeScripts(contentArea);
+        /* Inject HTML and run scripts in order */
+        loadingSpinner.classList.remove('active');
+        contentArea.innerHTML = html;
+        await executeScripts(contentArea);
 
-        // Save current page to localStorage
-        localStorage.setItem('currentPage', page);
+        /* Persist navigation state */
+        localStorage.setItem('currentPage',  page);
         localStorage.setItem('currentTitle', title);
 
       } catch (error) {
-    console.error('Error loading content:', error);
-    loadingSpinner.classList.remove('active');
-    contentArea.innerHTML = `
-      <div style="text-align: center; padding: 50px;">
-        <i class="fas fa-exclamation-triangle" style="font-size: 3rem; color: #e74c3c; margin-bottom: 20px;"></i>
-        <h3 style="color: #e74c3c;">Error Loading Content</h3>
-        <p>Unable to load the requested page. Please try again.</p>
-        <button class="btn" onclick="location.reload()" style="margin-top: 20px; padding: 10px 20px; background: #1abc9c; color: white; border: none; border-radius: 4px; cursor: pointer;">
-          Refresh Page
-        </button>
-      </div>
-    `;
-  }
-}
 
-// NEW FUNCTION: Execute scripts from dynamically loaded content
-function executeScripts(container) {
-  // Find all script tags in the loaded content
-  const scripts = container.querySelectorAll('script');
-  
-  scripts.forEach(oldScript => {
-    // Create a new script element
-    const newScript = document.createElement('script');
-    
-    // Copy all attributes
-    Array.from(oldScript.attributes).forEach(attr => {
-      newScript.setAttribute(attr.name, attr.value);
+        /* AbortError is intentional — not a real error, just ignore it */
+        if (error.name === 'AbortError') {
+          console.log(`⚡ Navigation to "${page}" was superseded — ignored`);
+          return;
+        }
+
+        console.error('Error loading content:', error);
+        loadingSpinner.classList.remove('active');
+        contentArea.innerHTML = `
+          <div style="text-align:center; padding:50px;">
+            <i class="fas fa-exclamation-triangle"
+               style="font-size:3rem; color:#e74c3c; margin-bottom:20px;"></i>
+            <h3 style="color:#e74c3c;">Error Loading Content</h3>
+            <p>Unable to load the requested page. Please try again.</p>
+            <button onclick="location.reload()"
+                    style="margin-top:20px; padding:10px 20px; background:#1abc9c;
+                           color:white; border:none; border-radius:4px; cursor:pointer;">
+              Refresh Page
+            </button>
+          </div>
+        `;
+      }
+    }
+
+
+    /* ----------------------------------------------------------
+       executeScripts
+       Processes every <script> tag inside a dynamically-injected
+       container IN ORDER, waiting for each external file to fully
+       load before moving to the next one.  This prevents inline
+       init calls from firing before their .js file has downloaded.
+    ---------------------------------------------------------- */
+    async function executeScripts(container) {
+      const scripts = Array.from(container.querySelectorAll('script'));
+      console.log(`⚙️  Processing ${scripts.length} script(s)...`);
+
+      for (const oldScript of scripts) {
+        await new Promise((resolve) => {
+          const newScript = document.createElement('script');
+
+          /* Copy all attributes (src, type, defer, etc.) */
+          Array.from(oldScript.attributes).forEach(attr => {
+            newScript.setAttribute(attr.name, attr.value);
+          });
+
+          if (oldScript.src) {
+            /* External script — wait for it to fully load */
+            newScript.onload  = () => { console.log(`✅ Loaded: ${oldScript.src}`); resolve(); };
+            newScript.onerror = () => { console.error(`❌ Failed: ${oldScript.src}`); resolve(); };
+          } else {
+            /* Inline script — executes synchronously when appended */
+            newScript.textContent = oldScript.textContent;
+          }
+
+          oldScript.parentNode.replaceChild(newScript, oldScript);
+
+          /* Inline scripts resolve immediately (they ran synchronously above) */
+          if (!oldScript.src) resolve();
+        });
+      }
+
+      console.log(`✅ All ${scripts.length} script(s) executed in order.`);
+    }
+
+
+    /* ============================================================
+       NAVIGATION CLICK HANDLERS
+    ============================================================ */
+    navItems.forEach(item => {
+      item.addEventListener('click', function (e) {
+        e.preventDefault();
+
+        const page  = this.getAttribute('data-page');
+        const title = this.getAttribute('data-title');
+
+        /* Update active nav highlight immediately for responsiveness */
+        navItems.forEach(nav => nav.classList.remove('active'));
+        this.classList.add('active');
+
+        loadContent(page, title);
+      });
     });
-    
-    // Copy the script content
-    newScript.textContent = oldScript.textContent;
-    
-    // Replace old script with new one (this triggers execution)
-    oldScript.parentNode.replaceChild(newScript, oldScript);
-  });
-  
-  console.log(`✅ Executed ${scripts.length} script(s) in loaded content`);
-}
 
-    // Add click event listeners to navigation items
-navItems.forEach(item => {
-  item.addEventListener('click', function(e) {
-    e.preventDefault();
-    
-    const page = this.getAttribute('data-page');
-    const title = this.getAttribute('data-title');
 
-    // Remove active class from all items
-    navItems.forEach(nav => nav.classList.remove('active'));
-    
-    // Add active class to clicked item
-    this.classList.add('active');
+    /* ============================================================
+       TOP-BAR ICON HANDLERS
+       Settings icon and Profile icon both navigate to the Settings
+       page inside the SPA (same behaviour as clicking Settings in
+       the sidebar).
+    ============================================================ */
+    function navigateToSettings() {
+      navItems.forEach(nav => nav.classList.remove('active'));
+      const settingsNav = document.querySelector('.nav-item[data-page="settings"]');
+      if (settingsNav) settingsNav.classList.add('active');
+      loadContent('settings', 'Settings');
+    }
 
-    // Load content
-    loadContent(page, title);
-  });
-});
+    document.getElementById('topbarSettingsLink').addEventListener('click', function (e) {
+      e.preventDefault();
+      navigateToSettings();
+    });
 
-// Load last visited page or dashboard on page load
-window.addEventListener('DOMContentLoaded', function() {
-  const lastPage = localStorage.getItem('currentPage') || 'dashboard';
-  const lastTitle = localStorage.getItem('currentTitle') || 'Dashboard';
-  
-  // Find and activate the nav item
-  const activeNav = document.querySelector(`.nav-item[data-page="${lastPage}"]`);
-  if (activeNav) {
-    navItems.forEach(nav => nav.classList.remove('active'));
-    activeNav.classList.add('active');
-  }
+    document.getElementById('topbarProfileLink').addEventListener('click', function (e) {
+      e.preventDefault();
+      navigateToSettings();
+    });
 
-  // Load the content
-  loadContent(lastPage, lastTitle);
-});
 
-  // ==================== LOGOUT FUNCTIONALITY ====================
-    const logoutLink = document.getElementById('logout-link');
-    const logoutModal = document.getElementById('logoutModal');
-    const cancelLogout = document.getElementById('cancelLogout');
-    const confirmLogout = document.getElementById('confirmLogout');
+    /* ============================================================
+       LOGOUT
+    ============================================================ */
+    const logoutLink     = document.getElementById('logout-link');
+    const logoutModal    = document.getElementById('logoutModal');
+    const cancelLogout   = document.getElementById('cancelLogout');
+    const confirmLogout  = document.getElementById('confirmLogout');
     const logoutUsername = document.getElementById('logoutUsername');
-    
-    // Get username from the page
-    const usernameElement = document.getElementById('username');
-    const currentUsername = usernameElement ? usernameElement.textContent : 'User';
-    
-    console.log('🔐 Logout system initialized for user:', currentUsername);
-    
-    // Show logout modal
+    const usernameEl     = document.getElementById('username');
+    const currentUsername = usernameEl ? usernameEl.textContent.trim() : 'User';
+
     function showLogoutModal() {
-      console.log('📢 Opening logout modal...');
-      logoutUsername.textContent = currentUsername;
+      logoutUsername.textContent    = currentUsername;
       logoutModal.classList.add('active');
-      document.body.style.overflow = 'hidden'; // Prevent scrolling
+      document.body.style.overflow  = 'hidden';
     }
-    
-    // Hide logout modal
+
     function hideLogoutModal() {
-      console.log('📢 Closing logout modal...');
       logoutModal.classList.remove('active');
-      document.body.style.overflow = ''; // Restore scrolling
+      document.body.style.overflow  = '';
     }
-    
-    // Logout link click handler
-    if (logoutLink) {
-      logoutLink.addEventListener('click', function(event) {
-        event.preventDefault();
-        console.log('🚪 Logout link clicked');
-        showLogoutModal();
-      });
-    }
-    
-    // Cancel button handler
-    if (cancelLogout) {
-      cancelLogout.addEventListener('click', function() {
-        console.log('❌ Logout cancelled by user');
-        hideLogoutModal();
-      });
-    }
-    
-    // Confirm logout handler
-    if (confirmLogout) {
-      confirmLogout.addEventListener('click', async function() {
-        console.log('✅ Logout confirmed by user:', currentUsername);
-        
-        // Disable button and show loading state
-        confirmLogout.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Logging out...';
-        confirmLogout.disabled = true;
-        cancelLogout.disabled = true;
-        
-        try {
-          // Clear frontend session data FIRST
-          console.log('🧹 Clearing frontend session data...');
-          sessionStorage.clear();
-          localStorage.removeItem('currentPage');
-          localStorage.removeItem('currentTitle');
-          localStorage.removeItem('sidebarCollapsed');
-          console.log('✅ Frontend session data cleared');
-          
-          // Call Django logout endpoint to clear backend session
-          console.log('🔄 Calling Django logout endpoint...');
-          
-          // Use fetch to call logout (or simple redirect)
-          window.location.href = '/logout/';
-          
-          // Note: The redirect happens immediately, code below won't execute
-          
-        } catch (error) {
-          console.error('❌ Logout error:', error);
-          // If anything fails, still try to redirect
-          window.location.href = '/logout/';
-        }
-      });
-    }    
-    
-    // Close modal when clicking outside
-    if (logoutModal) {
-      logoutModal.addEventListener('click', function(event) {
-        if (event.target === logoutModal) {
-          console.log('📢 Modal closed by clicking outside');
-          hideLogoutModal();
-        }
-      });
-    }
-    
-    // Close modal with Escape key
-    document.addEventListener('keydown', function(event) {
-      if (event.key === 'Escape' && logoutModal && logoutModal.classList.contains('active')) {
-        console.log('📢 Modal closed by Escape key');
+
+    logoutLink.addEventListener('click', function (e) {
+      e.preventDefault();
+      showLogoutModal();
+    });
+
+    cancelLogout.addEventListener('click', hideLogoutModal);
+
+    confirmLogout.addEventListener('click', function () {
+      confirmLogout.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Logging out...';
+      confirmLogout.disabled  = true;
+      cancelLogout.disabled   = true;
+
+      sessionStorage.clear();
+      localStorage.removeItem('currentPage');
+      localStorage.removeItem('currentTitle');
+      localStorage.removeItem('sidebarCollapsed');
+
+      window.location.href = '/logout/';
+    });
+
+    logoutModal.addEventListener('click', function (e) {
+      if (e.target === logoutModal) hideLogoutModal();
+    });
+
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && logoutModal.classList.contains('active')) {
         hideLogoutModal();
       }
     });
-    
-    console.log('✅ Logout system ready');
 
-  // ==================== TOP BAR ICON HANDLERS ====================
-  /*
-     Both the Settings icon (fa-cog) and Profile icon (fa-user) in
-     the top bar navigate to the Settings page.
 
-     navigateToSettings() mirrors exactly what clicking the sidebar
-     "Settings" nav item does:
-       1. Clears the active class from all sidebar nav items.
-       2. Marks the Settings sidebar nav item as active.
-       3. Calls loadContent('settings', 'Settings') to inject the
-          Settings partial template into the content area.
+    /* ============================================================
+       SINGLE DOMContentLoaded HANDLER
+       ─────────────────────────────────
+       FIX: The old code had TWO separate DOMContentLoaded listeners
+       (one for sidebar state at line 568 and one for page load at
+       line 714).  Consolidated into ONE handler here to keep
+       initialisation clean and predictable.
+    ============================================================ */
+    window.addEventListener('DOMContentLoaded', function () {
 
-     The Settings partial template (Settings.html) always opens with
-     "My Profile" as the default active section (it has the
-     class="settings-section active" and the first sidebar nav item
-     has class="settings-nav-item active").  This means:
-       • Settings icon  → lands on Settings → My Profile  ✓
-       • Profile  icon  → lands on Settings → My Profile  ✓
-  */
-  function navigateToSettings() {
-    // Deactivate all sidebar nav items
-    navItems.forEach(nav => nav.classList.remove('active'));
+      /* 1. Restore sidebar collapsed state */
+      if (localStorage.getItem('sidebarCollapsed') === 'true') {
+        sidebar.classList.add('collapsed');
+      }
 
-    // Activate the Settings sidebar nav item
-    const settingsNav = document.querySelector('.nav-item[data-page="settings"]');
-    if (settingsNav) settingsNav.classList.add('active');
+      /* 2. Load the last visited page (or Dashboard on first visit) */
+      const lastPage  = localStorage.getItem('currentPage')  || 'dashboard';
+      const lastTitle = localStorage.getItem('currentTitle') || 'Dashboard';
 
-    // Update top bar title and load the Settings content
-    loadContent('settings', 'Settings');
-  }
+      const activeNav = document.querySelector(`.nav-item[data-page="${lastPage}"]`);
+      if (activeNav) {
+        navItems.forEach(nav => nav.classList.remove('active'));
+        activeNav.classList.add('active');
+      }
 
-  const topbarSettingsLink = document.getElementById('topbarSettingsLink');
-  const topbarProfileLink  = document.getElementById('topbarProfileLink');
-
-  if (topbarSettingsLink) {
-    topbarSettingsLink.addEventListener('click', function (e) {
-      e.preventDefault();
-      navigateToSettings();
+      loadContent(lastPage, lastTitle);
     });
-  }
-
-  if (topbarProfileLink) {
-    topbarProfileLink.addEventListener('click', function (e) {
-      e.preventDefault();
-      navigateToSettings();
-    });
-  }
-
-  console.log('✅ Top bar Settings & Profile icons wired up');
 
   </script>
 
