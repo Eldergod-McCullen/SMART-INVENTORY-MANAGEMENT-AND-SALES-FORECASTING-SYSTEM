@@ -21,14 +21,11 @@ from . import views
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', views.welcome_view, name='welcome'),
-    path('contact/', views.contact_view, name='contact'),            # URL FOR THE WELCOME PAGE'S CONTACT SECTION
     
     # AUTHENTICATION URLs-LOG IN/LOG OUT/REGISTER
     path('login/', views.login_view, name='login'),
     path('register/', views.register_view, name='register'),
     path('logout/', views.logout_view, name='logout'),
-    
-    
     
     # MAIN APPLICATION
     path('index', views.index, name='index'),
@@ -181,6 +178,8 @@ urlpatterns = [
     path('api/dashboard/purchase-details/', views.api_get_all_purchase_details, name='api_get_all_purchase_details'),
 
     # ============================ SALES-FORECASTING MODULE VIEWS =========================================================================================================================
+    path('api/sales-forecasting/data/',       views.api_sales_forecast_data,    name='api_sales_forecast_data'),
+    path('api/sales-forecasting/export-csv/', views.api_export_forecast_csv,    name='api_export_forecast_csv'),
 
 
 
@@ -203,5 +202,4 @@ urlpatterns = [
 
     # ============= TEST URL ==========================================================================================================================================
     path('test/', views.test_page, name='test'),
-
 ]

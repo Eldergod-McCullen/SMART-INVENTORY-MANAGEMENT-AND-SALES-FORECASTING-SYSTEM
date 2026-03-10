@@ -20,9 +20,6 @@ from django.db.models.functions import TruncMonth, TruncDate
 from django.utils.timezone import now
 from django.db.models import F, ExpressionWrapper, DecimalField
 
-from django.core.mail import send_mail
-from django.conf import settings as django_settings 
-
 from sklearn.ensemble import RandomForestRegressor
 import numpy as np
 import sklearn
@@ -54,57 +51,6 @@ from .models import UserManager,User
 # A TEST VIEW TO SEE WHETHER THE Test.html DOCUMENT IS PERFECTLY LOADING
 def test_page(request):
     return render(request, 'Test.html')
-
-@csrf_exempt
-def contact_view(request):
-    """
-    Receives the Welcome page contact form submission
-    and sends the message to the site owner's email.
-    """
-    if request.method != 'POST':
-        return JsonResponse({'success': False, 'message': 'Invalid request method'}, status=405)
-
-    try:
-        data        = json.loads(request.body)
-        full_name   = data.get('full_name', '').strip()
-        email       = data.get('email', '').strip()
-        phone       = data.get('phone', '').strip()
-        subject     = data.get('subject', '').strip()
-        message     = data.get('message', '').strip()
-
-        # Basic validation
-        if not all([full_name, email, subject, message]):
-            return JsonResponse({'success': False, 'message': 'Please fill in all required fields.'}, status=400)
-
-        # Build the email body
-        email_body = f"""
-New contact message from InvenTrack Welcome Page
-=================================================
-
-Name    : {full_name}
-Email   : {email}
-Phone   : {phone if phone else 'Not provided'}
-Subject : {subject}
-
-Message:
-{message}
-
-=================================================
-Sent from InvenTrack Contact Form
-        """.strip()
-
-        send_mail(
-            subject         = f'[InvenTrack Contact] {subject}',
-            message         = email_body,
-            from_email      = django_settings.DEFAULT_FROM_EMAIL,
-            recipient_list  = [django_settings.CONTACT_RECIPIENT],
-            fail_silently   = False,
-        )
-
-        return JsonResponse({'success': True, 'message': 'Message sent successfully! We will get back to you soon.'})
-
-    except Exception as e:
-        return JsonResponse({'success': False, 'message': f'Failed to send message: {str(e)}'}, status=500)
 
 # ========================================== AUTHENTICATION VIEWS ==============================================================================================
 @ensure_csrf_cookie
@@ -4239,55 +4185,123 @@ def api_get_all_purchase_details(request):
 
 # ========================= SALES FORECASTING VIEWS ============================================================================================================================
 
-# Django backend endpoint
-def calculate_forecast_ensemble(historical_data, periods):
-    forecasts = {
-        'linear': linear_regression_forecast(),
-        'ema': exponential_smoothing_forecast(),
-        'arima': arima_forecast(),
-    }
-    # Weighted average of all models
-    ensemble = weighted_average(forecasts, weights={'linear': 0.3, 'ema': 0.4, 'arima': 0.3})
-    return ensemble
+@csrf_exempt
+@login_required(login_url='/login/')
+def api_sales_forecast_data(request):
+    """
+    Returns monthly aggregated sales data for the Sales Forecasting module.
 
-def ml_forecast(sales_history, external_features):
-    # Features: previous 3 months, day of week, is_holiday, etc.
-    X = prepare_features(sales_history, external_features)
-    y = sales_history['revenue']
-    
-    model = RandomForestRegressor(n_estimators=100)
-    model.fit(X, y)
-    predictions = model.predict(future_features)
-    return predictions
+    Query Parameters:
+        range : 3 | 6 | 12 | all
+                Number of months of history to include (default: all).
 
-def calculate_accuracy_metrics(forecasts, actuals):
-    mape = np.mean(np.abs((actuals - forecasts) / actuals)) * 100
-    rmse = np.sqrt(np.mean((actuals - forecasts) ** 2))
-    return {'mape': mape, 'rmse': rmse, 'accuracy': 100 - mape}
+    Response:
+        {
+            "success": true,
+            "data": [
+                { "month": "2024-01", "total_revenue": 125000.00, "order_count": 14 },
+                ...
+            ],
+            "count": <int>
+        }
+    """
+    try:
+        import datetime
 
-def calculate_eoq(annual_demand, ordering_cost, holding_cost):
-    """Economic Order Quantity"""
-    eoq = math.sqrt((2 * annual_demand * ordering_cost) / holding_cost)
-    return eoq
+        range_param = request.GET.get('range', 'all')
 
-def calculate_safety_stock(forecast_std, service_level=0.95):
-    """Safety stock for 95% service level"""
-    z_score = 1.65  # 95% service level
-    safety_stock = z_score * forecast_std
-    return safety_stock
+        qs = SalesOrder.objects.all()
 
-def forecast_profitability(sales_forecast, inventory_data):
-    revenue = sales_forecast['total_sales']
-    cogs = sum(item.quantity * item.purchase_price for item in inventory_data)
-    gross_profit = revenue - cogs
-    gross_margin = (gross_profit / revenue) * 100
-    
-    return {
-        'revenue': revenue,
-        'cogs': cogs,
-        'gross_profit': gross_profit,
-        'gross_margin': gross_margin
-    }
+        if range_param != 'all':
+            months    = int(range_param)
+            cutoff    = datetime.date.today() - datetime.timedelta(days=months * 30)
+            qs        = qs.filter(date__gte=cutoff)
+
+        monthly = (
+            qs
+            .annotate(month=TruncMonth('date'))
+            .values('month')
+            .annotate(
+                total_revenue=Sum('total_amount'),
+                order_count=Count('so_id')
+            )
+            .order_by('month')
+        )
+
+        data = []
+        for row in monthly:
+            data.append({
+                'month':         row['month'].strftime('%Y-%m') if row['month'] else '',
+                'total_revenue': float(row['total_revenue'] or 0),
+                'order_count':   row['order_count']
+            })
+
+        return JsonResponse({'success': True, 'data': data, 'count': len(data)})
+
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+@login_required(login_url='/login/')
+def api_export_forecast_csv(request):
+    """
+    Accepts a POST with a JSON body containing forecast rows and returns
+    a downloadable CSV file.
+
+    Expected body:
+        {
+            "rows": [
+                {
+                    "period":     "Apr 2025",
+                    "predicted":  120000.00,
+                    "lower":      108000.00,
+                    "upper":      132000.00,
+                    "confidence": 75,
+                    "action":     "Stock up"
+                },
+                ...
+            ]
+        }
+    """
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'POST required'}, status=405)
+
+    try:
+        import csv
+
+        body = json.loads(request.body)
+        rows = body.get('rows', [])
+
+        output = io.StringIO()
+        writer = csv.writer(output)
+
+        # Header row
+        writer.writerow([
+            'Period',
+            'Predicted Sales (KSH)',
+            'Lower Bound (KSH)',
+            'Upper Bound (KSH)',
+            'Confidence (%)',
+            'Recommended Action'
+        ])
+
+        for row in rows:
+            writer.writerow([
+                row.get('period',     ''),
+                round(float(row.get('predicted',  0)), 2),
+                round(float(row.get('lower',      0)), 2),
+                round(float(row.get('upper',      0)), 2),
+                row.get('confidence', 0),
+                row.get('action',     '')
+            ])
+
+        response = HttpResponse(output.getvalue(), content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename="sales_forecast.csv"'
+        return response
+
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
     
 
 

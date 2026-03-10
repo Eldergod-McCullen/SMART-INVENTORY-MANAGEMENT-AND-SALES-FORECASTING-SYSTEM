@@ -8,16 +8,18 @@
 
 <div class="forecast-container">
 
+  <!-- ── PAGE HEADER ─────────────────────────────────────────── -->
   <div class="forecast-header">
     <h1><i class="fas fa-chart-line"></i> Sales Forecasting &amp; Analysis</h1>
     <p>Predictive analytics and insights for inventory planning</p>
   </div>
 
-  <!-- Controls -->
+  <!-- ── CONTROLS ────────────────────────────────────────────── -->
   <div class="controls-section">
     <div class="controls-grid">
+
       <div class="control-group">
-        <label>Forecast Period</label>
+        <label for="fctForecastPeriod">Forecast Period</label>
         <select id="fctForecastPeriod">
           <option value="1">Next 1 Month</option>
           <option value="3" selected>Next 3 Months</option>
@@ -25,17 +27,18 @@
           <option value="12">Next 12 Months</option>
         </select>
       </div>
+
       <div class="control-group">
-        <label>Analysis Type</label>
+        <label for="fctAnalysisType">Analysis Type</label>
         <select id="fctAnalysisType">
-          <option value="overall" selected>Overall Sales</option>
+          <option value="overall"  selected>Overall Sales</option>
           <option value="category">By Category</option>
           <option value="item">By Item</option>
-          <option value="location">By Location</option>
         </select>
       </div>
+
       <div class="control-group">
-        <label>Historical Data Range</label>
+        <label for="fctHistoricalRange">Historical Data Range</label>
         <select id="fctHistoricalRange">
           <option value="3">Last 3 Months</option>
           <option value="6" selected>Last 6 Months</option>
@@ -43,7 +46,17 @@
           <option value="all">All Available Data</option>
         </select>
       </div>
+
     </div>
+
+    <!-- Filter row shown only for category / item analysis -->
+    <div id="fctFilterRow" class="fct-filter-row" style="display:none;">
+      <div class="control-group">
+        <label for="fctFilterSelect">Filter by</label>
+        <select id="fctFilterSelect"></select>
+      </div>
+    </div>
+
     <div class="fct-btn-group">
       <button class="fct-btn fct-btn-primary" onclick="generateForecast()">
         <i class="fas fa-magic"></i> Generate Forecast
@@ -54,8 +67,9 @@
     </div>
   </div>
 
-  <!-- Key Metrics -->
+  <!-- ── KEY METRICS ─────────────────────────────────────────── -->
   <div class="metrics-grid">
+
     <div class="metric-card">
       <div class="metric-icon primary"><i class="fas fa-chart-line"></i></div>
       <div class="metric-content">
@@ -64,6 +78,7 @@
         <div class="metric-change neutral" id="predictionConfidence">Calculating...</div>
       </div>
     </div>
+
     <div class="metric-card">
       <div class="metric-icon success"><i class="fas fa-percentage"></i></div>
       <div class="metric-content">
@@ -72,6 +87,7 @@
         <div class="metric-change neutral" id="growthTrend">Month-over-month</div>
       </div>
     </div>
+
     <div class="metric-card">
       <div class="metric-icon warning"><i class="fas fa-box"></i></div>
       <div class="metric-content">
@@ -80,6 +96,7 @@
         <div class="metric-change neutral" id="stockDays">Units needed</div>
       </div>
     </div>
+
     <div class="metric-card">
       <div class="metric-icon secondary"><i class="fas fa-calendar-alt"></i></div>
       <div class="metric-content">
@@ -88,6 +105,7 @@
         <div class="metric-change neutral" id="peakValue">Highest sales expected</div>
       </div>
     </div>
+
     <div class="metric-card">
       <div class="metric-icon purple"><i class="fas fa-crosshairs"></i></div>
       <div class="metric-content">
@@ -96,58 +114,66 @@
         <div class="metric-change neutral" id="accuracyNote">Based on historical data</div>
       </div>
     </div>
+
   </div>
 
-  <!-- Charts -->
+  <!-- ── CHARTS ──────────────────────────────────────────────── -->
   <div class="charts-grid">
+
+    <!-- Wide chart — spans full width -->
     <div class="chart-card wide">
       <div class="chart-header">
         <div>
           <div class="chart-title">Sales Forecast vs Historical</div>
-          <div class="chart-subtitle">Predicted sales with confidence intervals</div>
+          <div class="chart-subtitle" id="forecastChartSubtitle">Predicted sales with confidence intervals</div>
         </div>
       </div>
       <div class="chart-container"><canvas id="forecastChart"></canvas></div>
     </div>
+
     <div class="chart-card">
       <div class="chart-header">
         <div>
           <div class="chart-title">Sales Seasonality</div>
-          <div class="chart-subtitle">Monthly patterns</div>
+          <div class="chart-subtitle">Average monthly revenue patterns</div>
         </div>
       </div>
       <div class="chart-container"><canvas id="seasonalityChart"></canvas></div>
     </div>
+
     <div class="chart-card">
       <div class="chart-header">
         <div>
           <div class="chart-title">Trend Analysis</div>
-          <div class="chart-subtitle">Growth trajectory</div>
+          <div class="chart-subtitle">Growth trajectory with trend line</div>
         </div>
       </div>
       <div class="chart-container"><canvas id="trendChart"></canvas></div>
     </div>
+
     <div class="chart-card">
       <div class="chart-header">
         <div>
           <div class="chart-title">Top Products Forecast</div>
-          <div class="chart-subtitle">Expected best sellers</div>
+          <div class="chart-subtitle">Expected best sellers by revenue</div>
         </div>
       </div>
       <div class="chart-container"><canvas id="topProductsChart"></canvas></div>
     </div>
+
     <div class="chart-card">
       <div class="chart-header">
         <div>
           <div class="chart-title">Category Performance</div>
-          <div class="chart-subtitle">Revenue distribution</div>
+          <div class="chart-subtitle">Revenue distribution by category</div>
         </div>
       </div>
       <div class="chart-container"><canvas id="categoryChart"></canvas></div>
     </div>
+
   </div>
 
-  <!-- Insights -->
+  <!-- ── INSIGHTS ────────────────────────────────────────────── -->
   <div class="insights-section">
     <div class="insights-header">
       <i class="fas fa-lightbulb" style="color:#f39c12; font-size:1.5rem;"></i>
@@ -162,7 +188,7 @@
     </div>
   </div>
 
-  <!-- Forecast Details Table -->
+  <!-- ── FORECAST TABLE ──────────────────────────────────────── -->
   <div class="forecast-table-section">
     <div class="fct-table-header">
       <div class="fct-table-title">
@@ -173,9 +199,9 @@
       <thead>
         <tr>
           <th>Period</th>
-          <th>Predicted Sales</th>
-          <th>Lower Bound</th>
-          <th>Upper Bound</th>
+          <th>Predicted Sales (KSH)</th>
+          <th>Lower Bound (KSH)</th>
+          <th>Upper Bound (KSH)</th>
           <th>Confidence</th>
           <th>Recommended Action</th>
         </tr>
@@ -192,7 +218,8 @@
   </div>
 </div>
 
-<!-- Loading overlay — uses fct-* classes to avoid conflicting with Index.html -->
+<!-- ── LOADING OVERLAY ─────────────────────────────────────────
+     Uses fct-* classes to avoid clashing with Index.html styles  -->
 <div id="fctLoadingOverlay" class="fct-loading-overlay">
   <div class="fct-spinner"></div>
   <p>Analyzing data and generating forecast...</p>
