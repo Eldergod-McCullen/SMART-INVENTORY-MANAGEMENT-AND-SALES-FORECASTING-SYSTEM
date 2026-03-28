@@ -36,7 +36,7 @@ body{
     background: black;
     display: flex;
     align-items: center;
-    color: #8d8377;
+    color: #000280;                 /*#8d8377;*/
     text-align: center;
     padding: 40px;
     z-index: 1;
@@ -267,9 +267,15 @@ form{
 
 /* KEYFRAMES AND BREAKPOINTS */
 @keyframes gradientBG {
-    0%{background-position:0% 50%}
-    50%{background-position:100% 50%}
-    100%{background-position:0% 50%}
+    0%{ 
+        background-position:0% 50% 
+    }
+    50%{
+        background-position:100% 50%
+    }
+    100%{
+        background-position:0% 50%
+    }
 }   
 
 @media screen and (max-width: 650px){

@@ -20,6 +20,9 @@ from django.db.models.functions import TruncMonth, TruncDate
 from django.utils.timezone import now
 from django.db.models import F, ExpressionWrapper, DecimalField
 
+from django.core.mail import send_mail
+from django.conf import settings as django_settings
+
 from sklearn.ensemble import RandomForestRegressor
 import numpy as np
 import sklearn
@@ -245,6 +248,58 @@ def logout_view(request):
     
     # Redirect to login page
     return redirect('login')
+
+
+@csrf_exempt
+def contact_view(request):
+    """
+    Receives the Welcome page contact form submission
+    and sends the message to the site owner's email.
+    """
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Invalid request method'}, status=405)
+
+    try:
+        data        = json.loads(request.body)
+        full_name   = data.get('full_name', '').strip()
+        email       = data.get('email', '').strip()
+        phone       = data.get('phone', '').strip()
+        subject     = data.get('subject', '').strip()
+        message     = data.get('message', '').strip()
+
+        # Basic validation
+        if not all([full_name, email, subject, message]):
+            return JsonResponse({'success': False, 'message': 'Please fill in all required fields.'}, status=400)
+
+        # Build the email body
+        email_body = f"""
+New contact message from InvenTrack Welcome Page
+=================================================
+
+Name    : {full_name}
+Email   : {email}
+Phone   : {phone if phone else 'Not provided'}
+Subject : {subject}
+
+Message:
+{message}
+
+=================================================
+Sent from InvenTrack Contact Form
+        """.strip()
+
+        send_mail(
+            subject         = f'[InvenTrack Contact] {subject}',
+            message         = email_body,
+            from_email      = django_settings.DEFAULT_FROM_EMAIL,
+            recipient_list  = [django_settings.CONTACT_RECIPIENT],
+            fail_silently   = False,
+        )
+
+        return JsonResponse({'success': True, 'message': 'Message sent successfully! We will get back to you soon.'})
+
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': f'Failed to send message: {str(e)}'}, status=500)
 
 # ================================== MAIN APPLICATION VIEWS ===============================================================================================
 """@login_required(login_url='/login/')"""

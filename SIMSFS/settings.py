@@ -34,10 +34,10 @@ EMAIL_BACKEND        = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST           = 'smtp.gmail.com'
 EMAIL_PORT           = 587
 EMAIL_USE_TLS        = True
-EMAIL_HOST_USER      = 'thundergodmccullen@gmail.com'   # your Gmail address
-EMAIL_HOST_PASSWORD  = 'YOUR_APP_PASSWORD_HERE'          # Gmail App Password (not your login password)
+EMAIL_HOST_USER      = '2204329@students.kcau.ac.ke'   # your Gmail address
+EMAIL_HOST_PASSWORD  = 'ecwt adgo orup jutb'            # Gmail App Password (not your login password)
 DEFAULT_FROM_EMAIL   = 'thundergodmccullen@gmail.com'
-CONTACT_RECIPIENT    = 'thundergodmccullen@gmail.com'
+CONTACT_RECIPIENT    = '2204329@students.kcau.ac.ke'
 
 # Application definition
 # NOT EVERY MODULE IS AN APPLICATION IN THIS PROGRAM

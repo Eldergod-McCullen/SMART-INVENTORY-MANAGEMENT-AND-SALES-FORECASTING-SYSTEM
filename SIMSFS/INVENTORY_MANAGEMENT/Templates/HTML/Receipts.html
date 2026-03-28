@@ -1,0 +1,306 @@
+{% load static %}
+
+{% csrf_token %}
+<meta name="csrf-token" content="{{ csrf_token }}">
+
+<!-- CSS for this module -->
+<link rel="stylesheet" href="{% static 'Receipts.css' %}">
+
+<!-- Flatpickr CSS -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+
+
+<!-- ==================== MAIN CONTAINER ==================== -->
+<div class="receipt-container">
+
+    <!-- Header Section -->
+    <div class="header-section">
+        <h1>MANAGE RECEIPTS FROM CUSTOMERS</h1>
+        <p>Record and track all receipts received against sales orders</p>
+    </div>
+
+    <!-- Action Bar -->
+    <div class="action-bar">
+        <div class="btn-group">
+            <button class="btn btn-primary" id="btnNewReceipt">
+                <i class="fas fa-receipt"></i> New Receipt
+            </button>
+            <button class="btn btn-secondary" id="btnAddPaymentMode">
+                <i class="fas fa-credit-card"></i> Add Payment Mode
+            </button>
+        </div>
+
+        <div class="search-group">
+            <select id="searchCriteria" class="search-select" title="Search criteria">
+                <option value="all">All</option>
+                <option value="Transaction ID">Transaction ID</option>
+                <option value="Customer Name">Customer Name</option>
+                <option value="SO ID">SO ID</option>
+                <option value="Invoice Number">Invoice Number</option>
+                <option value="Payment Mode">Payment Mode</option>
+            </select>
+            <input type="text" id="searchInput" class="search-input" placeholder="Search...">
+            <button class="btn btn-outline" id="btnSearch">
+                <i class="fas fa-search"></i> Search
+            </button>
+            <button class="btn btn-outline" id="btnClear">
+                <i class="fas fa-times"></i> Clear
+            </button>
+        </div>
+    </div>
+
+    <!-- Receipt Table -->
+    <div id="tableContainer">
+        <table class="receipt-table">
+            <thead>
+                <tr>
+                    <th>Transaction ID</th>
+                    <th>Date</th>
+                    <th>Customer ID</th>
+                    <th>Customer Name</th>
+                    <th>County</th>
+                    <th>Town</th>
+                    <th>SO ID</th>
+                    <th>Invoice Number</th>
+                    <th>Payment Mode</th>
+                    <th>Amount Received</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody">
+                <!-- Data will be populated by JavaScript -->
+            </tbody>
+        </table>
+
+        <!-- Pagination -->
+        <div class="pagination" id="pagination"></div>
+    </div>
+
+    <!-- No Data Message -->
+    <div id="noData" class="no-data-container">
+        <i class="fas fa-inbox no-data-icon"></i>
+        <h3 class="no-data-title">No receipts found</h3>
+        <p>Click "New Receipt" to record a receipt</p>
+    </div>
+
+</div>
+<!-- ==================== END MAIN CONTAINER ==================== -->
+
+
+<!-- Processing Overlay -->
+<div id="processingOverlay" class="processing-overlay">
+    <div class="rct-spinner"></div>
+    <p>Processing...</p>
+</div>
+
+
+<!-- ==================== MODALS ==================== -->
+
+<!-- Payment Mode Modal -->
+<div id="paymentModeModal" class="modal">
+    <div class="modal-content" style="width:450px;">
+        <div class="modal-header">
+            <h2>Add Payment Mode</h2>
+            <span class="close-btn" id="closePaymentModeModal">&times;</span>
+        </div>
+        <div class="form-group">
+            <label class="required">Payment Mode</label>
+            <input type="text" id="newPaymentMode" class="form-control"
+                   placeholder="e.g., Cash, Bank Transfer, Cheque, M-Pesa" required>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-outline" id="btnClosePaymentModeModal">Close</button>
+            <button class="btn btn-primary" id="btnSavePaymentMode">Save</button>
+        </div>
+    </div>
+</div>
+
+<!-- New Receipt Modal -->
+<div id="receiptModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="modalTitle">Record New Receipt</h2>
+            <span class="close-btn" id="closeReceiptModal">&times;</span>
+        </div>
+
+        <!-- Transaction ID and Date Row -->
+        <div class="form-row">
+            <div class="form-group">
+                <label class="required">Transaction ID</label>
+                <div class="id-generate">
+                    <input type="text" id="transactionId" class="form-control id-field" readonly>
+                    <button class="btn btn-secondary" id="btnGenerateId">Generate</button>
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="required">Receipt Date</label>
+                <input type="text" id="receiptDate" class="form-control date-picker" placeholder="DD/MM/YYYY">
+            </div>
+        </div>
+
+        <!-- Customer Name and SO ID Row -->
+        <div class="form-row">
+            <div class="form-group">
+                <label class="required">Customer Name</label>
+                <select id="customerName" class="form-control" style="width:100%"></select>
+            </div>
+            <div class="form-group">
+                <label class="required">SO ID</label>
+                <select id="soId" class="form-control" style="width:100%"></select>
+            </div>
+        </div>
+
+        <!-- Customer ID and Invoice Number Row -->
+        <div class="form-row">
+            <div class="form-group">
+                <label>Customer ID</label>
+                <input type="text" id="customerId" class="form-control" readonly>
+            </div>
+            <div class="form-group">
+                <label>Invoice Number</label>
+                <input type="text" id="invoiceNumber" class="form-control" readonly>
+            </div>
+        </div>
+
+        <!-- County and Payment Mode Row -->
+        <div class="form-row">
+            <div class="form-group">
+                <label>County</label>
+                <input type="text" id="county" class="form-control" readonly>
+            </div>
+            <div class="form-group">
+                <label class="required">Payment Mode</label>
+                <select id="paymentMode" class="form-control" style="width:100%"></select>
+            </div>
+        </div>
+
+        <!-- Town and Amount Received Row -->
+        <div class="form-row">
+            <div class="form-group">
+                <label>Town</label>
+                <input type="text" id="town" class="form-control" readonly>
+            </div>
+            <div class="form-group">
+                <label class="required">Amount Received</label>
+                <input type="number" id="amountReceived" class="form-control"
+                       step="0.01" min="0" placeholder="0.00">
+            </div>
+        </div>
+
+        <!-- SO Balance Info -->
+        <div class="balance-info" id="balanceInfo" style="display:none;">
+            <p><strong>SO Total Amount:</strong> <span id="soTotalAmount">0.00</span></p>
+            <p><strong>Amount Already Received:</strong> <span id="soAmountReceived">0.00</span></p>
+            <p><strong>Outstanding Balance:</strong>
+                <span id="soBalance" style="font-size:1.1rem; font-weight:600;">0.00</span>
+            </p>
+        </div>
+
+        <div class="modal-footer">
+            <button class="btn btn-outline" id="btnCloseReceiptModal">Close</button>
+            <button class="btn btn-primary" id="btnSaveReceipt">Save Receipt</button>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div id="deleteConfirmModal" class="modal">
+    <div class="modal-content delete-modal">
+        <div class="modal-header delete-header">
+            <h2><i class="fas fa-exclamation-triangle"></i> Confirm Receipt Deletion</h2>
+            <span class="close-btn" onclick="closeDeleteModal()">&times;</span>
+        </div>
+
+        <div class="delete-icon">
+            <i class="fas fa-trash-alt"></i>
+        </div>
+
+        <div class="delete-warning">
+            <p><i class="fas fa-exclamation-circle"></i>
+                Warning: This action will reverse the receipt payment and update all related records!
+            </p>
+        </div>
+
+        <div class="transaction-details">
+            <h3 style="margin-bottom:15px; color:#2c3e50;">Transaction Details</h3>
+            <div class="detail-row">
+                <span class="detail-label">Transaction ID:</span>
+                <span class="detail-value" id="deleteTransactionId"></span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Receipt Date:</span>
+                <span class="detail-value" id="deleteReceiptDate"></span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Customer Name:</span>
+                <span class="detail-value" id="deleteCustomerName"></span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">SO ID:</span>
+                <span class="detail-value" id="deleteSOID"></span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Invoice Number:</span>
+                <span class="detail-value" id="deleteInvoiceNumber"></span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Payment Mode:</span>
+                <span class="detail-value" id="deletePaymentMode"></span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">SO Total Amount:</span>
+                <span class="detail-value" id="deleteSOAmount"></span>
+            </div>
+            <div class="detail-row"
+                 style="background-color:#fff3cd; margin:10px -10px -10px -10px; padding:15px 10px;">
+                <span class="detail-label" style="font-size:1.1rem;">Amount Received:</span>
+                <span class="detail-value amount" id="deleteAmountReceived"></span>
+            </div>
+        </div>
+
+        <p style="text-align:center; color:#7f8c8d; margin-top:20px; font-size:0.9rem;">
+            <i class="fas fa-info-circle"></i>
+            This will update the Sales Order balance and receipt/shipping status
+        </p>
+
+        <div class="modal-footer">
+            <button class="btn btn-outline" onclick="closeDeleteModal()">
+                <i class="fas fa-times"></i> Cancel
+            </button>
+            <button class="btn btn-danger" onclick="confirmDelete()">
+                <i class="fas fa-trash"></i>Confirm Delete
+            </button>
+        </div>
+    </div>
+</div>
+
+
+<!-- ==================== SCRIPTS ==================== -->
+<!--
+    jQuery and Select2 are already loaded globally in Index.html.
+    Do NOT add them here.
+    Flatpickr is only needed by this module so it is loaded here.
+-->
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+
+<!-- Receipts module logic -->
+<script>
+    (function() {
+        var script = document.createElement('script');
+        script.src = "{% static 'Receipts.js' %}";
+        script.onload = function() {
+            initReceipts();
+        };
+        document.head.appendChild(script);
+    })();
+</script>
+
+<!--
+    CRITICAL: Call initReceipts() directly here.
+    Do NOT use DOMContentLoaded — that event has already fired
+    on the parent Index.html and will never fire again for
+    dynamically injected content.
+-->
+<script>
+    initReceipts();
+</script>
