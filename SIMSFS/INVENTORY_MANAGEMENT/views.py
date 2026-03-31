@@ -141,7 +141,6 @@ def login_view(request):
 
     return response
 
-
 def register_view(request):                   # HANDLING BOTH THE USER REGISTRATION FORM AND THE REGISTRATION PROCESS
     if request.method == 'POST':
         try:
@@ -161,7 +160,7 @@ def register_view(request):                   # HANDLING BOTH THE USER REGISTRAT
                     'message': 'Full name must be at least 2 characters'
                 }, status=400)
             
-            if not email or ('@gmail.com' or '@outlook.com' or '@yahoo.com' or '@students.kcau.ac.ke') not in email:
+            if not email or ('@gmail.com' or '@outlook.com' or '@yahoo.com' or '@students.kcau.ac.ke' or '@kcau.ac.ke') not in email:
                 return JsonResponse({
                     'success': False,
                     'message': 'Please provide a valid email address'
@@ -4035,7 +4034,7 @@ def api_delete_receipt(request):
     except json.JSONDecodeError:
         return JsonResponse({'success': False, 'message': 'Invalid JSON data'}, status=400)
     except Exception as e:
-        print(f"❌ Error deleting receipt: {str(e)}")
+        print(f"❌Error deleting receipt: {str(e)}")
         import traceback
         traceback.print_exc()
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
@@ -4243,26 +4242,7 @@ def api_get_all_purchase_details(request):
 @csrf_exempt
 @login_required(login_url='/login/')
 def api_sales_forecast_data(request):
-    """
-    Returns monthly aggregated sales data for the Sales Forecasting module.
-
-    Query Parameters:
-        range : 3 | 6 | 12 | all
-                Number of months of history to include (default: all).
-
-    Response:
-        {
-            "success": true,
-            "data": [
-                { "month": "2024-01", "total_revenue": 125000.00, "order_count": 14 },
-                ...
-            ],
-            "count": <int>
-        }
-    """
     try:
-        import datetime
-
         range_param = request.GET.get('range', 'all')
 
         qs = SalesOrder.objects.all()
@@ -4300,25 +4280,6 @@ def api_sales_forecast_data(request):
 @csrf_exempt
 @login_required(login_url='/login/')
 def api_export_forecast_csv(request):
-    """
-    Accepts a POST with a JSON body containing forecast rows and returns
-    a downloadable CSV file.
-
-    Expected body:
-        {
-            "rows": [
-                {
-                    "period":     "Apr 2025",
-                    "predicted":  120000.00,
-                    "lower":      108000.00,
-                    "upper":      132000.00,
-                    "confidence": 75,
-                    "action":     "Stock up"
-                },
-                ...
-            ]
-        }
-    """
     if request.method != 'POST':
         return JsonResponse({'success': False, 'message': 'POST required'}, status=405)
 
@@ -4358,8 +4319,6 @@ def api_export_forecast_csv(request):
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
     
-
-
 
 # ============================================ REPORTS VIEWS ==================================================================================================================
 
@@ -4814,7 +4773,7 @@ def api_generate_profit_loss(request):
         })
     
     except Exception as e:
-        print(f"❌ Error generating P&L report: {str(e)}")
+        print(f" Error generating P&L report: {str(e)}")
         import traceback
         traceback.print_exc()
         return JsonResponse({
@@ -4862,7 +4821,7 @@ def api_generate_purchase_summary(request):
             po_id__in=purchase_orders
         )
         
-        # ✅ FIX: Calculate total manually
+        # Calculate total manually
         purchases_by_category_raw = purchase_details.values('item_category').annotate(
             quantity=Sum('quantity_purchased'),
             subtotal=Sum(F('quantity_purchased') * F('unit_cost')),
@@ -4935,7 +4894,7 @@ def api_generate_purchase_summary(request):
         })
     
     except Exception as e:
-        print(f"❌ Error generating purchase summary: {str(e)}")
+        print(f" Error generating purchase summary: {str(e)}")
         import traceback
         traceback.print_exc()
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
@@ -5162,7 +5121,7 @@ def api_generate_customer_analysis(request):
             else:
                 payment_analysis['poor'] += 1
         
-        # ✅ FIXED: Customer acquisition trend (new customers over time)
+        # FIXED: Customer acquisition trend (new customers over time)
         # Calculate based on first order date since we don't have a customer created_date
         customer_first_orders = []
         for customer in all_customers:
@@ -5224,7 +5183,7 @@ def api_generate_customer_analysis(request):
         })
     
     except Exception as e:
-        print(f"❌ Error generating customer analysis: {str(e)}")
+        print(f"Error generating customer analysis: {str(e)}")
         import traceback
         traceback.print_exc()
         return JsonResponse({
@@ -5623,7 +5582,7 @@ def api_generate_tax_summary(request):
         })
     
     except Exception as e:
-        print(f"❌ Error generating tax summary: {str(e)}")
+        print(f"Error generating tax summary: {str(e)}")
         import traceback
         traceback.print_exc()
         return JsonResponse({
@@ -5755,7 +5714,7 @@ def api_export_report_pdf(request):
         return response
     
     except Exception as e:
-        print(f"❌ Error exporting to PDF: {str(e)}")
+        print(f"Error exporting to PDF: {str(e)}")
         import traceback
         traceback.print_exc()
         return JsonResponse({'success': False, 'message': str(e)}, status=500)

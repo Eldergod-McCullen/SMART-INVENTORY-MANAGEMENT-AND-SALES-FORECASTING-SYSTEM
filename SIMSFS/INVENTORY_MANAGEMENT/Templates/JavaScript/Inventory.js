@@ -61,7 +61,7 @@ function invGetCSRFToken() {
    ENTRY POINT — called directly by the partial template
    ============================================================ */
 function initInventory() {
-    console.log('✅ Inventory module initialised');
+    console.log('Inventory module initialised');
 
     /* Load data */
     invLoadItems();
@@ -269,7 +269,7 @@ async function invUpdateItem(button) {
         });
         const result = await res.json();
         if (result.success) {
-            alert('✅ Reorder level updated successfully');
+            alert('Reorder level updated successfully');
             await invLoadItems();
         } else {
             alert('Error: ' + result.message);
@@ -325,13 +325,13 @@ async function invConfirmDelete() {
     if (itemQty > 0) {
         invCloseDeleteModal();
         invItemToDelete = null;
-        alert(`❌ Cannot delete "${itemName}" — it still has ${itemQty} units in stock.\n\nPlease sell or adjust inventory first.`);
+        alert(`Cannot delete "${itemName}" — it still has ${itemQty} units in stock.\n\nPlease sell or adjust inventory first.`);
         return;
     }
 
     invCloseDeleteModal();
 
-    if (!confirm(`⚠️ FINAL CONFIRMATION\n\nAre you absolutely sure you want to delete this item?\n\nItem ID: ${itemId}\nItem Name: ${itemName}\n\nThis will delete the item from BOTH:\n• Inventory table\n• Inventory Items table\n\nThis action CANNOT be undone.`)) {
+    if (!confirm(`FINAL CONFIRMATION\n\nAre you absolutely sure you want to delete this item?\n\nItem ID: ${itemId}\nItem Name: ${itemName}\n\nThis will delete the item from BOTH:\n• Inventory table\n• Inventory Items table\n\nThis action CANNOT be undone.`)) {
         invItemToDelete = null;
         return;
     }
@@ -349,14 +349,14 @@ async function invConfirmDelete() {
         });
         const result = await res.json();
         if (result.success) {
-            alert(result.message || `✅ Item deleted successfully!\n\nItem: ${itemName}\nID: ${itemId}\n\nDeleted from both tables.`);
+            alert(result.message || `Item deleted successfully!\n\nItem: ${itemName}\nID: ${itemId}\n\nDeleted from both tables.`);
             await invLoadItems();
         } else {
-            alert(result.message || '❌ Error: Unable to delete item');
+            alert(result.message || 'Error: Unable to delete item');
         }
     } catch (err) {
         console.error('Error deleting item:', err);
-        alert(`❌ Failed to delete item.\n\nError: ${err.message || 'Unknown error'}`);
+        alert(`Failed to delete item.\n\nError: ${err.message || 'Unknown error'}`);
     } finally {
         invHideProcessing();
         invItemToDelete = null;

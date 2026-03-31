@@ -40,7 +40,6 @@ DEFAULT_FROM_EMAIL   = 'thundergodmccullen@gmail.com'
 CONTACT_RECIPIENT    = '2204329@students.kcau.ac.ke'
 
 # Application definition
-# NOT EVERY MODULE IS AN APPLICATION IN THIS PROGRAM
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -61,7 +60,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-CACHE_MIDDLEWARE_SECONDS = 0   # PREVENTS BROWSER CACHING OF PROTECTED PAGES
+CACHE_MIDDLEWARE_SECONDS = 0           # PREVENTS BROWSER CACHING OF PROTECTED PAGES
 
 ROOT_URLCONF = 'SIMSFS.urls'
 

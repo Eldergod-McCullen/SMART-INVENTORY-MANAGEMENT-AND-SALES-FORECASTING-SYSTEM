@@ -931,12 +931,5 @@ async function exportForecast() {
   }
 }
 
-
-/* ============================================================
-   ENTRY POINT
-   DOMContentLoaded has already fired when Index.html loaded —
-   it will never fire again when this partial is injected
-   dynamically, so we call loadHistoricalData() directly.
-============================================================ */
 console.log('🚀 Initialising Sales Forecasting...');
 loadHistoricalData();

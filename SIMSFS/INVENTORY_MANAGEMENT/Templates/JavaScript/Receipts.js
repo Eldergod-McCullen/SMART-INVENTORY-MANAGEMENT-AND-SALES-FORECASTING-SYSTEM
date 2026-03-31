@@ -214,7 +214,7 @@ async function loadReceipts() {
             });
 
             filteredReceipts = [...allReceipts];
-            console.log('✅ Loaded receipts:', allReceipts.length);
+            console.log('Loaded receipts:', allReceipts.length);
             renderReceiptTable();
         } else {
             alert('Error loading receipts: ' + result.message);
@@ -559,13 +559,13 @@ async function saveReceipt() {
     console.log('Amount Received:',receiptData.amount_received);
     console.log('========================');
 
-    if (!receiptData.transaction_id)  { alert('❌ Please generate a Transaction ID');              return; }
-    if (!receiptData.receipt_date)    { alert('❌ Please select receipt date');                    return; }
-    if (!receiptData.customer_name)   { alert('❌ Please select a customer');                      return; }
-    if (!receiptData.so_id)           { alert('❌ Please select a Sales Order');                   return; }
-    if (!receiptData.payment_mode)    { alert('❌ Please select payment mode');                    return; }
+    if (!receiptData.transaction_id)  { alert('Please generate a Transaction ID');              return; }
+    if (!receiptData.receipt_date)    { alert('Please select receipt date');                    return; }
+    if (!receiptData.customer_name)   { alert('Please select a customer');                      return; }
+    if (!receiptData.so_id)           { alert('Please select a Sales Order');                   return; }
+    if (!receiptData.payment_mode)    { alert('Please select payment mode');                    return; }
     if (isNaN(receiptData.amount_received) || receiptData.amount_received <= 0) {
-        alert('❌ Please enter a valid amount (must be greater than 0)');
+        alert('Please enter a valid amount (must be greater than 0)');
         return;
     }
 
@@ -591,7 +591,7 @@ async function saveReceipt() {
         const result = await response.json();
 
         if (result.success) {
-            alert('✅ Receipt Recorded Successfully!\n\n' +
+            alert('Receipt Recorded Successfully!\n\n' +
                   'Receipt Status: ' + result.status_info.receipt_status + '\n' +
                   'Shipping Status: ' + result.status_info.shipping_status);
             closeReceiptModal();
@@ -617,14 +617,14 @@ function openDeleteModal(transactionId, receiptDate, customerName, soId,
     console.log('🔍 Opening delete modal for:', transactionId);
 
     if (!transactionId) {
-        alert('❌ Invalid transaction ID');
+        alert('Invalid transaction ID');
         return;
     }
 
     const receipt = allReceipts.find(r => r.transaction_id === transactionId);
 
     if (!receipt) {
-        alert('❌ Receipt not found in local data. Please refresh the page and try again.');
+        alert('Receipt not found in local data. Please refresh the page and try again.');
         console.error('Receipt not found:', transactionId);
         console.log('Available receipts:', allReceipts.map(r => r.transaction_id));
         return;
@@ -635,7 +635,7 @@ function openDeleteModal(transactionId, receiptDate, customerName, soId,
 
     const validatedAmount = parseFloat(amountReceived);
     if (isNaN(validatedAmount) || validatedAmount <= 0) {
-        alert('❌ Invalid receipt amount');
+        alert('Invalid receipt amount');
         console.error('Invalid amount:', amountReceived);
         return;
     }
@@ -646,7 +646,7 @@ function openDeleteModal(transactionId, receiptDate, customerName, soId,
         amount_received: validatedAmount
     };
 
-    console.log('💾 Receipt to delete:', receiptToDelete);
+    console.log('Receipt to delete:', receiptToDelete);
 
     document.getElementById('deleteTransactionId').textContent = transactionId  || 'N/A';
     document.getElementById('deleteReceiptDate').textContent   = receiptDate    || 'N/A';
@@ -675,13 +675,13 @@ function closeDeleteModal() {
    ============================================================ */
 async function confirmDelete() {
     if (!receiptToDelete) {
-        alert('❌ No receipt selected for deletion');
+        alert('No receipt selected for deletion');
         closeDeleteModal();
         return;
     }
 
     if (!receiptToDelete.transaction_id) {
-        alert('❌ Invalid receipt data');
+        alert('Invalid receipt data');
         closeDeleteModal();
         return;
     }
@@ -693,7 +693,7 @@ async function confirmDelete() {
         amount_received: receiptToDelete.amount_received
     };
 
-    console.log('🗑️ Attempting to delete receipt:', receiptData);
+    console.log('Attempting to delete receipt:', receiptData);
 
     /* Close modal and show processing */
     closeDeleteModal();
@@ -712,7 +712,7 @@ async function confirmDelete() {
             })
         });
 
-        console.log('📡 Delete response status:', response.status);
+        console.log('Delete response status:', response.status);
 
         /* Handle non-JSON responses */
         const contentType = response.headers.get('content-type');
@@ -721,10 +721,10 @@ async function confirmDelete() {
         }
 
         const result = await response.json();
-        console.log('📦 Delete response data:', result);
+        console.log('Delete response data:', result);
 
         if (result.success) {
-            alert('✅ Receipt Deleted Successfully!\n\n' +
+            alert('Receipt Deleted Successfully!\n\n' +
                   'Transaction ID: ' + receiptData.transaction_id + '\n' +
                   'Amount: ' + parseFloat(receiptData.amount_received).toFixed(2) + '\n\n' +
                   'Sales Order statuses have been updated accordingly.\n\n' +
@@ -733,11 +733,11 @@ async function confirmDelete() {
             await loadReceipts();
             await loadSalesOrders();
         } else {
-            alert('❌ Error: ' + (result.message || 'Unknown error occurred'));
+            alert('Error: ' + (result.message || 'Unknown error occurred'));
         }
     } catch (error) {
-        console.error('❌ Error deleting receipt:', error);
-        alert('❌ Failed to delete receipt. Please try again.\n\nError: ' + error.message);
+        console.error('Error deleting receipt:', error);
+        alert('Failed to delete receipt. Please try again.\n\nError: ' + error.message);
     } finally {
         hideProcessing();
         receiptToDelete = null;
@@ -806,4 +806,4 @@ function hideProcessing() {
     document.getElementById('processingOverlay').style.display = 'none';
 }
 
-console.log('✅ Receipts.js complete');
+console.log('Receipts.js complete');

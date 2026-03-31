@@ -1,15 +1,3 @@
-/* ============================================================
-   INVENTORY-ITEMS.CSS
-   Static stylesheet for the Inventory Items module.
-   Loaded by Inventory-items.html partial template via:
-       <link rel="stylesheet" href="{% static 'css/Inventory-items.css' %}">
-
-   NOTE: The `body` selector has been removed intentionally.
-   Body-level styles are owned by Index.html. The `.spinner`
-   class has been renamed to `.inv-items-spinner` to avoid
-   clashing with the `.spinner` class in Index.html.
-   ============================================================ */
-
 :root {
     --primary:       #1abc9c;
     --primary-light: #d1f2eb;
@@ -31,7 +19,7 @@
     box-sizing: border-box;
 }
 
-/* ---- CONTAINER ---- */
+/* CONTAINER */
 .inventory-container {
     max-width: 1400px;
     margin: 0 auto;
@@ -41,7 +29,7 @@
     padding: 25px;
 }
 
-/* ---- HEADER ---- */
+/* HEADER */
 .header-section {
     margin-bottom: 30px;
     padding-bottom: 15px;
@@ -60,7 +48,7 @@
     font-size: 1.05rem;
 }
 
-/* ---- ACTION BAR ---- */
+/* ACTION BAR*/
 .action-bar {
     display: flex;
     justify-content: space-between;
@@ -75,7 +63,7 @@
     flex-wrap: wrap;
 }
 
-/* ---- BUTTONS ---- */
+/* BUTTONS */
 .btn {
     padding: 10px 15px;
     border: none;
@@ -90,14 +78,35 @@
     font-size: 0.95rem;
 }
 
-.btn-primary            { background-color: var(--primary);   color: var(--white); }
-.btn-primary:hover      { background-color: var(--primary-dark); }
-.btn-secondary          { background-color: var(--secondary); color: var(--white); }
-.btn-secondary:hover    { background-color: #2980b9; }
-.btn-outline            { background-color: transparent; border: 1px solid #bdc3c7; color: var(--light-dark); }
-.btn-outline:hover      { background-color: var(--light-gray); }
+.btn-primary {
+    background-color: var(--primary);
+    color: var(--white);
+}
 
-/* ---- SEARCH ---- */
+.btn-primary:hover {
+    background-color: var(--primary-dark);
+}
+
+.btn-secondary {
+    background-color: var(--secondary);
+    color: var(--white);
+}
+
+.btn-secondary:hover {
+    background-color: #2980b9; 
+}
+
+.btn-outline {
+    background-color: transparent;
+    border: 1px solid #bdc3c7;
+    color: var(--light-dark); 
+}
+
+.btn-outline:hover {
+    background-color: var(--light-gray);
+}
+
+/* SEARCH */
 .search-group {
     display: flex;
     gap: 10px;
@@ -119,7 +128,7 @@
     width: 250px;
 }
 
-/* ---- TABLE ---- */
+/* TABLE */
 .inventory-table {
     width: 100%;
     border-collapse: collapse;
@@ -145,9 +154,11 @@
     font-size: 0.92rem;
 }
 
-.inventory-table tr:hover { background-color: rgba(26, 188, 156, 0.05); }
+.inventory-table tr:hover {
+    background-color: rgba(26, 188, 156, 0.05);
+}
 
-/* ---- ACTION CELL & BUTTONS ---- */
+/* ACTION CELL & BUTTONS */
 .action-cell {
     display: flex;
     gap: 8px;
@@ -164,10 +175,24 @@
     border: none;
 }
 
-.edit-btn   { background-color: #3498db;        color: white; }
-.update-btn { background-color: var(--success); color: white; }
-.cancel-btn { background-color: var(--gray);    color: white; }
-.delete-btn { background-color: var(--error);   color: white; }
+.edit-btn {
+    background-color: #3498db;
+    color: white;
+}
+
+.update-btn {
+    background-color: var(--success);
+    color: white; 
+}
+.cancel-btn {
+    background-color: var(--gray);
+    color: white;
+}
+
+.delete-btn {
+    background-color: var(--error);
+    color: white;
+}
 
 /* ---- INLINE EDIT ---- */
 .editable {
@@ -178,7 +203,7 @@
     width: 100%;
 }
 
-/* ---- MODAL ---- */
+/* MODAL */
 .modal {
     display: none;
     position: fixed;
@@ -217,10 +242,20 @@
     margin: 0;
 }
 
-.close-btn           { font-size: 1.8rem; cursor: pointer; color: var(--gray); transition: color 0.3s; }
-.close-btn:hover     { color: var(--dark); }
+.close-btn {
+    font-size: 1.8rem;
+    cursor: pointer;
+    color: var(--gray);
+    transition: color 0.3s;
+}
 
-.form-group          { margin-bottom: 22px; }
+.close-btn:hover{
+    color: var(--dark);
+}
+
+.form-group {
+    margin-bottom: 22px; 
+}
 
 .form-group label {
     display: block;
@@ -245,7 +280,10 @@
     box-shadow: 0 0 0 2px rgba(26, 188, 156, 0.2);
 }
 
-.required:after { content: " *"; color: var(--error); }
+.required:after {
+    content: " *";
+    color: var(--error);
+}
 
 .modal-footer {
     display: flex;
@@ -256,7 +294,7 @@
     border-top: 1px solid var(--light-gray);
 }
 
-/* ---- PROCESSING OVERLAY ---- */
+/* PROCESSING OVERLAY */
 .processing-overlay {
     display: none;
     position: fixed;
@@ -271,7 +309,6 @@
     flex-direction: column;
 }
 
-/* Renamed from .spinner to avoid collision with Index.html's .spinner class */
 .inv-items-spinner {
     border: 5px solid #f3f3f3;
     border-top: 5px solid var(--primary);
@@ -283,17 +320,28 @@
 }
 
 @keyframes inv-items-spin {
-    0%   { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg); 
+    }
 }
 
-/* ---- SELECT2 ---- */
-.select2-container { width: 100% !important; }
+/* SELECT2 */
+.select2-container {
+    width: 100% !important; 
+}
 
-.id-generate { display: flex; gap: 10px; }
-.id-field    { flex: 1; }
+.id-generate {
+    display: flex; gap: 10px; 
+}
 
-/* ---- PAGINATION ---- */
+.id-field {
+    flex: 1; 
+}
+
+/* PAGINATION */
 .pagination {
     display: flex;
     justify-content: center;
@@ -311,7 +359,9 @@
     transition: all 0.3s;
 }
 
-.page-btn:hover:not(.active) { background-color: var(--light-gray); }
+.page-btn:hover:not(.active) {
+    background-color: var(--light-gray); 
+}
 
 .page-btn.active {
     background-color: var(--primary);
@@ -319,7 +369,7 @@
     border-color: var(--primary);
 }
 
-/* ---- NO DATA ---- */
+/* NO DATA */
 .no-data-container {
     text-align: center;
     padding: 50px 20px;
@@ -329,5 +379,15 @@
     margin-top: 20px;
 }
 
-.no-data-icon  { font-size: 3.5rem; color: #bdc3c7; margin-bottom: 20px; display: block; }
-.no-data-title { color: var(--gray); margin-bottom: 10px; font-family: 'Montserrat', sans-serif; }
+.no-data-icon  {
+    font-size: 3.5rem;
+    color: #bdc3c7;
+    margin-bottom: 20px;
+    display: block;
+}
+
+.no-data-title {
+    color: var(--gray);
+    margin-bottom: 10px;
+    font-family: 'Montserrat', sans-serif;
+}
